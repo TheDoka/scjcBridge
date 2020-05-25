@@ -1,1 +1,3 @@
 # scjcBridge
+
+Projet de stage
