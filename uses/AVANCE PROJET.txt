@@ -1,0 +1,11 @@
+25/05/2020
+
+Réalisation d'un premier MCD
+Création d'un repo GitHub
+Mise en place des premiers plans pour le site, idées, conceptes
+Révisions sur les lignes princiaples avec Mml. Souchon
+Création de la page d'index (navbar)
+Base de donnéees MySQL créé et complété avec le MCD
+Page de connexion / cookie persistent / déconnexion / 'detection intrusion'
+
+

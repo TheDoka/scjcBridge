@@ -1,0 +1,162 @@
+CREATE TABLE `scjcBridge`.`statut` (
+
+  `idStatut` INT NOT NULL AUTO_INCREMENT, 
+  `libelle` TEXT NOT NULL, 
+  PRIMARY KEY (`idStatut`)
+  
+);
+
+CREATE TABLE `scjcBridge`.`niveau` (
+
+  `idNiveau` INT NOT NULL AUTO_INCREMENT, 
+  `numeroSerie` VARCHAR(30) NOT NULL, 
+  PRIMARY KEY (`idNiveau`)
+  
+);
+
+CREATE TABLE `scjcBridge`.`adherent` (
+
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `nom` VARCHAR(20) NOT NULL, 
+  `prenom` VARCHAR(20) NOT NULL ,
+  `mail` TEXT NOT NULL,
+  `tel` VARCHAR(15),
+  `commune` TEXT NOT NULL,
+  `sexe` CHAR NOT NULL,
+  `password` TEXT NOT NULL,
+  `numeroLicense` INT NOT NULL, 
+  `idStatut` INT NOT NULL, 
+  `idNiveau` INT NOT NULL, 
+  `partenaireFavoris` TEXT,
+  PRIMARY KEY (`id`),
+  FOREIGN KEY (`idStatut`) REFERENCES statut(`idStatut`),
+  FOREIGN KEY (`idNiveau`) REFERENCES statut(`idNiveau`) 
+  
+);
+
+CREATE TABLE `scjcBridge`.`evenement` (
+
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `titre` TEXT NOT NULL, 
+  `prix` TEXT,
+  `dteDebut` DATETIME NOT NULL,
+  `dteFin` DATETIME NOT NULL,
+  PRIMARY KEY (`id`),
+  FOREIGN KEY (`dteDebut`) REFERENCES date(`dateHeure`),
+  FOREIGN KEY (`dteFin`) REFERENCES date(`dateHeure`) 
+  
+);
+
+CREATE TABLE `scjcBridge`.`inscrire` (
+
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `partenaire2` INT UNIQUE, 
+  `partenaire3` INT UNIQUE, 
+  `partenaire4` INT UNIQUE, 
+  `partenaireExterieur` TEXT, 
+  PRIMARY KEY (`id`),
+  FOREIGN KEY (`partenaire2`) REFERENCES adherent(`id`), 
+  FOREIGN KEY (`partenaire3`) REFERENCES adherent(`id`), 
+  FOREIGN KEY (`partenaire4`) REFERENCES adherent(`id`)
+  
+);
+
+CREATE TABLE `scjcBridge`.`date`(
+ `id` INT NOT NULL AUTO_INCREMENT,
+ `dateHeure` DATETIME NOT NULL,
+  PRIMARY KEY (`id`)
+);
+
+CREATE TABLE `scjcBridge`.`lieu`(
+ `id` INT NOT NULL AUTO_INCREMENT,
+ `adresse` TEXT NOT NULL,
+ `commune` TEXT NOT NULL,
+  PRIMARY KEY (`id`)
+);
+
+CREATE TABLE `scjcBridge`.`tournoi`(
+
+ `id` INT NOT NULL AUTO_INCREMENT,
+ `evenementId` INT NOT NULL,
+ `donnesCommentess` BOOLEAN NOT NULL,
+ `repas` BOOLEAN NOT NULL,
+ `apero` BOOLEAN NOT NULL,
+ `imp` BOOLEAN NOT NULL,
+ 
+  PRIMARY KEY (`id`),
+  FOREIGN KEY (`evenementId`) REFERENCES `evenement`(`id`)
+);
+
+CREATE TABLE `scjcBridge`.`typeTournoi`(
+
+ `id` INT NOT NULL AUTO_INCREMENT,
+ `libelle` TEXT NOT NULL,
+ `paires` INT NOT NULL,
+ `niveauRequis` int NOT NULL,
+ 
+  PRIMARY KEY (`id`),
+  FOREIGN KEY (`niveauRequis`) REFERENCES niveau(`idNiveau`)
+)
+
+CREATE TABLE `scjcBridge`.`categorieCompetition`(
+
+ `id` INT NOT NULL AUTO_INCREMENT,
+ `libelle` TEXT NOT NULL,
+  PRIMARY KEY (`id`)
+
+);
+
+CREATE TABLE `scjcBridge`.`serie`(
+
+ `id` INT NOT NULL AUTO_INCREMENT,
+ `libelle` TEXT NOT NULL,
+  PRIMARY KEY (`id`)
+
+);
+
+CREATE TABLE `scjcBridge`.`stade`(
+
+ `id` INT NOT NULL AUTO_INCREMENT,
+ `libelle` TEXT NOT NULL,
+  PRIMARY KEY (`id`)
+
+);
+
+CREATE TABLE `scjcBridge`.`public`(
+
+ `id` INT NOT NULL AUTO_INCREMENT,
+ `libelle` TEXT NOT NULL,
+  PRIMARY KEY (`id`)
+
+);
+
+CREATE TABLE `scjcBridge`.`competition`(
+
+ `id` INT NOT NULL AUTO_INCREMENT,
+ `idTournoi` INT NOT NULL,
+ `catComp` INT NOT NULL,
+ `serie` INT NOT NULL,
+ `stade` INT NOT NULL,
+ `public` INT NOT NULL,
+ 
+    
+  PRIMARY KEY (`id`),
+  FOREIGN KEY (`idTournoi`) REFERENCES `tournoi`(`id`),
+  FOREIGN KEY (`catComp`) REFERENCES `categorieCompetition`(`id`),
+  FOREIGN KEY (`serie`) REFERENCES `serie`(`id`),
+  FOREIGN KEY (`stade`) REFERENCES `stade`(`id`),
+  FOREIGN KEY (`public`) REFERENCES `public`(`id`)
+
+);
+
+CREATE TABLE `scjcBridge`.`partieLibre`(
+
+ `id` INT NOT NULL AUTO_INCREMENT,
+ `idEvenement` INT NOT NULL,
+ `niveauRequis` INT NOT NULL,
+     
+  PRIMARY KEY (`id`),
+  FOREIGN KEY (`niveauRequis`) REFERENCES `niveau`(`idNiveau`),
+
+
+);
