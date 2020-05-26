@@ -11,7 +11,7 @@ CREATE TABLE `scjcBridge`.`niveau` (
   `idNiveau` INT NOT NULL AUTO_INCREMENT, 
   `numeroSerie` VARCHAR(30) NOT NULL, 
   PRIMARY KEY (`idNiveau`)
-  
+  FOREIGN KEY (`idNiveau`) REFERENCES statut(`idNiveau`) 
 );
 
 CREATE TABLE `scjcBridge`.`adherent` (
@@ -41,9 +41,11 @@ CREATE TABLE `scjcBridge`.`evenement` (
   `prix` TEXT,
   `dteDebut` DATETIME NOT NULL,
   `dteFin` DATETIME NOT NULL,
+  `lieu` INT NOT NULL,
   PRIMARY KEY (`id`),
   FOREIGN KEY (`dteDebut`) REFERENCES date(`dateHeure`),
   FOREIGN KEY (`dteFin`) REFERENCES date(`dateHeure`) 
+  FOREIGN KEY (`lieu`) REFERENCES lieu(`id`) 
   
 );
 
@@ -59,12 +61,6 @@ CREATE TABLE `scjcBridge`.`inscrire` (
   FOREIGN KEY (`partenaire3`) REFERENCES adherent(`id`), 
   FOREIGN KEY (`partenaire4`) REFERENCES adherent(`id`)
   
-);
-
-CREATE TABLE `scjcBridge`.`date`(
- `id` INT NOT NULL AUTO_INCREMENT,
- `dateHeure` DATETIME NOT NULL,
-  PRIMARY KEY (`id`)
 );
 
 CREATE TABLE `scjcBridge`.`lieu`(

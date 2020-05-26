@@ -1,3 +1,22 @@
+26/05/2020
+
+Recherches sur tdhtmlx scheduler (tableau)
+Création et configuration pour que la forme corresponde à ce qui a été vu
+login.php : form validation
+index.php : petits changments ui
+admin.php
+admin.php : création du système d'importation 
+		* papaparse (pour le csv) 
+	    affichage .CSV dans tableau
+	    confirmation d'import 
+
+admin.php : import terminé
+	    import fonctionnel
+		problème: la structure correspondait pas :|
+
+admin.php : nouvelle structure pour les .CSV
+
+
 25/05/2020
 
 Réalisation d'un premier MCD

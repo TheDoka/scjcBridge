@@ -48,8 +48,17 @@ if (sizeof($_GET) > 0)
             // Trigger quand le button connexion est pressé
             $("#connexion").click(function(e) {
 
-                // Récupère les informations saisies et éxéxute la connexion
-                    makeLogin($('#licenseId').val(), $('#pass').val())
+                if ($("#loginForm")[0].checkValidity() )
+                {
+
+                    // Récupère les informations saisies et éxéxute la connexion
+                        makeLogin($('#licenseId').val(), $('#pass').val())
+
+                } else {
+                    $('#logError').text("Champs incorrects, veuillez vérifier: \nLicense nombre seulement max: 10")
+                    $('#logError').show();
+                    
+                }
 
             });
 
@@ -67,6 +76,7 @@ if (sizeof($_GET) > 0)
                             $.cookie('logged', data);
                             window.location = 'index.php';
                         } else {
+                            $('#logError').text("Connexion impossible, veuillez réessayer")
                             $('#logError').show();
                         }
                 });
@@ -79,7 +89,17 @@ if (sizeof($_GET) > 0)
 
     </script>
 
+<style>
 
+input:invalid {
+  border: 1px solid black;
+}
+
+input:valid {
+  border: 1px solid green;
+}
+
+</style>
 
     <body>
         
@@ -96,18 +116,18 @@ if (sizeof($_GET) > 0)
             <div class="col-md-6 col-sm-12">
                 <div class="login-form">
 
-                    <form>
+                    <form id="loginForm">
                         <div class="form-group">
                             <label>Numéro de license</label>
-                            <input id="licenseId" type="text" class="form-control" placeholder="Numéro composé de 10 chiffres au maximum">
+                            <input id="licenseId" minlength="8" type="number" class="form-control" placeholder="Numéro composé de 10 chiffres au maximum" required>
                         </div>
 
                         <div class="form-group">
                             <label>Mot de passe</label>
-                            <input id="pass" type="password" class="form-control" placeholder="Mot de passe">
+                            <input id="pass" type="password" class="form-control" placeholder="Mot de passe" required>
                         </div>
                         
-                        <span id="logError" style="color: red; display: none;">Connexion impossible, veuillez réessayer<br></span> 
+                        <span id="logError" style="color: red; display: none;"><br></span> 
 
                         <button type="button" id="connexion" class="btn btn-black">Se connecter</button>
                         <button type="button" class="btn btn-secondary">S'enrengistrer</button>
