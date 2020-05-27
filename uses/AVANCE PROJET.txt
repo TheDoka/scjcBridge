@@ -1,3 +1,10 @@
+27/05/2020
+admin.php: nouveau import, maintenant par type: tournoi/parties libres/compétition
+admin.php: 
+index.php: changement d'agenda: "contrainte budget"->ancien payant
+
+
+
 26/05/2020
 
 Recherches sur tdhtmlx scheduler (tableau)

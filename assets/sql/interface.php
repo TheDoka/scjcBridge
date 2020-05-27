@@ -43,6 +43,7 @@ function importEvents($PDO, $evenements, $type)
 {
     $req = "";
     $curr= "";
+    $secondStep = "";
 
     // We skip one cause it's the header
     for ($i=1; $i < sizeof($evenements['data']) -1 ; $i++) { 
@@ -86,8 +87,8 @@ function importEvents($PDO, $evenements, $type)
 
 
             // Checking whether or not the time format, format should be: HH:MM:SS
-                $curr[0] = correctTimeFormat($curr[0]);
-                $curr[2] = correctTimeFormat($curr[2]);
+                $curr[1] = correctTimeFormat($curr[1]);
+                $curr[3] = correctTimeFormat($curr[3]);
 
             // Parse the date to MySQL format switching dd/mm/yyyy to yyyy/mm/dd
                 $startDate = correctDateTimeFormat($curr[0], $curr[1]);
@@ -116,37 +117,39 @@ function importEvents($PDO, $evenements, $type)
 
                 case 1:
                     // tournoi
-                    $req = "INSERT INTO `tournoi` 
-                            (`id`, `evenementId`, `repas`, `apero`, `imp`, `niveauRequis`) 
-                            VALUES (NULL, '$eventId', '$curr[7]', '$curr[6]', '$curr[9]', '$curr[6]');";
+                    $secondStep .= "INSERT INTO `tournoi` 
+                                    (`id`, `evenementId`, `repas`, `apero`, `imp`, `niveauRequis`) 
+                                    VALUES (NULL, '$eventId', '$curr[7]', '$curr[6]', '$curr[9]', '$curr[6]');";
                 break; 
 
                 case 2:
                     // partie libre
-                    $req = "INSERT INTO `partieLibre` 
-                            (`id`, `idEvenement`, `niveauRequis`)
-                             VALUES (NULL, '$eventId', '$curr[6]');";
+                    $secondStep .= "INSERT INTO `partieLibre` 
+                                    (`id`, `idEvenement`, `niveauRequis`)
+                                    VALUES (NULL, '$eventId', '$curr[6]');";
                 break; 
                 
                 case 3:
                     // compétition
 
-                    $req .= "INSERT INTO `competition` 
-                            (`id`, `evenementId`, `catComp`, `division`, `stade`, `public`) 
-                            VALUES (NULL, '$eventId', '$curr[10]', '$curr[11]', '$curr[12]', '$curr[13]')";
+                    $secondStep .= "INSERT INTO `competition` 
+                                    (`id`, `evenementId`, `catComp`, `division`, `stade`, `public`) 
+                                    VALUES (NULL, '$eventId', 1, 1, 1, 1);";
+                    echo $req . "\n";
                 break;
 
             }
-    
-            $curseur = $PDO->prepare($req);
-            $curseur ->execute();
 
         }
+
+
+
+    $curseur = $PDO->prepare($secondStep);
+    $curseur ->execute();
 
     $curseur->fetch();
     // In case, respons with error message, it should be empty
     echo $curseur->errorInfo()[2];
-
     $curseur = null;
 
 
