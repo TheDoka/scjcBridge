@@ -78,11 +78,14 @@ CREATE TABLE `scjcBridge`.`tournoi`(
  `repas` BOOLEAN NOT NULL,
  `apero` BOOLEAN NOT NULL,
  `imp` BOOLEAN NOT NULL,
+//niveauRequis
+//paires
  
   PRIMARY KEY (`id`),
   FOREIGN KEY (`evenementId`) REFERENCES `evenement`(`id`)
 );
 
+//del voir en huat
 CREATE TABLE `scjcBridge`.`typeTournoi`(
 
  `id` INT NOT NULL AUTO_INCREMENT,
@@ -129,17 +132,17 @@ CREATE TABLE `scjcBridge`.`public`(
 CREATE TABLE `scjcBridge`.`competition`(
 
  `id` INT NOT NULL AUTO_INCREMENT,
- `idTournoi` INT NOT NULL,
+ `evenementId` INT NOT NULL,
  `catComp` INT NOT NULL,
- `serie` INT NOT NULL,
+ `division` INT NOT NULL,
  `stade` INT NOT NULL,
  `public` INT NOT NULL,
  
     
   PRIMARY KEY (`id`),
-  FOREIGN KEY (`idTournoi`) REFERENCES `tournoi`(`id`),
+  FOREIGN KEY (`evenementId`) REFERENCES `evenement`(`id`),
   FOREIGN KEY (`catComp`) REFERENCES `categorieCompetition`(`id`),
-  FOREIGN KEY (`serie`) REFERENCES `serie`(`id`),
+  FOREIGN KEY (`division`) REFERENCES `division`(`id`),
   FOREIGN KEY (`stade`) REFERENCES `stade`(`id`),
   FOREIGN KEY (`public`) REFERENCES `public`(`id`)
 

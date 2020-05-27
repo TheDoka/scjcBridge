@@ -30,7 +30,7 @@ if (!logged())
             <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
 
         <!-- NavBar -->    
-            <link href="assets/css/navbar.css" rel="stylesheet" crossorigin="anonymous">
+            <link href="assets/css/navbar.css" rel="stylesheet">
 
          <!-- Papaparse -->     
             <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.1.0/papaparse.min.js" crossorigin="anonymous"></script>
@@ -68,11 +68,13 @@ if (!logged())
                     $.post('assets/sql/interface.php',
                         {
                             function: 'importEvents',
-                            events: imported_ 
+                            events: imported_,
+                            type: $('#importType option:selected').attr('id')
                         }, function(data) {
                             if (data.length > 0)
                             {
-                                alert("Une erreur est survenue: \n" + data);
+                                //alert("Une erreur est survenue: \n" + data);
+                                console.log(data);
                             }
                     });
             
@@ -108,7 +110,7 @@ if (!logged())
                 // On sauvegarde le resultat dans une autre variable pour pouvoir réutiliser lors de l'importation
                     imported_ = results;
 
-                /* On importe les header (doit toujours être la première ligne)
+                // On importe les header (doit toujours être la première ligne)
                     tdata+= "<thead><tr>";
                     var row = data[0];
                     var cells = row.join(",").split(",");
@@ -119,7 +121,6 @@ if (!logged())
                         tdata+= "</th>";
                     }
                     tdata+= "</tr></thead>";
-                */
 
                 // On importe les données du CSV
                 for(i=1;i<data.length-1;i++){
@@ -140,7 +141,7 @@ if (!logged())
                     }
                 }
                 // La table prends les données
-                $("#parsed_csv_list > tbody").html(tdata);
+                $("#parsed_csv_list").html(tdata);
             }
 
         });
@@ -209,9 +210,14 @@ if (!logged())
                             <label style="width:400px" class="custom-file-label" for="files">Importer fichier .CSV</label>
                             <input type="file" id="files" class="form-control custom-file-input" accept=".csv" required />
                         </div>
-                        <div class="form-group">
+                        <div>
                                 <button type="submit" id="submit-file" class="btn btn-primary">Aperçu</button>
-                                <button id="confirmImport" class="btn btn-warning" type="button">Confirmer l'importation dans la base.</button>
+                                <button id="confirmImport" class="btn form-control btn-warning" type="button">Confirmer l'importation dans la base.</button>
+                                <select class="form-control" id="importType">
+                                    <option id="1">Tournois</option>
+                                    <option id="2">Parties Libres</option>
+                                    <option id="3">Compétitions</option>
+                                </select>
                             </div>
                     </div>
 
@@ -233,16 +239,6 @@ if (!logged())
                             <th>Heure de fin</th>
                             <th>Type</th>
                             <th>Lieu</th>
-                            <th>Apero</th>
-                            <th>Repas</th>
-                            <th>Données commentées</th>
-                            <th>IMP</th>
-                            <th>Paires</th>
-                            <th>Niveau Requis</th>
-                            <th>Catégorie compétition</th>
-                            <th>Serie compétition</th>
-                            <th>Stade compétition</th>
-                            <th>Public compétition</th>
                         </tr>
                     </thead>
                     <tbody></tbody>

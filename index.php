@@ -11,10 +11,6 @@ if (!logged())
 
 <style>
 
-#content{
-    background-color: #6e91b9;
-}
-
 </style>
     
 
@@ -29,6 +25,9 @@ if (!logged())
         <!-- BOOTSTRAP -->
             <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" rel="stylesheet"  crossorigin="anonymous">
             <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+       
+        <!-- Popper --> 
+            <script src="assets/js/popper.js"></script>
         
         <!-- FontAwesome -->    
             <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
@@ -36,14 +35,14 @@ if (!logged())
         <!-- NavBar -->    
             <link href="assets/css/navbar.css" rel="stylesheet" crossorigin="anonymous">
 
-        <!-- dthmlx scheduler --> 
-            <link rel="stylesheet" href="assets/css/scheduler/dhtmlxscheduler_material.css" type="text/css" charset="utf-8">
+        <!-- FullCalendar --> 
+            <link href='assets/css/fullcalendar/core/main.css' rel='stylesheet' />
+            <link href='assets/css/fullcalendar/daygrid/main.css' rel='stylesheet' />
+            <script src='assets/js/fullcalendar/core/main.js'></script>
+            <script src='assets/js/fullcalendar/interaction/main.js'></script>
+            <script src='assets/js/fullcalendar/daygrid/main.js'></script>
 
-            <script src='assets/js/scheduler/dhtmlxscheduler.js' type="text/javascript" charset="utf-8"></script>
-	        <script src='assets/js/scheduler/ext/dhtmlxscheduler_timeline.js' type="text/javascript" charset="utf-8"></script>
-            <script src="assets/js/scheduler/ext/dhtmlxscheduler_recurring.js" type="text/javascript"></script>
-
-            <script src="assets/js/scheduler/locale/locale_fr.js" type="text/javascript" charset="utf-8"></script>
+        <!-- next --> 
 
         <script type="text/javascript">
 
@@ -66,48 +65,162 @@ if (!logged())
 
             });
 
-            window.addEventListener("DOMContentLoaded", function(){
+                    
+            document.addEventListener('DOMContentLoaded', function() {
+                var calendarEl = document.getElementById('calendar');
 
-                scheduler.locale.labels.matrix_tab = "Vue simplifiée"
-                scheduler.locale.labels.section_custom="Section";
-                scheduler.config.details_on_create=true;
-                scheduler.config.details_on_dblclick=true;
-                scheduler.config.multi_day = true;
+                var calendar = new FullCalendar.Calendar(calendarEl, {
+                    locale: 'fr',
+                    height: 650,
+                    plugins: [ 'interaction', 'dayGrid' ],
+                    header: {
+                        left: 'prevYear,prev,next,nextYear today',
+                        center: 'title',
+                        right: 'dayGridMonth,dayGridWeek,dayGridDay'
+                    },
+                    defaultDate: '2020-02-12',
+                    navLinks: true, // can click day/week names to navigate views
+                    editable: true,
+                    eventLimit: true, // allow "more" link when too many events
+                    events: [
+                        {
+                        title: 'All Day Event',
+                        start: '2020-02-01'
+                        },
+                        {
+                        title: 'Long Event',
+                        start: '2020-02-07',
+                        end: '2020-02-10'
+                        },
+                        {
+                        groupId: 999,
+                        title: 'Repeating Event',
+                        start: '2020-02-09T16:00:00'
+                        },
+                        {
+                        groupId: 999,
+                        title: 'Repeating Event',
+                        start: '2020-02-16T16:00:00'
+                        },
+                        {
+                        title: 'Conference',
+                        start: '2020-02-11',
+                        end: '2020-02-13'
+                        },
+                        {
+                        title: 'Meeting',
+                        start: '2020-02-12T10:30:00',
+                        end: '2020-02-12T12:30:00'
+                        },
+                        {
+                        title: 'Lunch',
+                        start: '2020-02-12T12:00:00'
+                        },
+                        {
+                        title: 'Meeting',
+                        start: '2020-02-12T14:30:00'
+                        },
+                        {
+                        title: 'Happy Hour',
+                        start: '2020-02-12T17:30:00'
+                        },
+                        {
+                        title: 'Dinner',
+                        start: '2020-02-12T20:00:00'
+                        },
+                        {
+                        title: 'Birthday Party',
+                        start: '2020-02-13T07:00:00'
+                        },
+                        {
+                        title: 'Click for Google',
+                        url: 'http://google.com/',
+                        start: '2020-02-28'
+                        }
+                    ],
+                    // events: 'load.php',
+                    selectable:true,
+                    selectHelper:true,
+                    select: function(start, end, allDay)
+                    {
+                        var title = prompt("Enter Event Title");
+                            if(title)
+                            {
+                                var start = $.fullCalendar.formatDate(start, "Y-MM-DD HH:mm:ss");
+                                var end = $.fullCalendar.formatDate(end, "Y-MM-DD HH:mm:ss");
+                                $.ajax({
+                                    url:"insert.php",
+                                    type:"POST",
+                                    data:{title:title, start:start, end:end},
+                                    success:function()
+                                    {
+                                        calendar.fullCalendar('refetchEvents');
+                                        alert("Added Successfully");
+                                    }
+                                })
+                            }
+                    },
+                    editable:true,
+                    eventResize:function(event)
+                    {
 
+                        var start = $.fullCalendar.formatDate(event.start, "Y-MM-DD HH:mm:ss");
+                        var end = $.fullCalendar.formatDate(event.end, "Y-MM-DD HH:mm:ss");
+                        var title = event.title;
+                        var id = event.id;
+                        $.ajax({
+                            url:"update.php",
+                            type:"POST",
+                            data:{title:title, start:start, end:end, id:id},
+                            success:function(){
+                                calendar.fullCalendar('refetchEvents');
+                                alert('Event Update');
+                            }
+                        })
+                    },
 
-                //===============
-                //Configuration
-                //===============
-                var sections=[
-                    {key:1, label:"Matin"},
-                    {key:2, label:"Après-Midi"},
-                    {key:3, label:"Soirée"}
-                ];
+                    eventDrop:function(event)
+                    {
+                        console.log(event);
+                        var start = $.fullCalendar.formatDate(event.start, "Y-MM-DD HH:mm:ss");
+                        var end = $.fullCalendar.formatDate(event.end, "Y-MM-DD HH:mm:ss");
+                        var title = event.title;
+                        var id = event.id;
 
-                scheduler.createTimelineView({
-                    name:	"matrix",
-                    x_unit:	"day",
-                    x_date:	"%D %d %M",
-                    x_step:	1,
-                    x_size: 15,
-                    y_unit:	sections,
-                    y_property:	"section_id",
-                    render:"bar"
+                        $.ajax({
+                            url:"update.php",
+                            type:"POST",
+                            data:{title:title, start:start, end:end, id:id},
+                            success:function()
+                            {
+                                calendar.fullCalendar('refetchEvents');
+                                alert("Event Updated");
+                            }
+                        });
+                    },
+
+                    eventClick:function(event)
+                    {
+                        if(confirm("Are you sure you want to remove it?"))
+                        {
+                            var id = event.id;
+                            
+                            $.ajax({
+                                url:"delete.php",
+                                type:"POST",
+                                data:{id:id},
+                                success:function()
+                                {
+                                    calendar.fullCalendar('refetchEvents');
+                                    alert("Event Removed");
+                                }
+                            })
+                        }
+                    },
                 });
 
-   
-                //===============
-                //Data loading
-                //===============
-                scheduler.config.lightbox.sections=[	
-                    {name:"description", height:130, map_to:"text", type:"textarea" , focus:true},
-                    {name:"custom", height:23, type:"select", options:sections, map_to:"section_id" },
-                    {name:"time", height:72, type:"time", map_to:"auto"}
-                ]
-
-                scheduler.init('scheduler_here',new Date(2020,5,30),"matrix");
-                //scheduler.load("./data/units.json");
-                });
+                calendar.render();
+            });
 
 
 
@@ -168,26 +281,8 @@ if (!logged())
                 
                 <h2>Tableaux des tournois à venir</h2>
                 
-                <div id="scheduler_here" class="dhx_cal_container" style='width:100%; height:84vh;'>
-                    <div class="dhx_cal_navline">
-                        
-                        <div class="dhx_cal_prev_button">&nbsp;</div>
-                        <div class="dhx_cal_next_button">&nbsp;</div>
-                        <div class="dhx_cal_today_button"></div>
 
-                        <div class="dhx_cal_date"></div>
-                        <div class="dhx_cal_tab" name="day_tab" style="right:204px;"></div>
-                        <div class="dhx_cal_tab" name="week_tab" style="right:140px;"></div>
-                        <div style="width: 200px;" class="dhx_cal_tab" name="matrix_tab" style="right:300px;"></div>
-                        <div class="dhx_cal_tab" name="month_tab" style="right:76px;"></div>
-
-                        
-                    </div>
-                    <div class="dhx_cal_header">
-                    </div>
-                    <div class="dhx_cal_data">
-                    </div>		
-                </div>
+                <div id='calendar'></div>
 
             </div>
         </div>

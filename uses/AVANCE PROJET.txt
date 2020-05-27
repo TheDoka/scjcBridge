@@ -15,6 +15,7 @@ admin.php : import terminé
 		problème: la structure correspondait pas :|
 
 admin.php : nouvelle structure pour les .CSV
+bdd	  : modifications des tables -> evenement, suppression de date., niveau et autre surement
 
 
 25/05/2020
