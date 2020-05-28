@@ -132,7 +132,7 @@ if (!logged())
 
             function maSituation(data)
             {
-
+                console.log(data);
                 if (data.length > 0)
                 {
                     // 1. Vérifie si l'adherent est inscrit
@@ -161,7 +161,6 @@ if (!logged())
                             order by sur l'id de la paire.
                         */
 
-                        i = 0;
                         // Lit jusqu'a changement de paire et construit l'affichage
                         // pour la table.
 
@@ -171,6 +170,7 @@ if (!logged())
                             prenoms  += data[i]['prenom'] + "</br>";
                             i++;
                         }
+
                         var membresDeLaPaire = i;
 
                         $('#tableSituation > tbody').append(
@@ -182,37 +182,44 @@ if (!logged())
                             '</tr>'
                         );
 
-                    } else {
-                        i = 0;
+                        own_pid = pid;
                     }
+
+                        i = 0;
 
                         while (i < data.length)
                         {
- 
+                            
                             pid = data[i][0];
                             noms = "";
                             prenoms = "";
                             
-
-                            while (i < data.length && pid == data[i]['NumPaire'])
+                            if (pid != own_pid)
                             {
-                                console.log(pid);
-                                pid = data[i][0];
-                                noms     += data[i]['nom'] + "</br>";
-                                prenoms  += data[i]['prenom'] + "</br>";
-                                i++;
+                                while (i < data.length && pid == data[i]['NumPaire'])
+                                {
+                                    console.log(pid);
+                                    pid = data[i][0];
+                                    noms     += data[i]['nom'] + "</br>";
+                                    prenoms  += data[i]['prenom'] + "</br>";
+                                    i++;
 
+                                }
+                            
+                                
+                                $('#tableInscrit > tbody').append(
+                                    '<tr>' +
+                                        `<td> ${pid}</td>` +
+                                        `<td>${noms}</td>` +
+                                        `<td>${prenoms}</td>`+ +
+                                    '</tr>'
+                                );
+
+                                
+                            } else {
+                                i++;
                             }
-                           
-                            
-                            $('#tableInscrit > tbody').append(
-                                '<tr>' +
-                                    `<td> ${pid}</td>` +
-                                    `<td>${noms}</td>` +
-                                    `<td>${prenoms}</td>`+ +
-                                '</tr>'
-                            );
-                            
+
                         }
 
                 }
@@ -412,6 +419,7 @@ if (!logged())
                 <div id="inscriptArea" class="LeftRightHeader">
 
                     <div class="eqL">
+  
                         <h3>Ma situation: </h3>
                             <table class="table" id="tableSituation">
                                 <thead>

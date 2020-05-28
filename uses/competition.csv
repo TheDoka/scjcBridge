@@ -1,3 +1,3 @@
-Date debut,Heure de debut,Date de fin,Heure de fin,Lieu,Paires,Niveau Requis,Apero,Repas,IMP,Categorie, Division, Stade, Public
-1/6/2020,9:00,1/6/2020,21:00,Poitiers,2,B27,FALSE,FALSE,FALSE, Open, Couipe du Comite,Finale, Seniors
-4/6/2020,9:00,4/6/2020,21:00,Poitiers,2,B27,FALSE,FALSE,FALSE, Open, Couipe du Comite,Finale, Seniors
+Date debut,Heure de debut,Date de fin,Heure de fin,Lieu,Paires,Niveau Requis,IMP,Categorie, Division, Stade, Public
+1/6/2020,9:00,1/6/2020,21:00,Poitiers,2,B27,FALSE, Open, Couipe du Comite,Finale, Seniors
+4/6/2020,9:00,4/6/2020,21:00,Poitiers,2,B27,FALSE, Open, Couipe du Comite,Finale, Seniors
