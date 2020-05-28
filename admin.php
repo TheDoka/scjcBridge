@@ -107,6 +107,7 @@ if (!logged())
             function displayHTMLTable(results){
                 var tdata = "";
                 var data = results.data;
+
                 // On sauvegarde le resultat dans une autre variable pour pouvoir réutiliser lors de l'importation
                     imported_ = results;
 
@@ -162,10 +163,10 @@ if (!logged())
                     <button type="button" id="sidebarCollapse" class="btn btn-primary"></button>
                 </div>
 
-                <div class="img bg-wrap text-center py-4" style="background-image: url(ressources/img/bg_1.jpg);">
+                <div class="img bg-wrap text-center py-4" style="background-image: url(ressources/img/bg_1.webp);">
                     <div class="user-logo">
-                        <div class="img" style="background-image: url(ressources/img/jm.jpg);"></div>
-                        <h3>Jean-Marie</h3>
+                        <div class="img" style="background-image: url(ressources/img/user.jpg);"></div>
+                        <h3><?php echo $_COOKIE['nom'] . " " . $_COOKIE['prenom'] ?></h3>
                     </div>
                 </div>
 
@@ -173,10 +174,6 @@ if (!logged())
 
                     <li>
                         <a href="index.php"><span class="fa fa-home mr-3"></span> Agenda</a>
-                    </li>
-
-                    <li>
-                        <a href="#"><span class="fa fa-download mr-3 notif"><small class="d-flex align-items-center justify-content-center">5</small></span> Inscription</a>
                     </li>
 
                     <li>

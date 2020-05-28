@@ -14,6 +14,15 @@ if (isset($_POST['function']))
             break;
             case $_POST['function'] == 'importEvents': 
 				return importEvents(createPDO(), $_POST['events'], $_POST['type']);
+            break;
+            case $_POST['function'] == 'getEvents': 
+				return getEvents(createPDO());
+            break;
+            case $_POST['function'] == 'getEventInfo': 
+				return getEventInfo(createPDO(), $_POST['eid']);
+            break;
+            case $_POST['function'] == 'getAvailablePlayers': 
+				return getEventInfo(createPDO(), $_POST['eid']);
 			break;
             
         }
@@ -25,7 +34,7 @@ if (isset($_POST['function']))
 function connexion($PDO, $licenseId, $pass)
 {
     $pass = md5($pass);
-    $requete = "SELECT id
+    $requete = "SELECT *
                 FROM adherent
                 WHERE numeroLicense = $licenseId && password = '$pass'";
                     
@@ -34,7 +43,7 @@ function connexion($PDO, $licenseId, $pass)
     
     $unClient = $curseur->fetch();
     
-    echo $unClient[0];
+    echo json_encode($unClient);
     $curseur = null;
     
 }
@@ -53,7 +62,7 @@ function importEvents($PDO, $evenements, $type)
 
         // Pour chaque ligne on coupe à chaque virgule
             $curr = explode(',', $evenements['data'][$i][0]);
-
+            print_r($curr);
         /* 
 
             Common:  
@@ -66,16 +75,19 @@ function importEvents($PDO, $evenements, $type)
 
             Tournoi / Compétition: 
                 Niveau       [6] => B27
-                Apero        [7] => FALSE
-                Repas        [8] => FALSE
-                IMP          [9] => FALSE
+                IMP          [7] => FALSE
+
+            Tournoi:
+                Apero        [8] => FALSE
+                Repas        [9] => FALSE
+                DC           [10] => FALSE
 
             Compétition: 
-                Catégorie    [10] =>  Open
-                Division     [11] =>  Couipe du Comite
-                Stade        [12] => Finale
-                Public       [13] =>  Seniors
-                        
+                Catégorie    [8] =>  Open
+                Division     [9] =>  Couipe du Comite
+                Stade        [10] => Finale
+                Public       [11] =>  Seniors
+
             #type 
                 0 : évenement
                 1 : tournoi
@@ -100,8 +112,8 @@ function importEvents($PDO, $evenements, $type)
             // Parse each items and add to the request
 
                 $req = "INSERT INTO `evenement` 
-                        (`id`, `titre`, `prix`, `dteDebut`, `dteFin`, `lieu`, `type`) VALUES 
-                        (NULL, '$title', NULL, '$startDate', '$endDate', '1', $type);";
+                        (`id`, `titre`, `prix`, `dteDebut`, `dteFin`, `lieu`, `type`, `paires`) VALUES 
+                        (NULL, '$title', NULL, '$startDate', '$endDate', '1', $type, $curr[5]);";
 
             // Getting the evenement id
 
@@ -118,14 +130,14 @@ function importEvents($PDO, $evenements, $type)
                 case 1:
                     // tournoi
                     $secondStep .= "INSERT INTO `tournoi` 
-                                    (`id`, `evenementId`, `repas`, `apero`, `imp`, `niveauRequis`) 
-                                    VALUES (NULL, '$eventId', '$curr[7]', '$curr[6]', '$curr[9]', '$curr[6]');";
+                                    (`id`, `evenementId`, `repas`, `apero`, `imp`, `niveauRequis`, `DC`) 
+                                    VALUES (NULL, '$eventId', '$curr[9]', '$curr[8]', '$curr[7]', '$curr[6]', '$curr[10]');";
                 break; 
 
                 case 2:
                     // partie libre
                     $secondStep .= "INSERT INTO `partieLibre` 
-                                    (`id`, `idEvenement`, `niveauRequis`)
+                                    (`id`, `evenementId`, `niveauRequis`)
                                     VALUES (NULL, '$eventId', '$curr[6]');";
                 break; 
                 
@@ -188,15 +200,15 @@ function makeEventTile($data, $type)
             if ($data[6] != "4T")
             {
                 $title = "Tournoi en ";
-                if ($data[9]) $title .= "IMP"; else $title .= "PTT";
+                if ($data[7]) $title .= "IMP"; else $title .= "PTT";
                 $title .= " par " . $data[5];
             }
 
         break; 
-        
+
         case 3:
             // compétition
-            $title = "$data[11] $data[13] $data[10] par $data[5] $data[12]";
+            $title = "$data[9] $data[11] $data[8] par $data[5] $data[10]";
             
         break;
 
@@ -206,32 +218,98 @@ function makeEventTile($data, $type)
     return $title;
 }
 
-/*
 function getEvents($PDO)
 {
 
     $data = array();
 
-    $query = "SELECT * FROM evenement ORDER BY id";
+    $query = "SELECT * FROM evenement 
+              ORDER BY id";
 
     $statement = $PDO->prepare($query);
-
     $statement->execute();
 
     $result = $statement->fetchAll();
+    
+    /*
+
+            [id] => 27
+            [titre] => Tournoi en IMP par 2
+            [prix] => 
+            [dteDebut] => 2020-06-01 09:00:00
+            [dteFin] => 2020-06-01 21:00:00
+            [lieu] => 1
+            [type] => 1
+            [paires] => 0
+
+    */
 
     foreach($result as $row)
     {
-    $data[] = array(
-    'id'   => $row["id"],
-    'title'   => $row["title"],
-    'start'   => $row["start_event"],
-    'end'   => $row["end_event"]
-    );
+        $data[] = array(
+            'id'   => $row["id"],
+            'title'   => $row["titre"],
+            'start'   => $row["dteDebut"],
+            'end'   => $row["dteFin"]
+        );
     }
 
     echo json_encode($data);
-        
+    
 }
-*/
+
+function getEventInfo($PDO, $eid)
+{
+
+    $req = "SELECT * , L.adresse, L.commune 
+            FROM `evenement` E 
+
+            INNER JOIN lieu L
+             ON L.id = E.lieu 
+             
+             WHERE E.`id` = $eid";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+    
+    $common = $curseur->fetch();
+
+    switch ($common['type'])
+    {
+        case 1:
+            // Tournoi
+            $req = "SELECT * 
+                    FROM `tournoi` 
+                    WHERE `evenementId` = " . $common[0];
+        break;
+
+        case 2:
+            // Parties Libres
+            $req = "SELECT * 
+                    FROM `partieLibre` 
+                    WHERE `evenementId` = " . $common[0];
+        break;
+
+        case 3:
+            // Compétition
+            $req = "SELECT * 
+                    FROM `competition` 
+                    WHERE `evenementId` = " . $common[0];
+        break;
+
+    }
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+    
+    $common += $curseur->fetch();
+
+    echo json_encode($common);
+}
+
+function getAvailablePlayers($eid)
+{
+    
+}
+
 ?>

@@ -1,8 +1,19 @@
-27/05/2020
-admin.php: nouveau import, maintenant par type: tournoi/parties libres/compétition
-admin.php: 
-index.php: changement d'agenda: "contrainte budget"->ancien payant
+28/05/2020
 
+admin.php: fix import tournoi (Donnes commentées)
+
+27/05/2020
+
+admin.php: nouveau import, maintenant par type: tournoi/parties libres/compétition
+admin.php: structure .csv: trois types à present
+admin.php: import fonctionnnel pour compétition, tournois et partie libre
+index.php: changement d'agenda: "contrainte budget"->ancien payant
+	   à présent Javascript FullCalendar
+index.php: script d'import et de modification pour l'agenda
+
+
+bdd: gros changements sur TOUTES les tables
+mcd: mise a jour du MCD, il se rapproche plus de la réalité
 
 
 26/05/2020

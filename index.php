@@ -78,67 +78,30 @@ if (!logged())
                         center: 'title',
                         right: 'dayGridMonth,dayGridWeek,dayGridDay'
                     },
-                    defaultDate: '2020-02-12',
+                    defaultDate: '2020-06-01',
+                    firstDay: 1,
+                    defaultView: 'dayGridWeek',
                     navLinks: true, // can click day/week names to navigate views
                     editable: true,
                     eventLimit: true, // allow "more" link when too many events
-                    events: [
+                    eventSources:  [
+                                    
                         {
-                        title: 'All Day Event',
-                        start: '2020-02-01'
-                        },
-                        {
-                        title: 'Long Event',
-                        start: '2020-02-07',
-                        end: '2020-02-10'
-                        },
-                        {
-                        groupId: 999,
-                        title: 'Repeating Event',
-                        start: '2020-02-09T16:00:00'
-                        },
-                        {
-                        groupId: 999,
-                        title: 'Repeating Event',
-                        start: '2020-02-16T16:00:00'
-                        },
-                        {
-                        title: 'Conference',
-                        start: '2020-02-11',
-                        end: '2020-02-13'
-                        },
-                        {
-                        title: 'Meeting',
-                        start: '2020-02-12T10:30:00',
-                        end: '2020-02-12T12:30:00'
-                        },
-                        {
-                        title: 'Lunch',
-                        start: '2020-02-12T12:00:00'
-                        },
-                        {
-                        title: 'Meeting',
-                        start: '2020-02-12T14:30:00'
-                        },
-                        {
-                        title: 'Happy Hour',
-                        start: '2020-02-12T17:30:00'
-                        },
-                        {
-                        title: 'Dinner',
-                        start: '2020-02-12T20:00:00'
-                        },
-                        {
-                        title: 'Birthday Party',
-                        start: '2020-02-13T07:00:00'
-                        },
-                        {
-                        title: 'Click for Google',
-                        url: 'http://google.com/',
-                        start: '2020-02-28'
+                            url: 'assets/sql/interface.php',
+                            method: 'POST',
+                            extraParams: {
+                                function: 'getEvents',
+                            },
+                            failure: function(data) {
+                                alert('there was an error while fetching events!');
+                                console.log(data);
+                            },
+
                         }
+
+
                     ],
-                    // events: 'load.php',
+                    
                     selectable:true,
                     selectHelper:true,
                     select: function(start, end, allDay)
@@ -201,20 +164,11 @@ if (!logged())
 
                     eventClick:function(event)
                     {
-                        if(confirm("Are you sure you want to remove it?"))
+                        if (confirm("Inspecter l'êvenement?"))
                         {
-                            var id = event.id;
-                            
-                            $.ajax({
-                                url:"delete.php",
-                                type:"POST",
-                                data:{id:id},
-                                success:function()
-                                {
-                                    calendar.fullCalendar('refetchEvents');
-                                    alert("Event Removed");
-                                }
-                            })
+                
+                                window.location = 'inscription.php?eid=' + event.event.id;
+                        
                         }
                     },
                 });
@@ -240,10 +194,10 @@ if (!logged())
                     <button type="button" id="sidebarCollapse" class="btn btn-primary"></button>
                 </div>
 
-                <div class="img bg-wrap text-center py-4" style="background-image: url(ressources/img/bg_1.jpg);">
+                <div class="img bg-wrap text-center py-4" style="background-image: url(ressources/img/bg_1.webp);">
                     <div class="user-logo">
-                        <div class="img" style="background-image: url(ressources/img/jm.jpg);"></div>
-                        <h3>Jean-Marie</h3>
+                        <div class="img" style="background-image: url(ressources/img/user.jpg);"></div>
+                        <h3><?php echo $_COOKIE['nom'] . " " . $_COOKIE['prenom'] ?></h3>
                     </div>
                 </div>
 
@@ -251,10 +205,6 @@ if (!logged())
 
                     <li class="active">
                         <a href="#"><span class="fa fa-home mr-3"></span> Agenda</a>
-                    </li>
-
-                    <li>
-                        <a href="#"><span class="fa fa-download mr-3 notif"><small class="d-flex align-items-center justify-content-center">5</small></span> Inscription</a>
                     </li>
 
                     <li>
@@ -279,7 +229,7 @@ if (!logged())
 
             <div id="content" class="p-4 p-md-5 pt-5">
                 
-                <h2>Tableaux des tournois à venir</h2>
+                <h2>Tableaux des évenements à venir</h2>
                 
 
                 <div id='calendar'></div>

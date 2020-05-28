@@ -73,7 +73,10 @@ if (sizeof($_GET) > 0)
                     }, function(data) {
                         if (data)
                         {
-                            $.cookie('logged', data);
+                            data = JSON.parse(data);
+                            $.cookie('logged', data['id']);
+                            $.cookie('nom', data['nom']);
+                            $.cookie('prenom', data['prenom']);
                             window.location = 'index.php';
                         } else {
                             $('#logError').text("Connexion impossible, veuillez réessayer")
