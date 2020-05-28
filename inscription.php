@@ -57,34 +57,171 @@ if (!logged())
                 $('#sidebar').toggleClass('active');
             });
 
+            $(document).on('click', '.desinscription', function (e) {
+                inscriptionID = e.target.id;
+                unregister(inscriptionID);
+            });
+
+
+            // IMPORTANT ! 
+
+            var eid = <?php echo $_GET['eid'] ?>;
+            var aid = <?php echo $_COOKIE['logged'] ?>;
+
             initWithEvent();
 
             function initWithEvent()
             {
-                // 1.             
-                // Populate and construct the calendar
-                // Also shows the description
 
-                    $.post('assets/sql/interface.php',
-                    {
-                        function: 'getEventInfo',
-                        eid: "<?php echo $_GET['eid'] ?>",
-                    }, function(data) {
-                        data = JSON.parse(data);
-                        console.log(data);
-                        setPage(data);
-                    });
+                // 1.             
+                    // Populate and construct the calendar
+                    // Also shows the description
+
+                        $.post('assets/sql/interface.php',
+                        {
+                            function: 'getEventInfo',
+                            eid: eid,
+                        }, function(data) {
+                            data = JSON.parse(data);
+                            setEventDescription(data);
+                        });
 
                 // 2.
                 // Populate tables
 
-                    // I. Get availables players
+                    
+                    // I. Check if player already registered
+                    $.post('assets/sql/interface.php',
+                        {
+                            function: 'getPlayersRegisteredForEvent',
+                            eid: eid,
+                        }, function(data) {
+                            data = JSON.parse(data);
+                            if (data)
+                            {
+                                maSituation(data);
+                                
+                            }
 
+                        });
                 
-            
+                    //
             }
 
-            function setPage(event)
+
+            function unregister(iid)
+            {
+
+                if (confirm("Êtes-vous sûr de vouloir vous desinscrire de l'êvenement?"))
+                {
+                    $.post('assets/sql/interface.php',
+                        {
+                            function: 'unregisterFromEvent',
+                            iid: iid,
+                        }, function(data) {
+                            
+                                if (data)
+                                {
+                                    alert('Une erreur est survenue!\n' + data);
+                                }
+
+                        });
+                }
+
+            }
+
+            function maSituation(data)
+            {
+
+                if (data.length > 0)
+                {
+                    // 1. Vérifie si l'adherent est inscrit
+                    i = 0;
+                    while (i < data.length && data[i]['id'] != aid)
+                    {
+                        i++;
+                    }
+
+                    
+                    var noms = "";
+                    var prenoms = "";
+
+                    // 2. Vérifie si l'adherent est inscrit
+                    if (i < data.length)
+                    {
+
+                        // ID de l'inscription
+                        var iid = data[i][0];
+                        
+                        var pid = data[i]['NumPaire'];
+                        
+                        /* Récupères le nombre de membre de la paire
+                            à savoir, les membres sont tous cote a cote
+                            dans l'array car la requête est faite avec un
+                            order by sur l'id de la paire.
+                        */
+
+                        i = 0;
+                        // Lit jusqu'a changement de paire et construit l'affichage
+                        // pour la table.
+
+                        while (i < data.length && data[i]['NumPaire'] == pid)
+                        {
+                            noms     += data[i]['nom'] + "</br>";
+                            prenoms  += data[i]['prenom'] + "</br>";
+                            i++;
+                        }
+                        var membresDeLaPaire = i;
+
+                        $('#tableSituation > tbody').append(
+                            '<tr>' +
+                                `<td> ${pid}</td>` +
+                                `<td>${noms}</td>` +
+                                `<td>${prenoms}</td>` +
+                                `<td><button id="${iid}" type="button" class="btn btn-danger desinscription">Se desincrire</button></td>` +
+                            '</tr>'
+                        );
+
+                    } else {
+                        i = 0;
+                    }
+
+                        while (i < data.length)
+                        {
+ 
+                            pid = data[i][0];
+                            noms = "";
+                            prenoms = "";
+                            
+
+                            while (i < data.length && pid == data[i]['NumPaire'])
+                            {
+                                console.log(pid);
+                                pid = data[i][0];
+                                noms     += data[i]['nom'] + "</br>";
+                                prenoms  += data[i]['prenom'] + "</br>";
+                                i++;
+
+                            }
+                           
+                            
+                            $('#tableInscrit > tbody').append(
+                                '<tr>' +
+                                    `<td> ${pid}</td>` +
+                                    `<td>${noms}</td>` +
+                                    `<td>${prenoms}</td>`+ +
+                                '</tr>'
+                            );
+                            
+                        }
+
+                }
+
+
+
+            }
+
+            function setEventDescription(event)
             {
 
                 // Common
@@ -126,7 +263,6 @@ if (!logged())
 
             }
 
-
             function createCallendarForOneEvent(event)
             {
                 var calendarEl = document.getElementById('calendar');
@@ -155,6 +291,7 @@ if (!logged())
 
                 calendar.render();
             }
+
 
         });
             
@@ -276,7 +413,7 @@ if (!logged())
 
                     <div class="eqL">
                         <h3>Ma situation: </h3>
-                            <table class="table" id="inscrits">
+                            <table class="table" id="tableSituation">
                                 <thead>
                                     <tr>
                                     <th scope="col">#</th>
@@ -286,12 +423,7 @@ if (!logged())
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr>
-                                    <th scope="row">1</th>
-                                    <td>Mark<br>Jacob</td>
-                                    <td>Otto<br>Thornton</td>
-                                    <td><button>Se desinscrire</button></td>
-                                    </tr>
+                                   
                                 </tbody>
                             </table>
 
@@ -364,7 +496,7 @@ if (!logged())
 
 
                         <h3>Inscrits: </h3>
-                            <table class="table" id="SOS">
+                            <table class="table" id="tableInscrit">
                                 <thead>
                                     <tr>
                                     <tr>
@@ -374,13 +506,7 @@ if (!logged())
                                         </tr>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                        <tr>
-                                        <th scope="row">1</th>
-                                        <td>Mark<br>Jacob</td>
-                                        <td>Otto<br>Thornton</td>
-                                        </tr>
-                                    </tbody>
+                                <tbody> </tbody>
                             </table>
                             
                             <h3>Adherents disponibles: </h3>

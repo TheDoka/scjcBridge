@@ -22,7 +22,13 @@ if (isset($_POST['function']))
 				return getEventInfo(createPDO(), $_POST['eid']);
             break;
             case $_POST['function'] == 'getAvailablePlayers': 
-				return getEventInfo(createPDO(), $_POST['eid']);
+				return getAvailablePlayers(createPDO(), $_POST['eid']);
+            break;
+            case $_POST['function'] == 'getPlayersRegisteredForEvent': 
+				return getPlayersRegisteredForEvent(createPDO(), $_POST['eid']);
+            break;
+            case $_POST['function'] == 'unregisterFromEvent': 
+				return unregisterFromEvent(createPDO(), $_POST['iid']);
 			break;
             
         }
@@ -307,9 +313,57 @@ function getEventInfo($PDO, $eid)
     echo json_encode($common);
 }
 
-function getAvailablePlayers($eid)
+function getAvailablePlayers($PDO, $eid)
 {
+
+
+    // Recupère les adherents qui ne sont pas inscrits à l'évenement 
+    $req = "SELECT * , L.adresse, L.commune 
+            FROM `evenement` E 
+
+            INNER JOIN lieu L
+             ON L.id = E.lieu 
+             
+             WHERE E.`id` = $eid";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
     
+    $common = $curseur->fetch();
+ 
+}
+
+function getPlayersRegisteredForEvent($PDO, $eid)
+{
+
+    $req = "SELECT I.id as NumPaire,A.id, A.nom, A.prenom 
+            FROM `inscrire` I
+            
+            INNER JOIN adherent A
+            ON A.id IN(`adherent`, `partenaire1`, `partenaire2`, `partenaire3`)
+            
+            WHERE `evenementId` = $eid;
+            ORDER BY I.id";
+            
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+    echo json_encode($curseur->fetchAll());
+
+
+}
+
+function unregisterFromEvent($PDO, $iid)
+{
+
+    $req = "DELETE 
+            FROM `inscrire` 
+            WHERE `inscrire`.`id` = $iid";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+    
+    echo $curseur->errorInfo()[2];
 }
 
 ?>

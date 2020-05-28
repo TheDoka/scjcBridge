@@ -1,6 +1,26 @@
 28/05/2020
 
 admin.php: fix import tournoi (Donnes commentées)
+index.php: agenda fonctionnel
+index.php: possibilité de cliquer sur les évenements pour inspecter
+inscription.php
+inscription.php: possibilité de se desinscrire d'un tournoi (inscription fait dans la base, sous peu l'inscription)
+		 * Tableau: ma situation
+		 * Tableau: inscrits
+inscription.php: description évenement
+inscription.php: petit agenda qui montre la date de l'évenement située dans la semaine
+*: plus de Jean-Marie
+bdd: nouvelle table:
+	* favoris
+	* interesse
+bdd: modification de beacoups de table... euh, 
+	* adherent
+	* clées étrangères un peu partout
+	* statut
+
+difficulté(s): 
+	le MCD n'était pas parfait, des tables ont du être refaite ansi que des liens... 
+
 
 27/05/2020
 
