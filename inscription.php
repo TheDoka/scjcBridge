@@ -183,9 +183,11 @@ if (!logged())
                         );
 
                         own_pid = pid;
+                    } else {
+                        own_pid = -1;
                     }
-
-                        i = 0;
+                        
+                                                i = 0;
 
                         while (i < data.length)
                         {
@@ -382,7 +384,7 @@ if (!logged())
                     </li>
 
                     <li>
-                        <a href="#"><span class="fa fa-gift mr-3"></span> Profil / Partenaires </a>
+                        <a href="profil.php"><span class="fa fa-gift mr-3"></span> Profil / Partenaires </a>
                     </li>
 
                     <?php if ($_POST['statut'] == "admin")
@@ -456,18 +458,18 @@ if (!logged())
                                         <th scope="row">2</th>
                                         <td>Jacob</td>
                                         <td>Thornton</td>
-                                        <td><button>Inviter</button></td>
+                                        <td><input type="checkbox"></input></td>
                                     </tr>
                                     <tr>
                                         <th scope="row">3</th>
                                         <td>Larry</td>
                                         <td>the Bird</td>
-                                        <td><button>Inviter</button></td>
+                                        <td><input type="checkbox"></input></td>
                                     </tr>
                                 </tbody>
                             </table>
                     
-                        <h3>SOS Partenaire: </h3>
+                        <h3>SOS Partenaire: <button class="btn btn-primary">Activer/Desactiver</button></h3>
                         <table class="table" id="SOS">
                             <thead>
                                 <tr>
@@ -482,19 +484,19 @@ if (!logged())
                                 <th scope="row">1</th>
                                 <td>Mark</td>
                                 <td>Otto</td>
-                                <td><button>Inscrire</button></td>
+                                <td><button class="btn btn-primary">Inviter</button></td>
                                 </tr>
                                 <tr>
                                 <th scope="row">2</th>
                                 <td>Jacob</td>
                                 <td>Thornton</td>
-                                <td><button>Inscrire</button></td>
+                                <td><button class="btn btn-primary">Inviter</button></td>
                                 </tr>
                                 <tr>
                                 <th scope="row">3</th>
                                 <td>Larry</td>
                                 <td>the Bird</td>
-                                <td><button>Inscrire</button></td>
+                                <td><button class="btn btn-primary">Inviter</button></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -528,8 +530,28 @@ if (!logged())
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        
+                                    <tbody>
+                                    <tr>
+                                        <th scope="row">1</th>
+                                        <td>Mark</td>
+                                        <td>Otto</td>
+                                        <td><input type="checkbox"></input></td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">2</th>
+                                        <td>Jacob</td>
+                                        <td>Thornton</td>
+                                        <td><input type="checkbox"></input></td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">3</th>
+                                        <td>Larry</td>
+                                        <td>the Bird</td>
+                                        <td><input type="checkbox"></input></td>
+                                    </tr>
+                                </tbody>
                                     </tbody>
+
                                 </table>
 
                         </div>

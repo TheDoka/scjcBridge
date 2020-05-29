@@ -30,7 +30,18 @@ if (isset($_POST['function']))
             case $_POST['function'] == 'unregisterFromEvent': 
 				return unregisterFromEvent(createPDO(), $_POST['iid']);
 			break;
-            
+            case $_POST['function'] == 'getPlayerFavorite': 
+				return getPlayerFavorite(createPDO(), $_POST['aid']);
+            break;
+            case $_POST['function'] == 'unsetFromFavorite': 
+				return unsetFromFavorite(createPDO(), $_POST['aid'], $_POST['fid']);
+            break;
+            case $_POST['function'] == 'getEveryMembers': 
+				return getEveryMembers(createPDO(), $_POST['except']);
+            break;
+            case $_POST['function'] == 'addToFavorite': 
+				return addToFavorite(createPDO(), $_POST['aid'], $_POST['fid']);
+			break;
         }
 
 }
@@ -364,6 +375,81 @@ function unregisterFromEvent($PDO, $iid)
     $curseur ->execute();
     
     echo $curseur->errorInfo()[2];
+}
+
+function getPlayerFavorite($PDO, $aid)
+{
+    $req = "SELECT idFavoris, nom, prenom
+            FROM `favoris` 
+            
+            INNER JOIN adherent
+            ON adherent.id = `idFavoris`
+            
+            WHERE idAdherent = $aid";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+    echo json_encode($curseur->fetchAll());
+}
+
+function unsetFromFavorite($PDO, $aid, $fid)
+{
+
+    $req = "DELETE 
+            FROM `favoris`
+            
+            WHERE `idAdherent` = $aid && `idFavoris` = $fid";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+    echo $curseur->errorInfo()[2];
+}
+
+function addToFavorite($PDO, $aid, $fid)
+{
+    $req = "INSERT INTO `favoris` 
+            (`idAdherent`, `idFavoris`) 
+            VALUES ($aid, $fid)";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+    echo $curseur->errorInfo()[2];
+
+}
+
+function getEveryMembers($PDO, $except)
+{
+
+
+    // Liste des ids déjà dans la liste favoris
+        $except = json_decode($except, true);
+
+
+    // 1. Parse pour récupérer que les ids
+        $notThem = "";
+
+        for ($i=0; $i < sizeof($except); $i++) { 
+            $notThem .= $except[$i][0] . ",";
+        }
+    
+    $notThem = substr($notThem, 0, -1);
+  
+
+    // 2. Exectute la requête qui n'inclura pas les except
+    $req = "SELECT * 
+            FROM `adherent` 
+            
+            WHERE `id` NOT IN ($notThem)";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+    echo json_encode($curseur->fetchAll());
+
+
 }
 
 ?>

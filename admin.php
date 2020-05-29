@@ -177,7 +177,7 @@ if (!logged())
                     </li>
 
                     <li>
-                        <a href="#"><span class="fa fa-gift mr-3"></span> Profil / Partenaires </a>
+                        <a href="profil.php"><span class="fa fa-gift mr-3"></span> Profil / Partenaires </a>
                     </li>
 
                     <?php if ($_POST['statut'] == "admin")

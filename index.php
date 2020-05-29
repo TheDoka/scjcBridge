@@ -208,7 +208,7 @@ if (!logged())
                     </li>
 
                     <li>
-                        <a href="#"><span class="fa fa-gift mr-3"></span> Profil / Partenaires </a>
+                        <a href="profil.php"><span class="fa fa-gift mr-3"></span> Profil / Partenaires </a>
                     </li>
 
                     <?php if ($_POST['statut'] == "admin")
@@ -229,7 +229,7 @@ if (!logged())
 
             <div id="content" class="p-4 p-md-5 pt-5">
                 
-                <h2>Tableaux des évenements à venir</h2>
+                <h2>Évènements à venir</h2>
                 
 
                 <div id='calendar'></div>

@@ -121,7 +121,7 @@ input:valid {
 
                     <form id="loginForm">
                         <div class="form-group">
-                            <label>Numéro de license</label>
+                            <label>Numéro de licence</label>
                             <input id="licenseId" minlength="8" type="number" class="form-control" placeholder="Numéro composé de 10 chiffres au maximum" required>
                         </div>
 
