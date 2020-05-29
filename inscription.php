@@ -7,6 +7,16 @@ if (!logged())
     echo "<script>alert(\"Vous n'êtes pas connecté, vous allez être redirigé vers la page de connexion.\"); window.location = 'login.php'; </script>";
 }
 
+
+        $to      = 'lucas.ribotto@gmail.fr';
+        $subject = 'le sujet';
+        $message = 'Bonjour !';
+        $headers = 'From: webmaster@example.com' . "\r\n" .
+        'Reply-To: webmaster@example.com' . "\r\n" .
+        'X-Mailer: PHP/' . phpversion();
+
+        mail($to, $subject, $message, $headers);
+
 ?>
 
 <style>
@@ -20,6 +30,7 @@ if (!logged())
 
         <!-- Jquery -->    
             <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
+
 
         <!-- BOOTSTRAP -->
             <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" rel="stylesheet"  crossorigin="anonymous">
@@ -38,6 +49,17 @@ if (!logged())
             <script src='assets/js/fullcalendar/interaction/main.js'></script>
             <script src='assets/js/fullcalendar/daygrid/main.js'></script>
 
+        <!-- DataTable --> 
+            <script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
+            <script src="https://cdn.datatables.net/1.10.21/js/dataTables.bootstrap4.min.js"></script>
+            <link rel="stylesheet" href="https://cdn.datatables.net/1.10.21/css/dataTables.bootstrap4.min.css">
+        
+        <!-- SmtpJS -->
+        <script src="https://smtpjs.com/v3/smtp.js"></script>
+
+
+        <!-- Main --> 
+            <script src="assets/js/utils.js"></script>
 
         <script type="text/javascript">
 
@@ -62,11 +84,90 @@ if (!logged())
                 unregister(inscriptionID);
             });
 
+            $(document).on('change', '.inscrireAvec', function (e) {
+
+                if(this.checked) {
+                    if (paire > 0 )
+                    {
+                        paire--;
+                    } else {
+                        alert("Impossible d'inscrire un autre joueur, veuillez vérifier le nombre de joueurs ajoutés.");
+                        this.checked = false;
+                    }
+
+                } else {
+                    paire++;
+                }
+
+                if (paire == 0)
+                {
+                    $('#buttonInscrire').addClass("btn-primary");  
+                    $('#buttonInscrire').prop('disabled', false);
+                } else {
+                    $('#buttonInscrire').removeClass("btn-primary");  
+                    $('#buttonInscrire').prop('disabled', true);
+                }
+
+            });
+
+            $('#buttonInscrire').on('click', function() {
+
+                var joueursID = [];
+                $('.inscrireAvec:checkbox:checked').each(function () {
+                    joueursID.push(this.id);
+                });
+                console.log(joueursID);
+
+                registerToEventWith(joueursID, aid);
+               
+
+            });
+
+            var tableJoueurs = $('#tableJoueurs').DataTable({
+               search: false,
+               paging: false,
+               ordering: false,
+               info: false,
+               pageLength: 10,
+               
+               language: {
+                    "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/French.json"
+                    
+               },
+               columns: [
+                    { "width": "5%"},
+                    { "width": "40%"},
+                    { "width": "40%"},
+                    { "width": "10%", "orderable": false }
+                ]
+            });
+
+            var tableMesFavoris = $('#tableMesFavoris').DataTable({
+               search: false,
+               paging: false,
+               ordering: false,
+               info: false,
+               pageLength: 10,
+               
+               language: {
+                    "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/French.json"
+                    
+               },
+               columns: [
+                    { "width": "10%"},
+                    { "width": "40%"},
+                    { "width": "40%"},
+                    { "width": "10%", "orderable": false }
+                ]
+            });
 
             // IMPORTANT ! 
 
             var eid = <?php echo $_GET['eid'] ?>;
             var aid = <?php echo $_COOKIE['logged'] ?>;
+            var inscrit = false;
+            var paire = 0;
+
 
             initWithEvent();
 
@@ -91,28 +192,102 @@ if (!logged())
 
                     
                     // I. Check if player already registered
+                    var alreadyRegistered = [];
+                    $.ajaxSetup({async: false});  
                     $.post('assets/sql/interface.php',
                         {
                             function: 'getPlayersRegisteredForEvent',
                             eid: eid,
                         }, function(data) {
-                            data = JSON.parse(data);
+                            alreadyRegistered = JSON.parse(data);
                             if (data)
                             {
-                                maSituation(data);
-                                
+                                inscrit = maSituation(alreadyRegistered);
                             }
 
                         });
-                
-                    //
+                      
+                    if (!inscrit)
+                    {
+                        $( ".pourInscrire" ).show();
+                            
+                            // II. Récupère favoris
+                            var ignore = [];
+                            
+                            $.ajax({
+                                type: "POST",
+                                async: false,
+                                url: "assets/sql/interface.php",
+                                data: {
+                                    function: 'getPlayerFavorite',
+                                    aid: aid, 
+                                },
+                                success: function(data)
+                                {
+                                    ignore = JSON.parse(data);
+
+                                    if (ignore)
+                                    {
+                                        mesFavorisCheck(ignore, tableMesFavoris);
+                                    }
+                                },
+                            });
+
+                            // On se rajoute à l'array, car on ne veut pas être afficher dans la liste de joueurs
+                            ignore.push([aid]);
+
+                            /*
+                                Particulier ici, la fonction qui 'getEveryMembers' prends un argument 'Except'
+                                qui permet d'ignorer certains membres 'not in'. 
+                                Le problème c'est que 'getPlayersRegisteredForEvent' à pour [0] NumPaire, et,
+                                get.. prends l'id du joueur pour comparer.
+                            */
+
+                            for (let index = 0; index < alreadyRegistered.length; index++) {
+                                alreadyRegistered[index][0] = alreadyRegistered[index][1];
+                                ignore.push(alreadyRegistered[index]);
+                            }
+                            
+
+                            // III. Table des joueurs disponibles
+                            $.post('assets/sql/interface.php',
+                            {
+                                function: 'getEveryMembers',
+                                except: JSON.stringify(ignore),
+                            }, function(data) {
+                                data = JSON.parse(data);
+                                if (data)
+                                {
+                                    joueurDisponible(data);
+                                    console.log(data);
+                                }
+
+                            });
+
+                    }       
             }
 
+
+
+            function joueurDisponible(data)
+            {
+                for (let i = 0; i < data.length; i++) {
+                
+                tableJoueurs.row.add([
+                                    i,
+                                    data[i]['nom'],
+                                    data[i]['prenom'],
+                                    `<td><input type="checkbox" class="inscrireAvec" id="${data[i]['id']}"></input></td>`
+                                ]).node().id = i;
+                    
+                }
+                tableJoueurs.draw();
+            }
 
             function unregister(iid)
             {
 
-                if (confirm("Êtes-vous sûr de vouloir vous desinscrire de l'êvenement?"))
+                if (confirm("Êtes-vous sûr de vouloir vous desinscrire de l'évenement?"))
                 {
                     $.post('assets/sql/interface.php',
                         {
@@ -132,7 +307,7 @@ if (!logged())
 
             function maSituation(data)
             {
-                console.log(data);
+
                 if (data.length > 0)
                 {
                     // 1. Vérifie si l'adherent est inscrit
@@ -187,7 +362,7 @@ if (!logged())
                         own_pid = -1;
                     }
                         
-                                                i = 0;
+                        i = 0;
 
                         while (i < data.length)
                         {
@@ -200,7 +375,6 @@ if (!logged())
                             {
                                 while (i < data.length && pid == data[i]['NumPaire'])
                                 {
-                                    console.log(pid);
                                     pid = data[i][0];
                                     noms     += data[i]['nom'] + "</br>";
                                     prenoms  += data[i]['prenom'] + "</br>";
@@ -224,6 +398,8 @@ if (!logged())
 
                         }
 
+                    // Si notre paire id (c'est à dire nous même) est présent dans les inscrits et n'est pas égale à 'introuvable' alors : vrai sinon faux
+                    return own_pid != -1;
                 }
 
 
@@ -241,7 +417,9 @@ if (!logged())
                 $('#fin').text("Fini le : " + event['dteFin']);
                 $('#lieu').text("Place de l'évenement : " + event['commune'] + ", " + event['adresse']);
                 $('#paire').text("Inscription par paire de " + event['paires']);
-
+                
+                // On fait partie de la paire
+                paire = event['paires']-1;
 
                 let tmp = "";
 
@@ -301,6 +479,32 @@ if (!logged())
                 calendar.render();
             }
 
+            function registerToEventWith(joueursID)
+            {
+
+                if (confirm("Êtes-vous sûr de vouloir vous inscrire à l'évenement?"))
+                {
+                    $.post('assets/sql/interface.php',
+                        {
+                            function: 'registerToEventWith',
+                            aid: aid,
+                            eid: eid,
+                            ids: JSON.stringify(joueursID),
+                        }, function(data) {
+                            
+                                if (data)
+                                {
+                                    alert('Une erreur est survenue!\n' + data);
+
+                                } else {
+                                    document.location.reload(true);
+                                }
+
+                        });
+                }
+
+
+            }
 
         });
             
@@ -313,6 +517,8 @@ if (!logged())
 
 
 <style>
+
+
 
     .LeftRightHeader { 
         overflow:auto;         
@@ -352,8 +558,13 @@ if (!logged())
     }
 
     #inscriptArea{
-        //border-bottom: 1px solid black;
+        overflow-x: hidden;
     }
+
+    .pourInscrire{
+        display: none;
+    }
+
 </style>
 
     <body>
@@ -437,69 +648,40 @@ if (!logged())
                                 </tbody>
                             </table>
 
-                        <h3>Partenaire favoris: </h3>
+                        <div class="pourInscrire">
+                            <h3>Partenaire favoris: </h3>
+                                <table class="table" id="tableMesFavoris">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Nom</th>
+                                            <th>Prénom</th>
+                                            <th>Inscrire avec</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+
+                                    </tbody>
+                                </table>
+                        
+                            <h3>SOS Partenaire: <button class="btn btn-primary">Activer/Desactiver</button></h3>
                             <table class="table" id="SOS">
                                 <thead>
                                     <tr>
-                                        <th scope="col">#</th>
-                                        <th scope="col">Nom</th>
-                                        <th scope="col">Prénom</th>
-                                        <th scope="col">Inscrire avec</th>
+                                    <th>#</th>
+                                    <th>Nom</th>
+                                    <th>Prénom</th>
+                                    <th>Options</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr>
-                                        <th scope="row">1</th>
-                                        <td>Mark</td>
-                                        <td>Otto</td>
-                                        <td><input type="checkbox"></input></td>
-                                    </tr>
-                                    <tr>
-                                        <th scope="row">2</th>
-                                        <td>Jacob</td>
-                                        <td>Thornton</td>
-                                        <td><input type="checkbox"></input></td>
-                                    </tr>
-                                    <tr>
-                                        <th scope="row">3</th>
-                                        <td>Larry</td>
-                                        <td>the Bird</td>
-                                        <td><input type="checkbox"></input></td>
-                                    </tr>
+                                    
                                 </tbody>
                             </table>
-                    
-                        <h3>SOS Partenaire: <button class="btn btn-primary">Activer/Desactiver</button></h3>
-                        <table class="table" id="SOS">
-                            <thead>
-                                <tr>
-                                <th scope="col">#</th>
-                                <th scope="col">First</th>
-                                <th scope="col">Last</th>
-                                <th scope="col">Options</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                <th scope="row">1</th>
-                                <td>Mark</td>
-                                <td>Otto</td>
-                                <td><button class="btn btn-primary">Inviter</button></td>
-                                </tr>
-                                <tr>
-                                <th scope="row">2</th>
-                                <td>Jacob</td>
-                                <td>Thornton</td>
-                                <td><button class="btn btn-primary">Inviter</button></td>
-                                </tr>
-                                <tr>
-                                <th scope="row">3</th>
-                                <td>Larry</td>
-                                <td>the Bird</td>
-                                <td><button class="btn btn-primary">Inviter</button></td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        
+                        </div>
+
+
                     </div>
 
                     <div class="eqR">
@@ -518,60 +700,48 @@ if (!logged())
                                 </thead>
                                 <tbody> </tbody>
                             </table>
+
+                        <div class="pourInscrire">
                             
-                            <h3>Adherents disponibles: </h3>
-                                <table class="table" id="SOS">
+                            <h3>Joueurs disponibles: </h3>
+                                <table class="table" id="tableJoueurs">
                                     <thead>
                                         <tr>
-                                            <th scope="col">#</th>
-                                            <th scope="col">First</th>
-                                            <th scope="col">Last</th>
-                                            <th scope="col">Options</th>
+                                            <th>#</th>
+                                            <th>Last</th>
+                                            <th>First</th>
+                                            <th>Options</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                     <tbody>
-                                    <tr>
-                                        <th scope="row">1</th>
-                                        <td>Mark</td>
-                                        <td>Otto</td>
-                                        <td><input type="checkbox"></input></td>
-                                    </tr>
-                                    <tr>
-                                        <th scope="row">2</th>
-                                        <td>Jacob</td>
-                                        <td>Thornton</td>
-                                        <td><input type="checkbox"></input></td>
-                                    </tr>
-                                    <tr>
-                                        <th scope="row">3</th>
-                                        <td>Larry</td>
-                                        <td>the Bird</td>
-                                        <td><input type="checkbox"></input></td>
-                                    </tr>
-                                </tbody>
+                                   
+                                    </tbody>
                                     </tbody>
 
                                 </table>
 
-                        </div>
+                        </div>   
+                        
+                        
                     </div>
+
+                </div>
                     
-                
-                
-                    <footer class="footer">
+                <footer class="footer">
                         <div class="container-fluid">
                             <div class="row text-center">
                                 <div style="padding: 1em; "class="col-lg-12">      
-                                    <button type="button" class="btn btn-secondary btn-lg btn-mid20">S'inscire</button>
+                                    <button id="buttonInscrire" type="button" class="btn btn-secondary btn-lg btn-mid20 pourInscrire" disabled>S'inscire</button>
                                 </div>
                             </div>
                         </div>        
                  </footer>
 
-                </div>
+            </div>
                 
 
+       
         </div>
 
 

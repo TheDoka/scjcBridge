@@ -1,3 +1,20 @@
+29/05/2020
+* Reunion avec des membres du club, vues et discussions sur le projet
+profil.php
+profil.php: tableau mes favoris/liste de joeurs
+			* Ajouter Favoris / Retirer Favoris 
+			* 100% dynamique
+			* N'affiche que dans les joeurs les non favoris
+
+inscription.php: Ma situation: fix de bugs
+				* inscrits    : fix de bugs
+				* Partenaires favoris s'affiche
+				* Joueurs disponibles s'affiche (n'est pas favoris/déjà inscrit/vous-même)
+				* Inscription: detection type de paire.. possiblité de cocher ses partenaires et s'incrire avec
+				* Si inscrit cache les formulaire d'inscriptions
+				* Desinscription update
+				* Design amélioré
+
 28/05/2020
 
 admin.php: fix import tournoi (Donnes commentées)

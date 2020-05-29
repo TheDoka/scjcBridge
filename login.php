@@ -71,6 +71,7 @@ if (sizeof($_GET) > 0)
                         licenseId: licenseId,
                         pass: pass
                     }, function(data) {
+                        
                         if (data)
                         {
                             data = JSON.parse(data);

@@ -20,7 +20,7 @@ if (!logged())
 
         <!-- Jquery -->    
             <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
-
+            
         <!-- BOOTSTRAP -->
             <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" rel="stylesheet"  crossorigin="anonymous">
             <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
@@ -35,6 +35,8 @@ if (!logged())
             <script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
             <script src="https://cdn.datatables.net/1.10.21/js/dataTables.bootstrap4.min.js"></script>
             <link rel="stylesheet" href="https://cdn.datatables.net/1.10.21/css/dataTables.bootstrap4.min.css">
+
+        <!-- Main -->
 
         <script type="text/javascript">
 
@@ -79,7 +81,9 @@ if (!logged())
                search: false,
                paging: false,
                ordering: false,
-
+               info: false,
+               pageLength: 10,
+               
                language: {
                     "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/French.json"
                     
@@ -95,6 +99,8 @@ if (!logged())
 
             var tableJoueurs = $('#tableJoueurs').DataTable({
                 ordering: false,
+                info: false,
+                pageLength: 50,
                language: {
                     "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/French.json"
                     

@@ -41,6 +41,9 @@ if (isset($_POST['function']))
             break;
             case $_POST['function'] == 'addToFavorite': 
 				return addToFavorite(createPDO(), $_POST['aid'], $_POST['fid']);
+            break;
+            case $_POST['function'] == 'registerToEventWith': 
+				return registerToEventWith(createPDO(), $_POST['aid'], $_POST['eid'], $_POST['ids']);
 			break;
         }
 
@@ -54,7 +57,7 @@ function connexion($PDO, $licenseId, $pass)
     $requete = "SELECT *
                 FROM adherent
                 WHERE numeroLicense = $licenseId && password = '$pass'";
-                    
+
     $curseur = $PDO->prepare($requete);
     $curseur ->execute();
     
@@ -364,6 +367,29 @@ function getPlayersRegisteredForEvent($PDO, $eid)
 
 }
 
+function registerToEventWith($PDO, $aid, $eid, $joueursID)
+{
+    
+    $joueursID = json_decode($joueursID);
+
+    if (sizeof($joueursID) == 1)
+    {
+        $joueursID[1] = 'NULL';
+        $joueursID[2] = 'NULL';
+    }
+
+    $req = "INSERT INTO `inscrire` 
+            (`id`, `evenementId`, `adherent`, `partenaire1`, `partenaire2`, `partenaire3`) 
+            VALUES (NULL, '$eid', '$aid', $joueursID[0], $joueursID[1], $joueursID[2]);";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+    echo $curseur->errorInfo()[2];
+
+    
+}
+
 function unregisterFromEvent($PDO, $iid)
 {
 
@@ -423,10 +449,9 @@ function addToFavorite($PDO, $aid, $fid)
 function getEveryMembers($PDO, $except)
 {
 
-
+    
     // Liste des ids déjà dans la liste favoris
         $except = json_decode($except, true);
-
 
     // 1. Parse pour récupérer que les ids
         $notThem = "";
@@ -436,7 +461,6 @@ function getEveryMembers($PDO, $except)
         }
     
     $notThem = substr($notThem, 0, -1);
-  
 
     // 2. Exectute la requête qui n'inclura pas les except
     $req = "SELECT * 
