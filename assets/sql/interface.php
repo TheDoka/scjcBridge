@@ -1,50 +1,69 @@
 <?php
 
 include('sql.php');
-include('../php/utils.php');
+include(dirname(__FILE__) . '/../php/utils.php');
 
 if (isset($_POST['function']))
 {
 
-		switch(true)
+		switch($_POST['function'])
 		{
 
-			case $_POST['function'] == 'login': 
+			case  'login': 
 				return connexion(createPDO(), $_POST['licenseId'], $_POST['pass']);
             break;
-            case $_POST['function'] == 'importEvents': 
+            case 'importEvents': 
 				return importEvents(createPDO(), $_POST['events'], $_POST['type']);
             break;
-            case $_POST['function'] == 'getEvents': 
+            case 'getEvents': 
 				return getEvents(createPDO());
             break;
-            case $_POST['function'] == 'getEventInfo': 
-				return getEventInfo(createPDO(), $_POST['eid']);
+            case 'getEventInfo': 
+				return getEventInfoInterface(createPDO(), $_POST['eid']);
             break;
-            case $_POST['function'] == 'getAvailablePlayers': 
+            case 'getAvailablePlayers': 
 				return getAvailablePlayers(createPDO(), $_POST['eid']);
             break;
-            case $_POST['function'] == 'getPlayersRegisteredForEvent': 
+            case 'getPlayersRegisteredForEvent': 
 				return getPlayersRegisteredForEvent(createPDO(), $_POST['eid']);
             break;
-            case $_POST['function'] == 'unregisterFromEvent': 
+            case 'unregisterFromEvent': 
 				return unregisterFromEvent(createPDO(), $_POST['iid']);
 			break;
-            case $_POST['function'] == 'getPlayerFavorite': 
-				return getPlayerFavorite(createPDO(), $_POST['aid']);
+            case 'getPlayerFavorite': 
+				return getPlayerFavorite(createPDO(), $_POST['aid'], $_POST['except']);
             break;
-            case $_POST['function'] == 'unsetFromFavorite': 
+            case 'unsetFromFavorite': 
 				return unsetFromFavorite(createPDO(), $_POST['aid'], $_POST['fid']);
             break;
-            case $_POST['function'] == 'getEveryMembers': 
+            case 'getEveryMembers': 
 				return getEveryMembers(createPDO(), $_POST['except']);
             break;
-            case $_POST['function'] == 'addToFavorite': 
+            case 'addToFavorite': 
 				return addToFavorite(createPDO(), $_POST['aid'], $_POST['fid']);
             break;
-            case $_POST['function'] == 'registerToEventWith': 
+            case 'registerToEventWith': 
 				return registerToEventWith(createPDO(), $_POST['aid'], $_POST['eid'], $_POST['ids']);
-			break;
+            break;
+            case 'registerSOSpartenaire':
+                return registerSOSpartenaire(createPDO(), $_POST['aid'], $_POST['eid']);
+            break;
+            case 'unregisterSOSpartenaire':
+                return unregisterSOSpartenaire(createPDO(), $_POST['aid'], $_POST['eid']);
+            break; 
+            case 'isRegisteredForSOSpartenaire':
+                return isRegisteredForSOSpartenaire(createPDO(), $_POST['aid'], $_POST['eid']);
+            break;
+            case 'getPlayersRegisteredForSOSpartenaire':
+                return getPlayersRegisteredForSOSpartenaire(createPDO(), $_POST['eid'], $_POST['aid']);
+            break;
+            case 'sendMail':
+                require_once('../php/mail.php');
+                return sendMail($_POST['to'], $_POST['user'], $_POST['subject'], $_POST['body']);
+            break;
+            case 'createUnregistrationMailForEvent':
+                return createUnregistrationMailForEvent(createPDO(), $_POST['aid'], $_POST['nom'], $_POST['eid'], $_POST['ids']);
+            break;
         }
 
 }
@@ -241,40 +260,51 @@ function makeEventTile($data, $type)
 function getEvents($PDO)
 {
 
-    $data = array();
+    $result = [];
+    $autres = [];
 
-    $query = "SELECT * FROM evenement 
-              ORDER BY id";
+    $query = "SELECT * 
+            FROM `evenement` E
+            
+            INNER JOIN competition C 
+            ON E.`id` = C.evenementId;
+            
+
+            SELECT * 
+            FROM `evenement` E
+
+            INNER JOIN tournoi C 
+            ON E.`id` = C.evenementId;
+            
+
+            SELECT * 
+            FROM `evenement` E
+
+            INNER JOIN partieLibre C 
+            ON E.`id` = C.evenementId;";
 
     $statement = $PDO->prepare($query);
     $statement->execute();
 
     $result = $statement->fetchAll();
     
-    /*
-
-            [id] => 27
-            [titre] => Tournoi en IMP par 2
-            [prix] => 
-            [dteDebut] => 2020-06-01 09:00:00
-            [dteFin] => 2020-06-01 21:00:00
-            [lieu] => 1
-            [type] => 1
-            [paires] => 0
-
-    */
-
-    foreach($result as $row)
-    {
-        $data[] = array(
-            'id'   => $row["id"],
-            'title'   => $row["titre"],
-            'start'   => $row["dteDebut"],
-            'end'   => $row["dteFin"]
-        );
+    for ($i=0; $i < 2; $i++) { 
+        $statement->nextRowset();
+        $result = array_merge($result, $statement->fetchAll());
     }
 
-    echo json_encode($data);
+    $except = getFormatedIds($result);
+
+    $query = "SELECT * 
+            FROM `evenement` 
+            WHERE `id` NOT IN ($except);";
+
+    $statement = $PDO->prepare($query);
+    $statement->execute();
+
+    $result = $result = array_merge($result, $statement->fetchAll());
+
+    echo json_encode($result);
     
 }
 
@@ -324,7 +354,13 @@ function getEventInfo($PDO, $eid)
     
     $common += $curseur->fetch();
 
-    echo json_encode($common);
+    return $common;
+}
+
+function getEventInfoInterface($PDO, $eid)
+{
+    // Façon moche de permettre de reutiliser la fonction sans Jquery
+    echo json_encode(getEventInfo($PDO, $eid));
 }
 
 function getAvailablePlayers($PDO, $eid)
@@ -403,8 +439,27 @@ function unregisterFromEvent($PDO, $iid)
     echo $curseur->errorInfo()[2];
 }
 
-function getPlayerFavorite($PDO, $aid)
+function unregisterFromEventComplex($PDO, $aid, $eid)
 {
+
+    $req = "DELETE 
+            FROM `inscrire` 
+            WHERE `adherent` = $aid && `evenementId` = $eid";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+    echo $req;
+    echo $curseur->errorInfo()[2];
+}
+
+function getPlayerFavorite($PDO, $aid, $except)
+{
+    // Liste des ids déjà dans la liste favoris
+    $except = json_decode($except, true);
+    
+    // 1. Parse pour récupérer que les ids
+        $notThem = getFormatedIds($except);
+
     $req = "SELECT idFavoris, nom, prenom
             FROM `favoris` 
             
@@ -412,6 +467,11 @@ function getPlayerFavorite($PDO, $aid)
             ON adherent.id = `idFavoris`
             
             WHERE idAdherent = $aid";
+
+    if ($notThem)
+    {
+        $req .= " && `idFavoris` NOT IN ($notThem)";
+    }
 
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
@@ -448,30 +508,186 @@ function addToFavorite($PDO, $aid, $fid)
 
 function getEveryMembers($PDO, $except)
 {
-
-    
+        
     // Liste des ids déjà dans la liste favoris
-        $except = json_decode($except, true);
+    $except = json_decode($except, true);
 
     // 1. Parse pour récupérer que les ids
-        $notThem = "";
-
-        for ($i=0; $i < sizeof($except); $i++) { 
-            $notThem .= $except[$i][0] . ",";
-        }
-    
-    $notThem = substr($notThem, 0, -1);
+        $notThem = getFormatedIds($except);
 
     // 2. Exectute la requête qui n'inclura pas les except
     $req = "SELECT * 
-            FROM `adherent` 
-            
-            WHERE `id` NOT IN ($notThem)";
+            FROM `adherent`";
+
+    if ($notThem)
+    {
+        $req .= " WHERE `id` NOT IN ($notThem)";
+    }
 
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
 
     echo json_encode($curseur->fetchAll());
+
+
+}
+
+function getFormatedIds($except)
+{
+
+    // 1. Parse pour récupérer que les ids
+    $notThem = "";
+
+    for ($i=0; $i < sizeof($except); $i++) { 
+        $notThem .= $except[$i][0] . ",";
+    }
+
+    $notThem = substr($notThem, 0, -1);
+
+    // "0, 1, 2, 3, 4"
+    return $notThem;
+}
+
+function registerSOSpartenaire($PDO, $aid, $eid)
+{
+
+    $req = "INSERT INTO `sos`
+            (`idAdherent`, `evenementId`) 
+            VALUES ($aid, $eid)";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+    echo $curseur->errorInfo()[2];
+
+
+}
+
+function unregisterSOSpartenaire($PDO, $aid, $eid)
+{
+
+    $req = "DELETE 
+            FROM `sos` 
+            WHERE `idAdherent` = $aid && `evenementId` = $eid";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+    
+    echo $curseur->errorInfo()[2];
+
+}
+
+function isRegisteredForSOSpartenaire($PDO, $aid, $eid)
+{
+    $req = "SELECT * 
+            FROM `sos`
+            WHERE `idAdherent` = $aid && `evenementId` = $eid";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+    echo json_encode($curseur->fetchAll());
+
+}
+
+function getPlayersRegisteredForSOSpartenaire($PDO, $eid, $aid)
+{
+    $req = "SELECT A.id, A.nom, A.prenom
+            FROM `sos` S
+            
+            INNER JOIN adherent A
+            ON S.`idAdherent` = A.`id`
+            
+            WHERE `evenementId` = $eid && A.`id` != $aid";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+    echo json_encode($curseur->fetchAll());
+
+}
+
+function getPlayersInfo($PDO, $ids)
+{
+
+    $req = "SELECT * 
+            FROM adherent
+            WHERE id IN ($ids)";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+    
+    return $curseur->fetchAll();
+}
+
+function createUnregistrationMailForEvent($PDO, $aid, $nom, $eid, $ids)
+{
+
+    /*
+
+        Subject: Notification d'inscription
+        Body: 
+            Vous venez d'être inscrit au [TITRE].
+            Vous êtes inscrits avec: 
+                * NOM prenom
+                * NOM prenom
+        Cliquer ici pour refuser/annuler: [LIEN]
+        
+    */
+
+    $ids = getFormatedIds($ids);
+    $playersInfos = getPlayersInfo($PDO, $ids);
+
+    $toMails = [];
+    $players = "";
+    foreach ($playersInfos as $key => $player) {
+        array_push($toMails, $player['mail']);
+        $players .= $player['nom'] . " " . $player['prenom'] . "\n";
+    }
+
+    // Recupère les information de l'évenement:
+    $eventInfo = getEventInfo($PDO, $eid);
+
+    $content[] = array(
+        'subject' => "Notification d'inscription",
+        'body' => 
+            " Bonjour, </br>" .
+            " Vous venez d'être inscrit au " . $eventInfo['titre'] . "</br>" . 
+            " Vous êtes inscrits avec: $players". "</br>" . 
+            " Si vous souhaiter refuser ou annuler l'inscription cliquez ici: " . createUnregistrationLinkForEvent($aid, $nom, $eid). 
+            " Ou rendez vous sur l'interface.",
+        'to' => $toMails,
+    );
+
+    print_r($content);
+
+
+}
+
+function createUnregistrationLinkForEvent($aid, $nom, $eid)
+{
+    /*
+        Devra être changer par la vraie url.
+        http://aweebsserver.ddns.net:1500/scjcBridge/api.php?token=1693114948b55af09711300df7ae2822&f=unre&eid=45
+
+        On créer le lien de désinscription.
+        Actuellement ce lien est un lien 'personnel' le token est créer avec les informations utilisateur.
+        Le plus propre, serait de créer un lien de 'groupe', qui supprime l'inscription avec son id et non avec un laison utilisateur.
+        Après il resterait le même problème de sécurité, je serai obligé de créer un token pour authentifier l'utilisateur et sa demande,
+        alors, quoi qu'il arrive ces informations seront dans la requête. Donc c'est peu important.
+
+
+    */
+
+    $site_url = "http://aweebsserver.ddns.net:1500/scjcBridge/";
+    $link = $site_url . "api.php?token=" . md5($aid . $nom) . "&f=unre&eid=" . $eid;
+    return $link;
+
+}
+
+function presSendMail()
+{
 
 
 }

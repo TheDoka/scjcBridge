@@ -46,6 +46,8 @@ if (!logged())
 
         <script type="text/javascript">
 
+            var todayDate = new Date().toISOString().slice(0,10);
+
             $(document).ready(function(){
 
                 var fullHeight = function() {
@@ -62,11 +64,6 @@ if (!logged())
                     $('#sidebar').toggleClass('active');
                 });
 
-
-            });
-
-                    
-            document.addEventListener('DOMContentLoaded', function() {
                 var calendarEl = document.getElementById('calendar');
 
                 var calendar = new FullCalendar.Calendar(calendarEl, {
@@ -78,50 +75,17 @@ if (!logged())
                         center: 'title',
                         right: 'dayGridMonth,dayGridWeek,dayGridDay'
                     },
-                    defaultDate: '2020-06-01',
+                    defaultDate: todayDate,
                     firstDay: 1,
                     defaultView: 'dayGridWeek',
                     navLinks: true, // can click day/week names to navigate views
                     editable: true,
                     eventLimit: true, // allow "more" link when too many events
-                    eventSources:  [
-                                    
-                        {
-                            url: 'assets/sql/interface.php',
-                            method: 'POST',
-                            extraParams: {
-                                function: 'getEvents',
-                            },
-                            failure: function(data) {
-                                alert('there was an error while fetching events!');
-                                console.log(data);
-                            },
-
-                        }
-
-
-                    ],
-                    
                     selectable:true,
                     selectHelper:true,
                     select: function(start, end, allDay)
                     {
-                        var title = prompt("Enter Event Title");
-                            if(title)
-                            {
-                                var start = $.fullCalendar.formatDate(start, "Y-MM-DD HH:mm:ss");
-                                var end = $.fullCalendar.formatDate(end, "Y-MM-DD HH:mm:ss");
-                                $.ajax({
-                                    url:"insert.php",
-                                    type:"POST",
-                                    data:{title:title, start:start, end:end},
-                                    success:function()
-                                    {
-                                        calendar.fullCalendar('refetchEvents');
-                                        alert("Added Successfully");
-                                    }
-                                })
-                            }
+                       
                     },
                     editable:true,
                     eventResize:function(event)
@@ -164,18 +128,107 @@ if (!logged())
 
                     eventClick:function(event)
                     {
-                        if (confirm("Inspecter l'êvenement?"))
+                        if (event.event['classNames'][1] == 'inscrire')
                         {
-                
-                                window.location = 'inscription.php?eid=' + event.event.id;
-                        
+                            if (confirm("Inspecter l'êvenement?"))
+                            {
+
+                                    window.location = 'inscription.php?eid=' + event.event.id;
+
+                            
+                            }
                         }
                     },
                 });
 
+                callendarImport();
                 calendar.render();
+
+                function callendarImport()
+                {
+
+
+                    events = [];
+                    $.ajaxSetup({async: false});  
+                    $.post('assets/sql/interface.php',
+                    {
+                        function: 'getEvents',
+                    }, function(data) {
+                        events = JSON.parse(data);
+
+                        console.log(events);
+
+                    });
+
+                    events.forEach(event => {
+                        /*
+                        #type 
+                            0 : évenement
+                            1 : tournoi
+                            2 : partie libre
+                            3 : compétition
+                        */
+                       
+                        bcColor = "";
+                        classNames = [];
+
+                        switch (parseInt(event['type']))
+                        {
+                            case 0:
+                                bcColor = "#8e6eb7";
+                                classNames.push("evenement");
+                                classNames.push("inscrire");
+                            break;
+
+                            case 1:
+                                bcColor = "#e14658";
+                                classNames.push("tournoi");
+                                classNames.push("inscrire");
+                            break;
+
+                            case 2:
+                                bcColor = "#aaaaaa";
+                                classNames.push("partieLibre");
+                                classNames.push("inscrire");
+                            break;
+                            
+                            case 3: 
+                                bcColor = "#c0b3a0";
+                                classNames.push("competition");
+                                // On vérifie que la compétition n'a pas commencé
+                                //if (event.stade == 0)
+                                //{
+
+                                    classNames.push("inscrire");
+
+                                //}
+                            break;
+
+                        }
+
+                        calendar.addEvent({
+                            id: event[0],
+                            title: event['titre'],
+                            start: event['dteDebut'],
+                            end: event['dteFin'],
+                            classNames: classNames,
+                            backgroundColor: bcColor
+                        });
+
+                    });
+
+                    
+                    
+
+                }  
+
+                
+
+
+
             });
 
+ 
 
 
         </script>

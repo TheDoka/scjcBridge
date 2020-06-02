@@ -7,7 +7,7 @@ function mesFavorisCheck(data, table)
                 i+1,
                 data[i]['nom'],
                 data[i]['prenom'],
-                `<td><input type="checkbox" class="inscrireAvec" id="${data[i][0]}"></input></td>`,
+                `<td><input type="checkbox" class="inscrireAvec favoris" id="${data[i][0]}"></input></td>`,
             ]).node().id = i;
         
     }
@@ -24,7 +24,7 @@ function mesFavorisButton(data, table)
                 i+1,
                 data[i]['nom'],
                 data[i]['prenom'],
-                `<td><button id="${data[i][0]}" type="button" class="btn btn-danger retirerFavori">Retirer favori</button></td>`,
+                `<td><button id="${data[i][0]}" type="button" class="btn btn-danger retirerFavori favoris">Retirer favori</button></td>`,
             ]).node().id = i;
         
 
@@ -32,6 +32,3 @@ function mesFavorisButton(data, table)
     
 
 }
-
-
-

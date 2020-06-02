@@ -24,5 +24,9 @@ function correctDateTimeFormat($date, $time)
         return "$tmp[2]-$tmp[1]-$tmp[0] $time";
 }
 
+function redirect($dir)
+{
+    header("location: $dir");
+}
 
 ?>

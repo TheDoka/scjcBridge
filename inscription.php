@@ -1,29 +1,15 @@
 <?php 
 
 include('assets/php/utils.php');
+
 $_POST['statut'] = "admin";
 if (!logged())
 {
     echo "<script>alert(\"Vous n'êtes pas connecté, vous allez être redirigé vers la page de connexion.\"); window.location = 'login.php'; </script>";
 }
 
-
-        $to      = 'lucas.ribotto@gmail.fr';
-        $subject = 'le sujet';
-        $message = 'Bonjour !';
-        $headers = 'From: webmaster@example.com' . "\r\n" .
-        'Reply-To: webmaster@example.com' . "\r\n" .
-        'X-Mailer: PHP/' . phpversion();
-
-        mail($to, $subject, $message, $headers);
-
 ?>
-
-<style>
-
-</style>
     
-
 <html>
 
     <head>
@@ -55,7 +41,6 @@ if (!logged())
             <link rel="stylesheet" href="https://cdn.datatables.net/1.10.21/css/dataTables.bootstrap4.min.css">
         
         <!-- SmtpJS -->
-        <script src="https://smtpjs.com/v3/smtp.js"></script>
 
 
         <!-- Main --> 
@@ -112,19 +97,45 @@ if (!logged())
 
             $('#buttonInscrire').on('click', function() {
 
-                var joueursID = [];
-                $('.inscrireAvec:checkbox:checked').each(function () {
-                    joueursID.push(this.id);
-                });
-                console.log(joueursID);
+                let joueursID = [];
 
-                registerToEventWith(joueursID, aid);
-               
+                $('.inscrireAvec:checkbox:checked').each(function () {
+                        joueursID.push(this.id);
+                });
+                
+                if (SOSenabled)
+                {
+                    // On desinscrit les joueurs SOS
+                    //unregisterSOSpartenaire(joueursID);
+                }
+
+                notifyRegisterByMail(aid, eid, joueursID);
+                //registerToEventWith(joueursID, aid);
+
+                
 
             });
 
+            $('#buttonSOS').on('click', function() {
+
+                if ($('#tableSOS').is(':hidden'))
+                {
+                    if (confirm('Êtes-vous sûr de vouloir rejoindre SOS partenaire?'))
+                    {
+                        registerSOSpartenaire();
+                        $('#tableSOS').show();          
+
+                    }
+                } else {
+                    if (confirm('Êtes-vous sûr de vouloir vous desinscrire de SOS partenaire?'))
+                    {
+                        unregisterSOSpartenaire();
+                        $('#tableSOS').hide();
+                    }
+                }
+            });
+
             var tableJoueurs = $('#tableJoueurs').DataTable({
-               search: false,
                paging: false,
                ordering: false,
                info: false,
@@ -143,7 +154,6 @@ if (!logged())
             });
 
             var tableMesFavoris = $('#tableMesFavoris').DataTable({
-               search: false,
                paging: false,
                ordering: false,
                info: false,
@@ -161,23 +171,44 @@ if (!logged())
                 ]
             });
 
+            var tableSOSpartenaire = $('#tableSOS').DataTable({
+               paging: false,
+               ordering: false,
+               info: false,
+               pageLength: 10,
+               searching: false,
+
+               language: {
+                    "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/French.json"
+                    
+               },
+               columns: [
+                    { "width": "10%"},
+                    { "width": "40%"},
+                    { "width": "40%"},
+                    { "width": "10%", "orderable": false }
+                ]
+            });
+
             // IMPORTANT ! 
 
             var eid = <?php echo $_GET['eid'] ?>;
+            var ety = null;
             var aid = <?php echo $_COOKIE['logged'] ?>;
+            var anom = '<?php echo $_COOKIE['nom'] ?>';
             var inscrit = false;
             var paire = 0;
-
+            var SOSenabled = false;
 
             initWithEvent();
 
             function initWithEvent()
             {
-
+                
                 // 1.             
                     // Populate and construct the calendar
                     // Also shows the description
-
+                        $.ajaxSetup({async: false});  
                         $.post('assets/sql/interface.php',
                         {
                             function: 'getEventInfo',
@@ -190,10 +221,23 @@ if (!logged())
                 // 2.
                 // Populate tables
 
+                    // I. Check if player as registered for SOS partenaire
+                    $.post('assets/sql/interface.php',
+                        {
+                            function: 'isRegisteredForSOSpartenaire',
+                            eid: eid,
+                            aid: aid,
+                        }, function(data) {
+                            data = JSON.parse(data);
+
+                            SOSenabled = data.length > 0;
+
+                        });
+
                     
-                    // I. Check if player already registered
+                    // II. Check if player already registered
                     var alreadyRegistered = [];
-                    $.ajaxSetup({async: false});  
+                      
                     $.post('assets/sql/interface.php',
                         {
                             function: 'getPlayersRegisteredForEvent',
@@ -202,36 +246,58 @@ if (!logged())
                             alreadyRegistered = JSON.parse(data);
                             if (data)
                             {
-                                inscrit = maSituation(alreadyRegistered);
+                                inscrit = maSituationInscrits(alreadyRegistered);
                             }
 
                         });
-                      
-                    if (!inscrit)
-                    {
-                        $( ".pourInscrire" ).show();
-                            
-                            // II. Récupère favoris
-                            var ignore = [];
-                            
-                            $.ajax({
-                                type: "POST",
-                                async: false,
-                                url: "assets/sql/interface.php",
-                                data: {
-                                    function: 'getPlayerFavorite',
-                                    aid: aid, 
-                                },
-                                success: function(data)
-                                {
-                                    ignore = JSON.parse(data);
+                     
 
-                                    if (ignore)
-                                    {
-                                        mesFavorisCheck(ignore, tableMesFavoris);
-                                    }
-                                },
-                            });
+                    if (SOSenabled)
+                    {
+                        $('.pourInscrire').show();
+                        $('.JO').hide();    // Cache table joueurs
+                        $('.PA').hide();    // Cache table joueurs
+
+                        $('#buttonSOS').show();
+                        $('#tableSOS').show();
+
+                        $.post('assets/sql/interface.php',
+                        {
+                            function: 'getPlayersRegisteredForSOSpartenaire',
+                            eid: eid,
+                            aid: aid,
+                        }, function(data) {
+                            data = JSON.parse(data);
+                            populateSOSpartenaire(data);
+
+                        });
+
+                    }
+
+                    // Si n'est pas inscrit et SOS desactivé
+                    if (!inscrit && !SOSenabled)
+                    {
+                            $( ".pourInscrire" ).show();
+
+                            switch (ety)
+                            {
+                                case 0: // Evenement 
+                                break;
+                                                         
+                                case 1: // tournoi
+                                    $('#buttonSOS').show();
+                                break;
+
+                                case 2: // Partie Libre 
+                                    
+                                break;
+
+                                case 3: // Compétition
+                                    
+                                break;
+                            }
+                            var ignore = [];
+
 
                             // On se rajoute à l'array, car on ne veut pas être afficher dans la liste de joueurs
                             ignore.push([aid]);
@@ -247,9 +313,36 @@ if (!logged())
                                 alreadyRegistered[index][0] = alreadyRegistered[index][1];
                                 ignore.push(alreadyRegistered[index]);
                             }
-                            
 
-                            // III. Table des joueurs disponibles
+
+                            // III. Récupère favoris
+                            var favoris = [];
+                            $.ajax({
+                                type: "POST",
+                                async: false,
+                                url: "assets/sql/interface.php",
+                                data: {
+                                    function: 'getPlayerFavorite',
+                                    aid: aid, 
+                                    except: JSON.stringify(ignore),
+                                },
+                                success: function(data)
+                                {
+
+                                    favoris = JSON.parse(data);
+                                    if (favoris)
+                                    {
+                                        mesFavorisCheck(favoris, tableMesFavoris);
+                                    }
+                                },
+                            });
+
+                            // Push favoris to ignore list
+                            for (let index = 0; index < favoris.length; index++) {
+                                ignore.push(favoris[index]);
+                            }
+
+                            // IV. Table des joueurs disponibles
                             $.post('assets/sql/interface.php',
                             {
                                 function: 'getEveryMembers',
@@ -258,8 +351,7 @@ if (!logged())
                                 data = JSON.parse(data);
                                 if (data)
                                 {
-                                    joueurDisponible(data);
-                                    console.log(data);
+                                    populatejoueurDisponible(data);
                                 }
 
                             });
@@ -268,18 +360,34 @@ if (!logged())
             }
 
 
-
-            function joueurDisponible(data)
+            function populateSOSpartenaire(data)
             {
+
                 for (let i = 0; i < data.length; i++) {
                 
-                tableJoueurs.row.add([
+                tableSOSpartenaire.row.add([
                                     i,
                                     data[i]['nom'],
                                     data[i]['prenom'],
-                                    `<td><input type="checkbox" class="inscrireAvec" id="${data[i]['id']}"></input></td>`
+                                    `<td><input type="checkbox" class="inscrireAvec SOS" id="${data[i]['id']}"></input></td>`
                                 ]).node().id = i;
                     
+                }
+                tableSOSpartenaire.draw();
+
+            }
+
+            function populatejoueurDisponible(data)
+            {
+                for (let i = 0; i < data.length; i++) {
+                
+                    tableJoueurs.row.add([
+                                        i,
+                                        data[i]['nom'],
+                                        data[i]['prenom'],
+                                        `<td><input type="checkbox" class="inscrireAvec" id="${data[i]['id']}"></input></td>`
+                                    ]).node().id = i;
+                        
                 }
                 tableJoueurs.draw();
             }
@@ -298,6 +406,8 @@ if (!logged())
                                 if (data)
                                 {
                                     alert('Une erreur est survenue!\n' + data);
+                                } else {
+                                    document.location.reload(true);
                                 }
 
                         });
@@ -305,7 +415,7 @@ if (!logged())
 
             }
 
-            function maSituation(data)
+            function maSituationInscrits(data)
             {
 
                 if (data.length > 0)
@@ -418,6 +528,8 @@ if (!logged())
                 $('#lieu').text("Place de l'évenement : " + event['commune'] + ", " + event['adresse']);
                 $('#paire').text("Inscription par paire de " + event['paires']);
                 
+                ety = parseInt(event['type']);
+
                 // On fait partie de la paire
                 paire = event['paires']-1;
 
@@ -502,6 +614,63 @@ if (!logged())
 
                         });
                 }
+
+
+            }
+
+            function registerSOSpartenaire()
+            {
+                    $.post('assets/sql/interface.php',
+                        {
+                            function: 'registerSOSpartenaire',
+                            aid: aid,
+                            eid: eid,
+                        }, function(data) {
+                                if (data)
+                                {
+                                    alert('Une erreur est survenue!\n' + data);
+                                } else {
+                                   document.location.reload(true);
+                                }
+
+                        });
+            }
+       
+            function unregisterSOSpartenaire()
+            {
+                    $.post('assets/sql/interface.php',
+                        {
+                            function: 'unregisterSOSpartenaire',
+                            aid: aid,
+                            eid: eid,
+                        }, function(data) {
+                                if (data)
+                                {
+                                    alert('Une erreur est survenue!\n' + data);
+                                } else {
+                                   document.location.reload(true);
+                                }
+
+                        });
+            }
+       
+
+            function notifyRegisterByMail(aid, eid, ids)
+            {
+
+
+                $.post('assets/sql/interface.php',
+                    {
+                        function: 'createUnregistrationMailForEvent',
+                        aid: aid,
+                        nom: anom,
+                        eid: eid,
+                        ids: ids,
+                    }, function(data) {
+                        console.log(data);
+
+                    });
+                
 
 
             }
@@ -648,7 +817,7 @@ if (!logged())
                                 </tbody>
                             </table>
 
-                        <div class="pourInscrire">
+                        <div class="pourInscrire PA">
                             <h3>Partenaire favoris: </h3>
                                 <table class="table" id="tableMesFavoris">
                                     <thead>
@@ -663,9 +832,10 @@ if (!logged())
 
                                     </tbody>
                                 </table>
-                        
-                            <h3>SOS Partenaire: <button class="btn btn-primary">Activer/Desactiver</button></h3>
-                            <table class="table" id="SOS">
+                        </div>
+                        <div class="pourInscrire SOS">
+                            <h3 style="display: none;" id="buttonSOS">SOS Partenaire: <button class="btn btn-primary">Activer/Desactiver</button></h3>
+                            <table style="display: none;" class="table" id="tableSOS">
                                 <thead>
                                     <tr>
                                     <th>#</th>
@@ -678,8 +848,8 @@ if (!logged())
                                     
                                 </tbody>
                             </table>
-                        
                         </div>
+                        
 
 
                     </div>
@@ -701,7 +871,7 @@ if (!logged())
                                 <tbody> </tbody>
                             </table>
 
-                        <div class="pourInscrire">
+                        <div class="pourInscrire JO">
                             
                             <h3>Joueurs disponibles: </h3>
                                 <table class="table" id="tableJoueurs">

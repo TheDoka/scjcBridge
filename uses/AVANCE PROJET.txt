@@ -1,3 +1,25 @@
+02/05/2020
+index.php: nouveau système d'import d'évenements
+			* couleurs par evenement
+			* ...
+bdd: table SOS
+
+mail.php
+Utilisation de PHPMailer dans le projet
+inscription.php: envoie mail
+				 création lien de desinscription évenement avec token etc... 
+				 modifications de certaines fonctions
+				 inscription à SOS / desinscription
+				 affichage ou non de SOS partenaire
+
+api.php: token
+		 desinscription
+
+interface.php: trop
+
+
+
+
 29/05/2020
 * Reunion avec des membres du club, vues et discussions sur le projet
 profil.php

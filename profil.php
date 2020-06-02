@@ -126,7 +126,7 @@ if (!logged())
                 // Populate tables
 
                     
-                var favoris = null;
+                var favoris = [];
                 // I. Get favoris
                 $.ajax({
                     type: "POST",
@@ -135,9 +135,11 @@ if (!logged())
                     data: {
                         function: 'getPlayerFavorite',
                         aid: aid, 
+                        except: JSON.stringify(favoris),
                     },
                     success: function(data)
                     {
+                        console.log(data);
                         favoris = JSON.parse(data);
 
                         if (favoris)
