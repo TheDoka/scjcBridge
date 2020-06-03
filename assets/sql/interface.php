@@ -135,9 +135,6 @@ function importEvents($PDO, $evenements, $type)
     // We skip one cause it's the header
     for ($i=1; $i < sizeof($evenements['data']) -1 ; $i++) { 
         
-        // Skip ",,,,"
-            if ($evenements['data'][$i][0] == ",,,,,") continue;
-
         // Pour chaque ligne on coupe à chaque virgule
             $curr = explode(',', $evenements['data'][$i][0]);
  
@@ -618,7 +615,6 @@ function getLowFormatedIds($except)
     // "0, 1, 2, 3, 4"
     return $notThem;
 }
-
 
 function registerSOSpartenaire($PDO, $aid, $eid)
 {
