@@ -20,11 +20,15 @@ if (!logged())
 
         <!-- Jquery -->    
             <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
-            
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css" integrity="sha256-rByPlHULObEjJ6XQxW/flG2r+22R5dKiAoef+aXWfik=" crossorigin="anonymous" />
+       
         <!-- BOOTSTRAP -->
             <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" rel="stylesheet"  crossorigin="anonymous">
             <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
         
+        <!-- Jquery --> 
+            <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>  <!-- Modal forms -->
+
         <!-- FontAwesome -->    
             <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
 
@@ -83,7 +87,11 @@ if (!logged())
                ordering: false,
                info: false,
                pageLength: 10,
-               
+               fnDrawCallback: function (oSettings) {
+                    $('.dataTables_filter').each(function () {
+                        $(this).append('<button id="addExterne" class="btn btn-primary" style="margin-right: 1em; margin-left: 1em;" type="button">Ajouter externe</button>');
+                    });
+                },
                language: {
                     "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/French.json"
                     
@@ -101,6 +109,7 @@ if (!logged())
                 ordering: false,
                 info: false,
                 pageLength: 50,
+                
                language: {
                     "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/French.json"
                     
@@ -276,10 +285,66 @@ if (!logged())
                 }
                 tableJoueurs.draw();
             }
-
             
-     
+            function addUser()
+            {
 
+                valid =($('#lastname').val() + $('#name').val() + $('#email').val() + $('#license').val()).length > 5;
+
+                if (valid)
+                {
+                    if (confirm("Êtes-vous sûr de vouloir ajouter ce joueur?"))
+                    {
+                        $.post('assets/sql/interface.php',
+                            {
+                                function: 'quickInsertUserAndFav',
+                                aid: aid,
+                                lastname: $('#lastname').val(),
+                                name: $('#name').val(),
+                                mail: $('#email').val(),
+                                license: $('#license').val(),
+                            }, function(data) {
+                                    if (data)
+                                    {
+                                        alert('Une erreur est survenue!\n' + data);
+                                    } else {
+                                        alert('Joueur ajouté!');
+                                        document.location.reload(true);
+                                    }                      
+                            });
+                    }
+                } else {
+                    alert('Veuillez vérifier les champs.')
+                }
+
+            }
+
+            var dialog = $( "#dialog-form" ).dialog({
+                autoOpen: false,
+                height: 350,
+                width: 280,
+                modal: true,
+                resize: false,
+                buttons: {
+                    "Ajouter l'utilisateur": addUser,
+                    Cancel: function() {
+                        dialog.dialog( "close" );
+                    }
+                },
+                close: function() {
+                    form[ 0 ].reset();
+                }
+            });
+
+            form = dialog.find( "form" ).on( "submit", function( event ) {
+                event.preventDefault();
+
+            });
+
+            $(document).on('click', '#addExterne', function (e) {
+                dialog.dialog( "open" );
+            });
+     
         });
 
 
@@ -294,10 +359,34 @@ if (!logged())
 
 <style>
 
+
 </style>
 
     <body>
         
+    <div id="dialog-form" title="Ajouter un utilisateur">
+        <p class="validateTips">Toutes les champs sont requis.</p>
+        
+        <form>
+            <fieldset>
+                <label for="lastname">Nom: </label>
+                <input type="text" name="lastname" id="lastname" value="" class="text ui-widget-content ui-corner-all">
+                
+                <label for="name">Prenom: </label>
+                <input type="text" name="name" id="name" value="" class="text ui-widget-content ui-corner-all">
+
+                <label for="email">Mail: </label>
+                <input type="text" name="email" id="email" value="" class="text ui-widget-content ui-corner-all">
+
+                <label for="license">Numéro licence: </label>
+                <input type="number" name="license" id="license" value="" class="text ui-widget-content ui-corner-all">
+            
+                <!-- Allow form submission with keyboard without duplicating the dialog button -->
+                <input type="submit" tabindex="-1" style="position:absolute; top:-1000px">
+            </fieldset>	
+		</form>
+    </div>
+
         <div class="wrapper d-flex align-items-stretch">
             
             <nav id="sidebar">

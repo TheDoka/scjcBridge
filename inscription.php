@@ -97,22 +97,28 @@ if (!logged())
 
             $('#buttonInscrire').on('click', function() {
 
-                let joueursID = [];
-
-                $('.inscrireAvec:checkbox:checked').each(function () {
-                        joueursID.push(this.id);
-                });
-                
-                if (SOSenabled)
+                if (confirm("Êtes-vous sûr de vouloir vous inscrire à l'évenement?"))
                 {
-                    // On desinscrit les joueurs SOS
-                    //unregisterSOSpartenaire(joueursID);
-                }
-
-                notifyRegisterByMail(aid, eid, joueursID);
-                //registerToEventWith(joueursID, aid);
-
                 
+                    let joueursID = [];
+
+                    $('.inscrireAvec:checkbox:checked').each(function () {
+                            joueursID.push(this.id);
+                    });
+                    
+                    //registerToEventWith(joueursID, aid);
+
+                    //if (SOSenabled)
+                    //{
+                    //    // On desinscrit les joueurs SOS
+                    //    unregisterSOSpartenaire(joueursID);
+                    //}
+                    
+                    notifyRegisterByMail(eid, joueursID);
+
+                }
+                
+
 
             });
 
@@ -129,7 +135,7 @@ if (!logged())
                 } else {
                     if (confirm('Êtes-vous sûr de vouloir vous desinscrire de SOS partenaire?'))
                     {
-                        unregisterSOSpartenaire();
+                        unregisterSOSpartenaire([]);
                         $('#tableSOS').hide();
                     }
                 }
@@ -194,7 +200,8 @@ if (!logged())
 
             var eid = <?php echo $_GET['eid'] ?>;
             var ety = null;
-            var aid = <?php echo $_COOKIE['logged'] ?>;
+            var aid = <?php echo intval($_COOKIE['logged']) ?>;
+
             var anom = '<?php echo $_COOKIE['nom'] ?>';
             var inscrit = false;
             var paire = 0;
@@ -214,6 +221,7 @@ if (!logged())
                             function: 'getEventInfo',
                             eid: eid,
                         }, function(data) {
+
                             data = JSON.parse(data);
                             setEventDescription(data);
                         });
@@ -427,7 +435,7 @@ if (!logged())
                         i++;
                     }
 
-                    
+
                     var noms = "";
                     var prenoms = "";
 
@@ -440,7 +448,8 @@ if (!logged())
                         
                         var pid = data[i]['NumPaire'];
                         
-                        /* Récupères le nombre de membre de la paire
+                        /* 
+                            Récupères le nombre de membre de la paire
                             à savoir, les membres sont tous cote a cote
                             dans l'array car la requête est faite avec un
                             order by sur l'id de la paire.
@@ -448,7 +457,7 @@ if (!logged())
 
                         // Lit jusqu'a changement de paire et construit l'affichage
                         // pour la table.
-
+                        i=0;
                         while (i < data.length && data[i]['NumPaire'] == pid)
                         {
                             noms     += data[i]['nom'] + "</br>";
@@ -594,8 +603,6 @@ if (!logged())
             function registerToEventWith(joueursID)
             {
 
-                if (confirm("Êtes-vous sûr de vouloir vous inscrire à l'évenement?"))
-                {
                     $.post('assets/sql/interface.php',
                         {
                             function: 'registerToEventWith',
@@ -613,8 +620,6 @@ if (!logged())
                                 }
 
                         });
-                }
-
 
             }
 
@@ -636,17 +641,24 @@ if (!logged())
                         });
             }
        
-            function unregisterSOSpartenaire()
+            function unregisterSOSpartenaire(joueursId)
             {
+
+                    // L'array joueursId contient tout les joueurs cochés, or il ne nous contient pas.
+                    // Quand on s'inscrit on souhaite ne plus être sur la liste SOS partenaire, ainsi que nos partenaires inscrits.
+
+                    joueursId.push(aid);
+
                     $.post('assets/sql/interface.php',
                         {
                             function: 'unregisterSOSpartenaire',
-                            aid: aid,
+                            players: JSON.stringify(joueursId),
                             eid: eid,
                         }, function(data) {
+                            console.log(data);
                                 if (data)
                                 {
-                                    alert('Une erreur est survenue!\n' + data);
+                                   alert('Une erreur est survenue!\n' + data);
                                 } else {
                                    document.location.reload(true);
                                 }
@@ -655,22 +667,31 @@ if (!logged())
             }
        
 
-            function notifyRegisterByMail(aid, eid, ids)
+            function notifyRegisterByMail(eid, ids)
             {
 
+                ids.push(aid);
 
+                $mailContent = [];
                 $.post('assets/sql/interface.php',
                     {
                         function: 'createUnregistrationMailForEvent',
-                        aid: aid,
-                        nom: anom,
                         eid: eid,
                         ids: ids,
                     }, function(data) {
-                        console.log(data);
-
+                        mailContent = JSON.parse(data);
                     });
-                
+
+                console.log(mailContent);
+                return;
+
+                $.post('assets/sql/interface.php',
+                {
+                    function: 'sendMail',
+                    mailContent: mailContent,
+                }, function(data) {
+                    console.log(data);
+                });
 
 
             }

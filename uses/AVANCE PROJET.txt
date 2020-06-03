@@ -1,3 +1,7 @@
+03/05/2020
+profil.php: ajout d'utilisateur externe dans les favoris
+inscription.php: fix affichage
+
 02/05/2020
 index.php: nouveau système d'import d'évenements
 			* couleurs par evenement

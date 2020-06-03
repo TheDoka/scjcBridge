@@ -49,7 +49,7 @@ if (isset($_POST['function']))
                 return registerSOSpartenaire(createPDO(), $_POST['aid'], $_POST['eid']);
             break;
             case 'unregisterSOSpartenaire':
-                return unregisterSOSpartenaire(createPDO(), $_POST['aid'], $_POST['eid']);
+                return unregisterSOSpartenaire(createPDO(), $_POST['players'], $_POST['eid']);
             break; 
             case 'isRegisteredForSOSpartenaire':
                 return isRegisteredForSOSpartenaire(createPDO(), $_POST['aid'], $_POST['eid']);
@@ -59,10 +59,13 @@ if (isset($_POST['function']))
             break;
             case 'sendMail':
                 require_once('../php/mail.php');
-                return sendMail($_POST['to'], $_POST['user'], $_POST['subject'], $_POST['body']);
+                return sendMail($_POST['mailContent']);
             break;
             case 'createUnregistrationMailForEvent':
-                return createUnregistrationMailForEvent(createPDO(), $_POST['aid'], $_POST['nom'], $_POST['eid'], $_POST['ids']);
+                return createUnregistrationMailForEvent(createPDO(), $_POST['eid'], $_POST['ids']);
+            break;
+            case 'quickInsertUserAndFav':
+                return quickInsertUserAndFav(createPDO(), $_POST['aid'], $_POST['lastname'], $_POST['name'], $_POST['mail'], $_POST['license']);
             break;
         }
 
@@ -342,8 +345,22 @@ function getEventInfo($PDO, $eid)
 
         case 3:
             // Compétition
-            $req = "SELECT * 
-                    FROM `competition` 
+
+            $req = "SELECT CC.`id`, CC.`evenementId`, C.libelle AS catComp, D.libelle AS division, S.libelle as stade, P.libelle as public
+                    FROM `competition` CC
+                                        
+                    INNER JOIN categorieCompetition C
+                    ON `catComp` = C.id
+                    
+                    INNER JOIN division D
+                    ON `division` = D.id
+                    
+                    INNER JOIN stade S
+                    ON `stade` = S.id
+                    
+                    INNER JOIN public P
+                    ON `public` = P.id 
+                    
                     WHERE `evenementId` = " . $common[0];
         break;
 
@@ -540,6 +557,7 @@ function getFormatedIds($except)
 
     for ($i=0; $i < sizeof($except); $i++) { 
         $notThem .= $except[$i][0] . ",";
+       
     }
 
     $notThem = substr($notThem, 0, -1);
@@ -547,6 +565,24 @@ function getFormatedIds($except)
     // "0, 1, 2, 3, 4"
     return $notThem;
 }
+
+function getLowFormatedIds($except)
+{
+
+    // 1. Parse pour récupérer que les ids
+    $notThem = "";
+
+    for ($i=0; $i < sizeof($except); $i++) { 
+        $notThem .= $except[$i] . ",";
+       
+    }
+
+    $notThem = substr($notThem, 0, -1);
+
+    // "0, 1, 2, 3, 4"
+    return $notThem;
+}
+
 
 function registerSOSpartenaire($PDO, $aid, $eid)
 {
@@ -563,12 +599,16 @@ function registerSOSpartenaire($PDO, $aid, $eid)
 
 }
 
-function unregisterSOSpartenaire($PDO, $aid, $eid)
+function unregisterSOSpartenaire($PDO, $jouersId, $eid)
 {
+
+    $jouersId = json_decode($jouersId);
+
+    $jouersId = getLowFormatedIds($jouersId);
 
     $req = "DELETE 
             FROM `sos` 
-            WHERE `idAdherent` = $aid && `evenementId` = $eid";
+            WHERE `idAdherent` IN ($jouersId) && `evenementId` = $eid";
 
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
@@ -612,7 +652,8 @@ function getPlayersInfo($PDO, $ids)
 
     $req = "SELECT * 
             FROM adherent
-            WHERE id IN ($ids)";
+            WHERE id IN ($ids)
+            ORDER BY $ids";
 
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
@@ -621,7 +662,7 @@ function getPlayersInfo($PDO, $ids)
     return $curseur->fetchAll();
 }
 
-function createUnregistrationMailForEvent($PDO, $aid, $nom, $eid, $ids)
+function createUnregistrationMailForEvent($PDO, $eid, $ids)
 {
 
     /*
@@ -636,8 +677,12 @@ function createUnregistrationMailForEvent($PDO, $aid, $nom, $eid, $ids)
         
     */
 
+    // Récupère informations du réfèrent
+    // [lastOne]
+
     $ids = getFormatedIds($ids);
     $playersInfos = getPlayersInfo($PDO, $ids);
+    $referant = $playersInfos[sizeof($playersInfos)-1];
 
     $toMails = [];
     $players = "";
@@ -651,16 +696,17 @@ function createUnregistrationMailForEvent($PDO, $aid, $nom, $eid, $ids)
 
     $content[] = array(
         'subject' => "Notification d'inscription",
-        'body' => 
-            " Bonjour, </br>" .
-            " Vous venez d'être inscrit au " . $eventInfo['titre'] . "</br>" . 
-            " Vous êtes inscrits avec: $players". "</br>" . 
-            " Si vous souhaiter refuser ou annuler l'inscription cliquez ici: " . createUnregistrationLinkForEvent($aid, $nom, $eid). 
-            " Ou rendez vous sur l'interface.",
+        'body' => nl2br(
+            " Bonjour, \n" .
+            " Vous venez d'être inscrit au " . $eventInfo['titre'] . " par: " . $referant['nom'] . ' ' . $referant['prenom'] . "\n". 
+            " Membres de la paire: \n $players \n" . 
+            " Si vous souhaiter refuser ou annuler l'inscription cliquez ici: " . createUnregistrationLinkForEvent($referant[0], $referant['nom'], $eid). ".".
+            " Ou rendez vous sur l'interface."
+        ),
         'to' => $toMails,
     );
 
-    print_r($content);
+    echo json_encode($content);
 
 
 }
@@ -686,9 +732,20 @@ function createUnregistrationLinkForEvent($aid, $nom, $eid)
 
 }
 
-function presSendMail()
+function quickInsertUserAndFav($PDO, $aid, $lastname, $name, $mail, $license)
 {
+    $req = "INSERT INTO `adherent` 
+            (`id`, `nom`, `prenom`, `mail`, `tel`, `commune`, `sexe`, `password`, `numeroLicense`, `idStatut`, `idNiveau`) 
+            VALUES (NULL, '$lastname', '$name', '$mail', NULL, '', '', '', '$license', 4, 1);
+            ";
 
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+    $fid = $PDO->lastInsertId();
+
+    addToFavorite($PDO, $aid, $fid);
+
+    echo $curseur->errorInfo()[2];
 
 }
 
