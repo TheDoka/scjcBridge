@@ -29,6 +29,17 @@ function mesFavorisButton(data, table)
         
 
     }
-    
-
 }
+
+
+function isInArray(arr, element)
+{
+    i = 0;
+    while (i < arr.length && arr[i][0] != element)
+    { 
+        i++;
+    }
+
+    return i < arr.length;
+}
+

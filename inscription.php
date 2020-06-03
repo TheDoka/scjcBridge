@@ -95,7 +95,7 @@ if (!logged())
 
             });
 
-            $('#buttonInscrire').on('click', function() {
+            $(document).on('click', '#buttonInscrire', function (e) {
 
                 if (confirm("Êtes-vous sûr de vouloir vous inscrire à l'évenement?"))
                 {
@@ -106,19 +106,42 @@ if (!logged())
                             joueursID.push(this.id);
                     });
                     
-                    //registerToEventWith(joueursID, aid);
-
-                    //if (SOSenabled)
-                    //{
-                    //    // On desinscrit les joueurs SOS
-                    //    unregisterSOSpartenaire(joueursID);
-                    //}
                     
-                    notifyRegisterByMail(eid, joueursID);
+                    let error = registerToEventWith(joueursID, aid);
+
+                    //should be false
+                    if (!error)
+                    {
+                        if (SOSenabled)
+                        {
+                            // On desinscrit les joueurs SOS
+                            unregisterSOSpartenaire(joueursID);
+                        }
+                        
+                        notifyRegisterByMail(eid, joueursID);
+                    }
+                    
 
                 }
                 
 
+
+            });
+
+
+            $(document).on('click', '#buttonInscrirePL', function (e) {
+
+                if (confirm("Êtes-vous sûr de vouloir vous inscrire à l'évenement?"))
+                {
+
+                    let joueursID = [aid];
+                    
+                    error = registerToEventWith(joueursID, aid);                   
+                    if (!error)
+                    {
+                        notifyRegisterByMail(eid, joueursID);
+                    }
+                }
 
             });
 
@@ -264,7 +287,7 @@ if (!logged())
                     {
                         $('.pourInscrire').show();
                         $('.JO').hide();    // Cache table joueurs
-                        $('.PA').hide();    // Cache table joueurs
+                        $('.PA').hide();    // Cache table favoris
 
                         $('#buttonSOS').show();
                         $('#tableSOS').show();
@@ -290,14 +313,25 @@ if (!logged())
                             switch (ety)
                             {
                                 case 0: // Evenement 
+                                    $('.JO').hide();    // Cache table joueurs
+                                    $('.PA').hide();    // Cache table favoris
+                                    $('#buttonInscrire').removeAttr("disabled");
+                                    $('#buttonInscrire').addClass("btn-primary");  
+                                    $('#buttonInscrire').prop('disabled', false);
+                                    $('#buttonInscrire').prop('id', 'buttonInscrirePL');
                                 break;
                                                          
                                 case 1: // tournoi
                                     $('#buttonSOS').show();
                                 break;
 
-                                case 2: // Partie Libre 
-                                    
+                                case 2:                 // Partie Libre 
+                                    $('.JO').hide();    // Cache table joueurs
+                                    $('.PA').hide();    // Cache table favoris
+                                    $('#buttonInscrire').removeAttr("disabled");
+                                    $('#buttonInscrire').addClass("btn-primary");  
+                                    $('#buttonInscrire').prop('disabled', false);
+                                    $('#buttonInscrire').prop('id', 'buttonInscrirePL');
                                 break;
 
                                 case 3: // Compétition
@@ -405,7 +439,19 @@ if (!logged())
 
                 if (confirm("Êtes-vous sûr de vouloir vous desinscrire de l'évenement?"))
                 {
-                    $.post('assets/sql/interface.php',
+                        $.post('assets/sql/interface.php',
+                        {
+                            function: 'getMembersFromIIDForEvent',
+                            iid: iid,
+                        }, function(data) {
+                            
+                                let ids = JSON.parse(data);
+                                console.log(ids);
+                                notifiyUnRegisterByMail(eid, ids);
+
+                        });
+
+                        $.post('assets/sql/interface.php',
                         {
                             function: 'unregisterFromEvent',
                             iid: iid,
@@ -419,6 +465,10 @@ if (!logged())
                                 }
 
                         });
+
+
+                    
+
                 }
 
             }
@@ -535,7 +585,6 @@ if (!logged())
                 $('#debut').text("Commence le : " + event['dteDebut']);
                 $('#fin').text("Fini le : " + event['dteFin']);
                 $('#lieu').text("Place de l'évenement : " + event['commune'] + ", " + event['adresse']);
-                $('#paire').text("Inscription par paire de " + event['paires']);
                 
                 ety = parseInt(event['type']);
 
@@ -548,6 +597,7 @@ if (!logged())
                 {
                     case 1:
                         // Tournoi
+                        $('#paire').text("Inscription par paire de " + event['paires']);
                         tmp = "Apéro: " + event['apero'] +
                               " / Repas: " + event['repas'];
                         $('#more').text(tmp);
@@ -560,6 +610,7 @@ if (!logged())
                     case 3:
 
                         // Compétition
+                        $('#paire').text("Inscription par paire de " + event['paires']);
                         tmp = "Catégorie: " + event['catComp'] +
                               " / Division: " + event['division'] +
                               " / Public: " + event['public'] +
@@ -610,11 +661,11 @@ if (!logged())
                             eid: eid,
                             ids: JSON.stringify(joueursID),
                         }, function(data) {
-                            
+                                console.log(data);
                                 if (data)
                                 {
                                     alert('Une erreur est survenue!\n' + data);
-
+                                    return true;
                                 } else {
                                     document.location.reload(true);
                                 }
@@ -675,15 +726,12 @@ if (!logged())
                 $mailContent = [];
                 $.post('assets/sql/interface.php',
                     {
-                        function: 'createUnregistrationMailForEvent',
+                        function: 'createRegistrationNotificationMailForEvent',
                         eid: eid,
                         ids: ids,
                     }, function(data) {
                         mailContent = JSON.parse(data);
                     });
-
-                console.log(mailContent);
-                return;
 
                 $.post('assets/sql/interface.php',
                 {
@@ -693,6 +741,29 @@ if (!logged())
                     console.log(data);
                 });
 
+
+            }
+
+            function notifiyUnRegisterByMail(eid, ids)
+            {
+ 
+                $mailContent = [];
+                $.post('assets/sql/interface.php',
+                    {
+                        function: 'createUnRegistrationNotificationMailForEvent',
+                        eid: eid,
+                        ids: ids,
+                    }, function(data) {
+                        mailContent = JSON.parse(data);
+                    });
+
+                $.post('assets/sql/interface.php',
+                {
+                    function: 'sendMail',
+                    mailContent: mailContent,
+                }, function(data) {
+                    console.log(data);
+                });
 
             }
 
@@ -813,7 +884,7 @@ if (!logged())
                         <span id="debut">Commence le: 13/08/2001 à 13h00</span></br>
                         <span id="fin">Fini le: 13/08/2001 à 13h00</span></br>
                         <span id="lieu">Lieu: Loudun, adresse</span></br>
-                        <span id="paire">Inscription par paire de 2</span></br>
+                        <span id="paire"></span></br>
                         <span id="more"></span></br>
                     </div>
                     <div id='calendar' class="right"></div>
@@ -923,7 +994,7 @@ if (!logged())
                         <div class="container-fluid">
                             <div class="row text-center">
                                 <div style="padding: 1em; "class="col-lg-12">      
-                                    <button id="buttonInscrire" type="button" class="btn btn-secondary btn-lg btn-mid20 pourInscrire" disabled>S'inscire</button>
+                                    <button id="buttonInscrire" type="button" class="btn btn-secondary btn-lg btn-mid20" disabled>S'inscire</button>
                                 </div>
                             </div>
                         </div>        

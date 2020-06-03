@@ -5,12 +5,20 @@ include(dirname(__FILE__) . '/../php/utils.php');
 
 if (isset($_POST['function']))
 {
+        /*
+            Global
+        */
+
+        $site_url = "http://aweebsserver.ddns.net:1500/scjcBridge/";
 
 		switch($_POST['function'])
 		{
 
 			case  'login': 
 				return connexion(createPDO(), $_POST['licenseId'], $_POST['pass']);
+            break;
+            case  'getUser': 
+				return getUser(createPDO(), $_POST['aid']);
             break;
             case 'importEvents': 
 				return importEvents(createPDO(), $_POST['events'], $_POST['type']);
@@ -61,11 +69,20 @@ if (isset($_POST['function']))
                 require_once('../php/mail.php');
                 return sendMail($_POST['mailContent']);
             break;
-            case 'createUnregistrationMailForEvent':
-                return createUnregistrationMailForEvent(createPDO(), $_POST['eid'], $_POST['ids']);
+            case 'createRegistrationNotificationMailForEvent':
+                return createRegistrationNotificationMailForEvent(createPDO(), $_POST['eid'], $_POST['ids']);
+            break;
+            case 'createUnRegistrationNotificationMailForEvent':
+                return createUnRegistrationNotificationMailForEvent(createPDO(), $_POST['eid'], $_POST['ids']);
+            break;
+            case 'getMembersFromIIDForEvent':
+                return getMembersFromIIDForEvent(createPDO(), $_POST['iid']);
             break;
             case 'quickInsertUserAndFav':
                 return quickInsertUserAndFav(createPDO(), $_POST['aid'], $_POST['lastname'], $_POST['name'], $_POST['mail'], $_POST['license']);
+            break;
+            case 'getAllPlayersRegistrations':
+                return getAllPlayersRegistrations(createPDO(), $_POST['aid']);
             break;
         }
 
@@ -90,6 +107,25 @@ function connexion($PDO, $licenseId, $pass)
     
 }
 
+function getUser($PDO, $aid)
+{
+    $req = "SELECT `id`,`nom`,`prenom`,`mail`,`tel`,`commune`,`sexe`,`password`,`numeroLicense`, S.libelle as statut, N.numeroSerie as Niveau
+            FROM adherent A
+            
+            INNER JOIN statut S
+            ON A.idStatut = S.idStatut
+            
+            INNER JOIN niveau N
+            ON A.idNiveau = N.idNiveau";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+    
+    $unClient = $curseur->fetch();
+    
+    echo json_encode($unClient);
+}
+
 function importEvents($PDO, $evenements, $type)
 {
     $req = "";
@@ -104,7 +140,7 @@ function importEvents($PDO, $evenements, $type)
 
         // Pour chaque ligne on coupe à chaque virgule
             $curr = explode(',', $evenements['data'][$i][0]);
-            print_r($curr);
+ 
         /* 
 
             Common:  
@@ -465,7 +501,7 @@ function unregisterFromEventComplex($PDO, $aid, $eid)
 
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
-    echo $req;
+
     echo $curseur->errorInfo()[2];
 }
 
@@ -662,7 +698,25 @@ function getPlayersInfo($PDO, $ids)
     return $curseur->fetchAll();
 }
 
-function createUnregistrationMailForEvent($PDO, $eid, $ids)
+function getMembersFromIIDForEvent($PDO, $iid)
+{
+
+    $req = "SELECT A.id, A.nom, A.prenom 
+            FROM `inscrire` I
+            
+            INNER JOIN adherent A
+            ON A.id IN(`adherent`, `partenaire1`, `partenaire2`, `partenaire3`)
+
+            WHERE I.`id` = $iid";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+    
+    echo json_encode($curseur->fetchAll());
+
+}
+
+function createRegistrationNotificationMailForEvent($PDO, $eid, $ids)
 {
 
     /*
@@ -711,6 +765,39 @@ function createUnregistrationMailForEvent($PDO, $eid, $ids)
 
 }
 
+function createUnRegistrationNotificationMailForEvent($PDO, $eid, $ids)
+{
+
+    global $site_url;
+    
+    $ids = getFormatedIds($ids);
+    $playersInfos = getPlayersInfo($PDO, $ids);
+
+    $toMails = [];
+    $players = "";
+    foreach ($playersInfos as $key => $player) {
+        array_push($toMails, $player['mail']);
+        $players .= $player['nom'] . " " . $player['prenom'] . "\n";
+    }
+
+    // Recupère les information de l'évenement:
+    $eventInfo = getEventInfo($PDO, $eid);
+    
+    $content[] = array(
+        'subject' => "Notification de desinscription",
+        'body' => nl2br(
+            " Bonjour, \n" .
+            " Vous venez de vous desinscrire de " . $eventInfo['titre'] . "\n" .
+            " Les joueurs suivants ont été desinscrits: \n " . $players. "\n" . 
+            " Pour inspecter l'évenement cliquer ici: " . $site_url . "inscription.php?eid=" . $eid
+        ),
+        'to' => $toMails,
+    );
+
+    echo json_encode($content);
+
+}
+
 function createUnregistrationLinkForEvent($aid, $nom, $eid)
 {
     /*
@@ -726,7 +813,8 @@ function createUnregistrationLinkForEvent($aid, $nom, $eid)
 
     */
 
-    $site_url = "http://aweebsserver.ddns.net:1500/scjcBridge/";
+    global $site_url;
+
     $link = $site_url . "api.php?token=" . md5($aid . $nom) . "&f=unre&eid=" . $eid;
     return $link;
 
@@ -746,6 +834,20 @@ function quickInsertUserAndFav($PDO, $aid, $lastname, $name, $mail, $license)
     addToFavorite($PDO, $aid, $fid);
 
     echo $curseur->errorInfo()[2];
+
+}
+
+function getAllPlayersRegistrations($PDO, $aid)
+{
+
+    $req = "SELECT `evenementId`
+            FROM `inscrire`
+            WHERE `adherent` = $aid";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+    echo json_encode($curseur->fetchAll());
 
 }
 

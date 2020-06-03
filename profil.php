@@ -87,7 +87,7 @@ if (!logged())
                ordering: false,
                info: false,
                pageLength: 10,
-               fnDrawCallback: function (oSettings) {
+               initComplete: function (oSettings) {
                     $('.dataTables_filter').each(function () {
                         $(this).append('<button id="addExterne" class="btn btn-primary" style="margin-right: 1em; margin-left: 1em;" type="button">Ajouter externe</button>');
                     });

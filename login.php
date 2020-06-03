@@ -45,9 +45,26 @@ if (sizeof($_GET) > 0)
             
         $(document).ready(function(){
 
+            // Trigger quand on presse 'entrer'
+            $(document).keypress(function(event){
+                var keycode = (event.keyCode ? event.keyCode : event.which);
+                if(keycode == '13'){
+                        preLogin(); 
+                }
+            });
+
+
+
             // Trigger quand le button connexion est pressé
             $("#connexion").click(function(e) {
 
+                preLogin();
+
+            });
+
+
+            function preLogin()
+            {
                 if ($("#loginForm")[0].checkValidity() )
                 {
 
@@ -57,10 +74,9 @@ if (sizeof($_GET) > 0)
                 } else {
                     $('#logError').text("Champs incorrects, veuillez vérifier: \nLicense nombre seulement max: 10")
                     $('#logError').show();
-                    
                 }
 
-            });
+            }
 
             function makeLogin(licenseId, pass)
             {
@@ -71,10 +87,11 @@ if (sizeof($_GET) > 0)
                         licenseId: licenseId,
                         pass: pass
                     }, function(data) {
-                        
+                        console.log(data);
+                        data = JSON.parse(data);
+
                         if (data)
                         {
-                            data = JSON.parse(data);
                             $.cookie('logged', data['id']);
                             $.cookie('nom', data['nom']);
                             $.cookie('prenom', data['prenom']);
@@ -133,8 +150,7 @@ input:valid {
                         
                         <span id="logError" style="color: red; display: none;"><br></span> 
 
-                        <button type="button" id="connexion" class="btn btn-black">Se connecter</button>
-                        <button type="button" class="btn btn-secondary">S'enrengistrer</button>
+                        <button tabindex="-1" type="button" id="connexion" class="btn btn-black">Se connecter</button>
                     </form>
 
                 </div>

@@ -42,14 +42,18 @@ if (!logged())
             <script src='assets/js/fullcalendar/interaction/main.js'></script>
             <script src='assets/js/fullcalendar/daygrid/main.js'></script>
 
+         <!-- FullCalendar --> 
+            <script src='assets/js/utils.js'></script>
+
         <!-- next --> 
 
         <script type="text/javascript">
 
-            var todayDate = new Date().toISOString().slice(0,10);
-
             $(document).ready(function(){
 
+                var todayDate = new Date().toISOString().slice(0,10);
+                var aid = <?php echo intval($_COOKIE['logged']) ?>;
+                var statut = "";
                 var fullHeight = function() {
 
                     $('.js-fullheight').css('height', $(window).height());
@@ -128,26 +132,70 @@ if (!logged())
 
                     eventClick:function(event)
                     {
-                        if (event.event['classNames'][1] == 'inscrire')
+                        event = event.event;
+
+                        if (event['classNames'][1] == 'inscrire')
                         {
-                            if (confirm("Inspecter l'êvenement?"))
+
+                            if (!event['classNames'].includes('all'))
                             {
 
-                                    window.location = 'inscription.php?eid=' + event.event.id;
+                                if (event['classNames'].includes('membre', 'sympathisant'))
+                                {
+                                    
+                                    if (!['membre', 'sympathisant'].includes(statut))
+                                    {
+                                        alert('Cet évenement est reservé aux membres ou aux sympathisants.')
+                                        return;
+                                    } 
 
-                            
+                                }
+
                             }
+
+                          
+
+                            if (confirm("Inspecter l'êvenement?"))
+                            {
+                                    window.location = 'inscription.php?eid=' + event.id;
+                            }
+
+                        } else {
+                            alert("L'inscription n'est pas/plus disponible pour cet évenement.");
                         }
+
+
                     },
                 });
 
                 callendarImport();
+
+                getUser(aid);
+                function getUser(aid)
+                {
+
+                    $.post('assets/sql/interface.php',
+                    {
+                        function: 'getUser',
+                        aid: aid
+                    }, function(data) {
+                        data = JSON.parse(data);
+                        statut = data['statut'];
+                    });
+
+                }
+        
+                // TO REMOVE
+                statut = "membre";
+
                 calendar.render();
 
                 function callendarImport()
                 {
 
-
+                    /*
+                        On recupères tout les événements et leurs informations
+                    */
                     events = [];
                     $.ajaxSetup({async: false});  
                     $.post('assets/sql/interface.php',
@@ -155,11 +203,22 @@ if (!logged())
                         function: 'getEvents',
                     }, function(data) {
                         events = JSON.parse(data);
+                    });
+                    
+                    /*
+                        On regarde les évenements où est inscrits notre joueur:
+                    */
+                    registeredForEvents = [];
+                    $.post('assets/sql/interface.php',
+                    {
+                        function: 'getAllPlayersRegistrations',
+                        aid: aid,
+                    }, function(data) {
 
-                        console.log(events);
+                        registeredForEvents = JSON.parse(data);
 
                     });
-
+                    
                     events.forEach(event => {
                         /*
                         #type 
@@ -178,37 +237,56 @@ if (!logged())
                                 bcColor = "#8e6eb7";
                                 classNames.push("evenement");
                                 classNames.push("inscrire");
+                                classNames.push("all");
                             break;
 
                             case 1:
                                 bcColor = "#e14658";
                                 classNames.push("tournoi");
                                 classNames.push("inscrire");
+                                if (event['DC'])
+                                {
+
+                                    classNames.push("membre");
+                                    classNames.push("sympathisant");
+
+                                } 
                             break;
 
                             case 2:
                                 bcColor = "#aaaaaa";
                                 classNames.push("partieLibre");
                                 classNames.push("inscrire");
+
+                                classNames.push("membre");
+                                classNames.push("sympathisant");
                             break;
                             
                             case 3: 
                                 bcColor = "#c0b3a0";
                                 classNames.push("competition");
                                 // On vérifie que la compétition n'a pas commencé
-                                //if (event.stade == 0)
-                                //{
+                                if (event.stade == 3) // Stade d'inscription
+                                {
 
                                     classNames.push("inscrire");
 
-                                //}
+                                }
                             break;
 
                         }
 
+                        let title = "";
+
+                        if (isInArray(registeredForEvents, event[0]))
+                        {
+                            title += "★ ";
+                        }
+                        title += event['titre'];
+
                         calendar.addEvent({
                             id: event[0],
-                            title: event['titre'],
+                            title: title,
                             start: event['dteDebut'],
                             end: event['dteFin'],
                             classNames: classNames,
@@ -222,7 +300,7 @@ if (!logged())
 
                 }  
 
-                
+
 
                 
             });

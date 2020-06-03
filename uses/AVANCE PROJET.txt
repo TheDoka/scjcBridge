@@ -1,6 +1,10 @@
 03/05/2020
 profil.php: ajout d'utilisateur externe dans les favoris
 inscription.php: fix affichage
+index.php: detection si déjà inscrit
+		   meilleur detection fin inscription tournoi (stade: inscription)
+
+
 
 02/05/2020
 index.php: nouveau système d'import d'évenements
