@@ -4,21 +4,20 @@
 ###### Fin  : 25/06/2020
 
 #### Synopsis
-Dans le cadre d'un stage, j'ai été amené à developpé une interface qui permetterai de simplifier la vie du club. 
-En effet, l'organisation des tournois, compétitions, et autres évenements se faisaient par mail et de façon humaine.
-Ce fastidieux inconvenient vient trouver sa solution dans l'automatisation informatique.
+Dans le cadre d'un stage, j'ai été amené à developper une interface qui permettrait de simplifier la vie du club. 
+En effet, l'organisation des tournois, compétitions, et autres évenements se faisait par mail et avec de nombreuses interventions humaines fastidieuses. Le projet qui m'a été confié propose d'automatiser informatiquement toute cette gestion quotidienne.
 
 #### Remarques
-Une relation étroite avec les clients à été nécessaire, ne connaisant rien au bridge. Plusieurs reunions ont été entreprises, cet aspect social constitue un des points fort ce cet éxpérience.
+Une relation étroite avec les clients a été nécessaire, ne connaissant rien au bridge ni à leurs contraintes de gestion. Plusieurs réunions ont donc eu lieu et cet aspect social constitue un des points fort de cette expérience.
 
 #### Ce qui à été fait
 * Authentification
-* Importation d'évenements, parties libres, compétitions, tounois depuis des fichiers .csv
-* Agenda, qui permet de voir les évenements, mais aussi les inspecter
+* Mise en place du calendrier : Importation d'événements, parties libres, compétitions, tounois depuis des fichiers .csv
+* Agenda, qui permet de voir les événements, mais aussi les inspecter
 * Interface d'inscription, les utilisateurs forment des paires entre eux et s'inscrivent à un évenement
-* Gestion de profil, gére les favoris de l'utilisateur
-* Système de mail: notification d'inscription, de desinscription
-* **API sécurisé**, pour l'instant l'API ne permet que de se desinscrire à un évenement.
+* Gestion de profil, gére les partenaires favoris de l'utilisateur
+* Système de mail: notification d'inscription, de désinscription
+* API sécurisée, pour l'instant l'API ne permet que de se désinscrire à un évenement.
 
 ### Authentification
 ![Image Introuvable, vérifier le contenu du dossier 'uses'](uses/login.png)
