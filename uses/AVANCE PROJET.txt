@@ -1,3 +1,13 @@
+04/05/2020
+* Commentaires de fonctions, ménages, optimisations, fix de bugs (BCP)
+index.php: partie administration
+		   * Nouvelle gestion du transit du statut (statut n'est plus dans les cookies, merci la sécurité)
+		   * Nouvelles vues, Planning (liste des événements dans la semaine) et 'Semaine' vue avec les heures
+		   * L'administrateur peut maintenant inspecter n'importe quel événement, le déplacer, et modifier sa durée
+		   * Possibilités de trier les événements affiché dans l'agenda, Compétitions/Tournois/Parties Libres/Spéciaux/Inscrits (cochable)
+inscription.php: autorisation pour les compétitions de faire des inscription à deux -- (en cours)
+
+
 03/05/2020
 profil.php: ajout d'utilisateur externe dans les favoris
 inscription.php: fix affichage

@@ -1,7 +1,7 @@
 <?php 
 
 include('assets/php/utils.php');
-$_POST['statut'] = "admin";
+
 if (!logged())
 {
     echo "<script>alert(\"Vous n'êtes pas connecté, vous allez être redirigé vers la page de connexion.\"); window.location = 'login.php'; </script>";
@@ -39,14 +39,24 @@ if (!logged())
             <link href="assets/css/navbar.css" rel="stylesheet" crossorigin="anonymous">
 
         <!-- FullCalendar --> 
-            <link href='assets/css/fullcalendar/core/main.css' rel='stylesheet' />
-            <link href='assets/css/fullcalendar/daygrid/main.css' rel='stylesheet' />
             <script src='assets/js/fullcalendar/core/main.js'></script>
-            <script src='assets/js/fullcalendar/interaction/main.js'></script>
-            <script src='assets/js/fullcalendar/daygrid/main.js'></script>
             <script src='assets/js/fullcalendar/core/locales/fr.js'></script>
+            <link href='assets/css/fullcalendar/core/main.css' rel='stylesheet' />
 
-         <!-- FullCalendar --> 
+            <script src='assets/js/fullcalendar/interaction/main.js'></script>
+
+            <script src='assets/js/fullcalendar/daygrid/main.js'></script>
+            <link href='assets/css/fullcalendar/daygrid/main.css' rel='stylesheet' />
+
+            <script src='assets/js/fullcalendar/list/main.js'></script>
+            <link href='assets/css/fullcalendar/list/main.css' rel='stylesheet' />
+
+            <script src='assets/js/fullcalendar/timegrid/main.js'></script>
+            <link href='assets/css/fullcalendar/timegrid/main.css' rel='stylesheet' />
+
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.26.0/moment.min.js" integrity="sha256-5oApc/wMda1ntIEK4qoWJ4YItnV4fBHMwywunj8gPqc=" crossorigin="anonymous"></script>
+
+         <!-- Utils --> 
             <script src='assets/js/utils.js'></script>
 
         <!-- next --> 
@@ -55,9 +65,17 @@ if (!logged())
 
             $(document).ready(function(){
 
+
                 var todayDate = new Date().toISOString().slice(0,10);
                 var aid = <?php echo intval($_COOKIE['logged']) ?>;
-                var statut = "";
+                var user = getUser(aid);
+                var statut = user['statut'];
+                var admin = user['statut'] == "Administrateur"; 
+                if (admin)
+                {
+                    $('#gestionBase').show();
+                }
+
                 var fullHeight = function() {
 
                     $('.js-fullheight').css('height', $(window).height());
@@ -71,98 +89,69 @@ if (!logged())
                 $('#sidebarCollapse').on('click', function () {
                     $('#sidebar').toggleClass('active');
                 });
-
-                getUser(aid);
-                
-                function getUser(aid)
-                {
-
-                    $.post('assets/sql/interface.php',
-                    {
-                        function: 'getUser',
-                        aid: aid
-                    }, function(data) {
-                        data = JSON.parse(data);
-                        statut = data['statut'];
-                    });
-
-                }
-
+       
                 var calendarEl = document.getElementById('calendar');
-
-                if (statut == "Administrateur")
-                {
-                    alert('admin');
-                }
-
                 var calendar = new FullCalendar.Calendar(calendarEl, {
                     locale: 'FR',
-                    height: 650,
-                    plugins: [ 'interaction', 'dayGrid' ],
+                    height: $(window).height()*0.85,
+                    plugins: ['interaction', 'dayGrid', 'list', 'timeGrid'],
                     header: {
                         left: 'prevYear,prev,next,nextYear today',
                         center: 'title',
-                        right: 'dayGridMonth,dayGridWeek,dayGridDay'
+                        right: 'dayGridMonth,dayGridWeek,dayGridDay, listMonth, timeGridWeek'
                     },
+                    businessHours: {
+                        startTime: '6:00',
+                        endTime: '23:00',
+                    },
+                    minTime: '6:00',
+                    maxTime: '24:00',
                     defaultDate: todayDate,
                     firstDay: 1,
-                    defaultView: 'dayGridWeek',
+                    defaultView: 'timeGridWeek',
                     navLinks: true, // can click day/week names to navigate views
-                    editable: true,
                     eventLimit: true, // allow "more" link when too many events
-                    selectable:true,
-                    selectHelper:true,
-                    select: function(start, end, allDay)
-                    {
-                       
-                    },
-                    editable:true,
+                    editable: admin,
+                    allDaySlot: false,
+
                     eventResize:function(event)
                     {
+                        let newStartDate = moment(event.event.start).format("YYYY-MM-DD HH:mm:ss");
+                        let newEndDate = moment(event.event.end).format("YYYY-MM-DD HH:mm:ss");
+                        let eid = event.event.id;
 
-                        var start = $.fullCalendar.formatDate(event.start, "Y-MM-DD HH:mm:ss");
-                        var end = $.fullCalendar.formatDate(event.end, "Y-MM-DD HH:mm:ss");
-                        var title = event.title;
-                        var id = event.id;
-                        $.ajax({
-                            url:"update.php",
-                            type:"POST",
-                            data:{title:title, start:start, end:end, id:id},
-                            success:function(){
-                                calendar.fullCalendar('refetchEvents');
-                                alert('Event Update');
-                            }
-                        })
+                        if (confirm("L'évenement aura pour nouvelle date: \nDébut: " + newStartDate + "\nFin     : " + newEndDate))
+                        {
+                            updateEventDate(eid, newStartDate, newEndDate);
+                        } else {
+                            event.revert();
+                        }
+                        
                     },
 
                     eventDrop:function(event)
                     {
-                        console.log(event);
-                        var start = $.fullCalendar.formatDate(event.start, "Y-MM-DD HH:mm:ss");
-                        var end = $.fullCalendar.formatDate(event.end, "Y-MM-DD HH:mm:ss");
-                        var title = event.title;
-                        var id = event.id;
 
-                        $.ajax({
-                            url:"update.php",
-                            type:"POST",
-                            data:{title:title, start:start, end:end, id:id},
-                            success:function()
-                            {
-                                calendar.fullCalendar('refetchEvents');
-                                alert("Event Updated");
-                            }
-                        });
+                        let newStartDate = moment(event.event.start).format("YYYY-MM-DD HH:mm:ss");
+                        let newEndDate = moment(event.event.end).format("YYYY-MM-DD HH:mm:ss");
+                        let eid = event.event.id;
+
+                        if (confirm("L'évenement aura pour nouvelle date: \nDébut: " + newStartDate + "\nFin     : " + newEndDate))
+                        {
+                            updateEventDate(eid, newStartDate, newEndDate);
+                        } else {
+                            event.revert();
+                        }
+
                     },
-
                     eventClick:function(event)
                     {
                         event = event.event;
-                        //statut = "membre";
-                        if (event['classNames'][1] == 'inscrire')
+
+                        if (event['classNames'][1] == 'inscrire' || admin)
                         {
 
-                            if (!event['classNames'].includes('all'))
+                            if (!event['classNames'].includes('all') && !admin)
                             {
 
                                 if (event['classNames'].includes('membre', 'sympathisant'))
@@ -191,6 +180,18 @@ if (!logged())
 
 
                     },
+
+                    viewSkeletonRender: function()
+                    {
+                        $('.fc-today-button').after('<select class="selectpicker" multiple data-live-search="false">'+
+                                                        '<option id="dC" selected>Compétitions</option>'+
+                                                        '<option id="dT" selected>Tournois</option>'+
+                                                        '<option id="dPL" selected>Parties Libres</option>'+
+                                                        '<option id="dES" selected>Evénements spéciaux</option>'+
+                                                        '<option id="dIN" selected>Afficher événements inscrits</option>'+
+                                                    '</select>');
+                        $('select').selectpicker();
+                    }
                 });
 
                 callendarImport();           
@@ -297,24 +298,34 @@ if (!logged())
                             start: event['dteDebut'],
                             end: event['dteFin'],
                             classNames: classNames,
-                            backgroundColor: bcColor
+                            backgroundColor: bcColor,
                         });
-
+                        
                     });
 
 
                 }  
+                
 
-                $('.fc-today-button').after('<select class="selectpicker" multiple data-live-search="false">'+
-                                                '<option id="dC" selected>Compétitions</option>'+
-                                                '<option id="dT" selected>Tournois</option>'+
-                                                '<option id="dPL" selected>Parties Libres</option>'+
-                                                '<option id="dES" selected>Evénements spéciaux</option>'+
-                                                '<option id="dIN" selected>Afficher événements inscrits</option>'+
-                                            '</select>');
-                $('select').selectpicker();
+                function updateEventDate(eid, startDate, endDate)
+                {
+                    $.post('assets/sql/interface.php',
+                        {
+                            function: 'updateEventDate',
+                            eid: eid,
+                            startDate: startDate,
+                            endDate: endDate,
+                        }, function(data) {
 
-                $('.selectpicker').on('change', function(){
+                            if (data)
+                            {
+                                alert('Une erreur est survenue: \n' + data + "\n Il est fortement recommandé d'actualiser la page.");
+                            }
+
+                        });
+                }
+
+                $(document).on('change', '.selectpicker', function (e) {
                     var selected = []; //array to store value
                     $(this).find("option:selected").each(function(key,value){
                         selected.push(value.id); //push the text to array
@@ -354,9 +365,12 @@ if (!logged())
                         
                 });
 
-            });
+                $(window).resize(function() {
+                    var calHeight = $(window).height()*0.85;
+                    calendar.setOption('height', calHeight);
+                });
 
- 
+            });
 
 
         </script>
@@ -401,13 +415,10 @@ if (!logged())
                         <a href="profil.php"><span class="fa fa-gift mr-3"></span> Profil / Partenaires </a>
                     </li>
 
-                    <?php if ($_POST['statut'] == "admin")
-                    {
-                        echo '<li>
-                                <a href="admin.php"><span class="fa fa-table mr-3"></span>Gestion administrateur</a>
-                              </li>';
-                    }
-                    ?>
+                    <li>
+                        <a style="display: none" id="gestionBase" href="admin.php"><span class="fa fa-table mr-3"></span>Gestion administrateur</a>
+                    </li>
+
 
                     <li>
                         <a href="login.php?logoff"><span class="fa fa-sign-out mr-3"></span> Se déconnecter</a>

@@ -41,6 +41,7 @@ if (!logged())
             <link rel="stylesheet" href="https://cdn.datatables.net/1.10.21/css/dataTables.bootstrap4.min.css">
 
         <!-- Main -->
+            <script src="assets/js/utils.js"></script>
 
         <script type="text/javascript">
 
@@ -125,6 +126,16 @@ if (!logged())
             // IMPORTANT ! 
 
             var aid = <?php echo $_COOKIE['logged'] ?>;
+            var user = getUser(aid);
+            var statut = user['statut'];
+            var anom = user['nom'];
+            var admin = user['statut'] == "Administrateur"; 
+        
+            if (admin)
+            {
+                $('#gestionBase').show();
+            }
+
 
             initTables();
             
@@ -412,13 +423,9 @@ if (!logged())
                         <a href="profil.php"><span class="fa fa-gift mr-3active"></span> Profil / Partenaires </a>
                     </li>
 
-                    <?php if ($_POST['statut'] == "admin")
-                    {
-                        echo '<li>
-                                <a href="admin.php"><span class="fa fa-table mr-3"></span>Gestion administrateur</a>
-                              </li>';
-                    }
-                    ?>
+                    <li>
+                        <a style="display: none" id="gestionBase" href="admin.php"><span class="fa fa-table mr-3"></span>Gestion administrateur</a>
+                    </li>
 
                     <li>
                         <a href="login.php?logoff"><span class="fa fa-sign-out mr-3"></span> Se déconnecter</a>
@@ -462,8 +469,6 @@ if (!logged())
                         </tbody>
                     </table>
 
-
-                    <button class="btn btn-primary">Ajouter</button>
                 </div>
                 
 

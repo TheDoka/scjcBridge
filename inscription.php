@@ -2,7 +2,6 @@
 
 include('assets/php/utils.php');
 
-$_POST['statut'] = "admin";
 if (!logged())
 {
     echo "<script>alert(\"Vous n'êtes pas connecté, vous allez être redirigé vers la page de connexion.\"); window.location = 'login.php'; </script>";
@@ -69,8 +68,23 @@ if (!logged())
                 unregister(inscriptionID);
             });
 
+            function getCheckedIds()
+            {
+                let joueursID = [];
+
+                $('.inscrireAvec:checkbox:checked').each(function () {
+                        joueursID.push(parseInt(this.id));
+                });
+                
+                return joueursID;
+            }
+
             $(document).on('change', '.inscrireAvec', function (e) {
 
+
+                /*
+                    Si paire est égal à 0, l'inscription aura atteint son quota
+                */
                 if(this.checked) {
                     if (paire > 0 )
                     {
@@ -83,8 +97,12 @@ if (!logged())
                 } else {
                     paire++;
                 }
+                
+                /*
+                    On souhaite pouvoir s'inscire avec une paire lorsque nous sommes en compétition 
+                */
 
-                if (paire == 0)
+                if (paire == 0 || (getCheckedIds().length == 1 && typeEvenement == 3))
                 {
                     $('#buttonInscrire').addClass("btn-primary");  
                     $('#buttonInscrire').prop('disabled', false);
@@ -100,22 +118,23 @@ if (!logged())
                 if (confirm("Êtes-vous sûr de vouloir vous inscrire à l'évenement?"))
                 {
                 
-                    let joueursID = [];
-
-                    $('.inscrireAvec:checkbox:checked').each(function () {
-                            joueursID.push(parseInt(this.id));
-                    });
+                    let joueursID = getCheckedIds();
                     
-                    
-                    registerToEventWith(joueursID, aid);
+                    if (typeEvenement != 3)
+                    {
+                        registerToEventWith(aid, eid, joueursID);
+                    } else {
+                        // Compétition
+                        // On va inserer notre paire 
+                    }
 
                     if (SOSenabled)
                     {
                         // On desinscrit les joueurs SOS
-                        unregisterSOSpartenaire(joueursID);
+                        unregisterSOSpartenaire(aid, eid, joueursID);
                     }
                     
-                    notifyRegisterByMail(eid, joueursID);
+                    notifyRegisterByMail(aid, eid, joueursID);
                     
                     
 
@@ -133,9 +152,9 @@ if (!logged())
 
                     let joueursID = [aid];
                     
-                    registerToEventWith(joueursID, aid);                   
+                    registerToEventWith(aid, eid, joueursID);                   
 
-                    notifyRegisterByMail(eid, joueursID);
+                    notifyRegisterByMail(aid, eid, joueursID);
                     
                 }
 
@@ -147,14 +166,14 @@ if (!logged())
                 {
                     if (confirm('Êtes-vous sûr de vouloir rejoindre SOS partenaire?'))
                     {
-                        registerSOSpartenaire();
+                        registerSOSpartenaire(aid, eid);
                         $('#tableSOS').show();          
 
                     }
                 } else {
                     if (confirm('Êtes-vous sûr de vouloir vous desinscrire de SOS partenaire?'))
                     {
-                        unregisterSOSpartenaire([]);
+                        unregisterSOSpartenaire(aid, eid, []);
                         $('#tableSOS').hide();
                     }
                 }
@@ -217,13 +236,22 @@ if (!logged())
 
             // IMPORTANT ! 
 
+            var aid = <?php echo intval($_COOKIE['logged']) ?>;
+            var user = getUser(aid);
+            var statut = user['statut'];
+            var anom = user['nom'];
+            var admin = user['statut'] == "Administrateur"; 
+        
+            if (admin)
+            {
+                $('#gestionBase').show();
+            }
+
             var eid = <?php echo $_GET['eid'] ?>;
             var ety = null;
-            var aid = <?php echo intval($_COOKIE['logged']) ?>;
-
-            var anom = '<?php echo $_COOKIE['nom'] ?>';
             var inscrit = false;
             var paire = 0;
+            var typeEvenement = 0;
             var SOSenabled = false;
 
             initWithEvent();
@@ -247,6 +275,7 @@ if (!logged())
 
                 // 2.
                 // Populate tables
+                
 
                     // I. Check if player as registered for SOS partenaire
                     $.post('assets/sql/interface.php',
@@ -260,11 +289,11 @@ if (!logged())
                             SOSenabled = data.length > 0;
 
                         });
-
+                    
                     
                     // II. Check if player already registered
                     var alreadyRegistered = [];
-                      
+
                     $.post('assets/sql/interface.php',
                         {
                             function: 'getPlayersRegisteredForEvent',
@@ -289,18 +318,24 @@ if (!logged())
                         $('#buttonSOS').show();
                         $('#tableSOS').show();
 
-                        $.post('assets/sql/interface.php',
+                    }
+
+                    
+                    // III. Check if players are in SOS partenaire list
+                    
+
+                    $.post('assets/sql/interface.php',
                         {
                             function: 'getPlayersRegisteredForSOSpartenaire',
                             eid: eid,
                             aid: aid,
                         }, function(data) {
+                            
                             data = JSON.parse(data);
+                            // Ajoute les joueurs SOS à la liste des "déjà inscrits"
+                            alreadyRegistered = alreadyRegistered.concat(data);
                             populateSOSpartenaire(data);
-
                         });
-
-                    }
 
                     // Si n'est pas inscrit et SOS desactivé
                     if (!inscrit && !SOSenabled)
@@ -335,24 +370,13 @@ if (!logged())
                                     
                                 break;
                             }
+                            
                             var ignore = [];
-
 
                             // On se rajoute à l'array, car on ne veut pas être afficher dans la liste de joueurs
                             ignore.push([aid]);
 
-                            /*
-                                Particulier ici, la fonction qui 'getEveryMembers' prends un argument 'Except'
-                                qui permet d'ignorer certains membres 'not in'. 
-                                Le problème c'est que 'getPlayersRegisteredForEvent' à pour [0] NumPaire, et,
-                                get.. prends l'id du joueur pour comparer.
-                            */
-
-                            for (let index = 0; index < alreadyRegistered.length; index++) {
-                                alreadyRegistered[index][0] = alreadyRegistered[index][1];
-                                ignore.push(alreadyRegistered[index]);
-                            }
-
+                            ignore = ignore.concat(alreadyRegistered);
 
                             // III. Récupère favoris
                             var favoris = [];
@@ -398,7 +422,6 @@ if (!logged())
                     }       
             }
 
-
             function populateSOSpartenaire(data)
             {
 
@@ -431,6 +454,47 @@ if (!logged())
                 tableJoueurs.draw();
             }
 
+            /*
+                Créer une table favoris avec des checkbox de classe inscrireAvec en option
+                [i] [nom] [prenom] [options]
+            */
+            function mesFavorisCheck(data, table)
+            {
+
+                for (let i = 0; i < data.length; i++) {
+
+                    table.row.add([
+                            i+1,
+                            data[i]['nom'],
+                            data[i]['prenom'],
+                            `<td><input type="checkbox" class="inscrireAvec favoris" id="${data[i][0]}"></input></td>`,
+                        ]).node().id = i;
+                    
+                }
+                table.draw();
+
+            }
+
+            /*
+                Créer une table favoris avec des buttons de classe retirerFavori en option.
+                [i] [nom] [prenom] [options]
+            */
+            function mesFavorisButton(data, table)
+            {
+
+                for (let i = 0; i < data.length; i++) {
+
+                    table.row.add([
+                            i+1,
+                            data[i]['nom'],
+                            data[i]['prenom'],
+                            `<td><button id="${data[i][0]}" type="button" class="btn btn-danger retirerFavori favoris">Retirer favori</button></td>`,
+                        ]).node().id = i;
+                    
+
+                }
+            }
+
             function unregister(iid)
             {
 
@@ -444,7 +508,7 @@ if (!logged())
                             
                                 let ids = JSON.parse(data);
                                 console.log(ids);
-                                notifiyUnRegisterByMail(eid, ids);
+                                notifiyUnRegisterByMail(aid, eid, ids);
 
                         });
 
@@ -490,11 +554,9 @@ if (!logged())
                     if (i < data.length)
                     {
 
-                        // ID de l'inscription
-                        var iid = data[i][0];
-                        
+                        // ID de la paire/inscription               
                         var pid = data[i]['NumPaire'];
-                        
+
                         /* 
                             Récupères le nombre de membre de la paire
                             à savoir, les membres sont tous cote a cote
@@ -507,6 +569,7 @@ if (!logged())
                         
                         while (i < data.length && data[i]['NumPaire'] == pid)
                         {
+
                             noms     += data[i]['nom'] + "</br>";
                             prenoms  += data[i]['prenom'] + "</br>";
                             i++;
@@ -519,7 +582,7 @@ if (!logged())
                                 `<td> ${pid}</td>` +
                                 `<td>${noms}</td>` +
                                 `<td>${prenoms}</td>` +
-                                `<td><button id="${iid}" type="button" class="btn btn-danger desinscription">Se desincrire</button></td>` +
+                                `<td><button id="${pid}" type="button" class="btn btn-danger desinscription">Se desincrire</button></td>` +
                             '</tr>'
                         );
 
@@ -533,7 +596,7 @@ if (!logged())
                         while (i < data.length)
                         {
                             
-                            pid = data[i][0];
+                            pid = data[i]['NumPaire'];
                             noms = "";
                             prenoms = "";
                             
@@ -541,7 +604,7 @@ if (!logged())
                             {
                                 while (i < data.length && pid == data[i]['NumPaire'])
                                 {
-                                    pid = data[i][0];
+                                    pid = data[i]['NumPaire'];
                                     noms     += data[i]['nom'] + "</br>";
                                     prenoms  += data[i]['prenom'] + "</br>";
                                     i++;
@@ -586,7 +649,9 @@ if (!logged())
                 ety = parseInt(event['type']);
 
                 // On fait partie de la paire
-                paire = event['paires']-1;
+                paire = event['paires']-1; 
+                // Utile pour detecter les inscriptions de compétitions
+                typeEvenement = event['type'];
 
                 let tmp = "";
 
@@ -611,7 +676,8 @@ if (!logged())
                         tmp = "Catégorie: " + event['catComp'] +
                               " / Division: " + event['division'] +
                               " / Public: " + event['public'] +
-                              " / Stade: " + event['stade'];
+                              " / Stade: " + event['stade'] +
+                              " / Prix: " + event['prix'];
 
                         $('#more').text(tmp);
                     break;
@@ -625,7 +691,8 @@ if (!logged())
                 var calendar = new FullCalendar.Calendar(calendarEl, {
                     locale: 'fr',
                     height: 150,
-                    plugins: [ 'dayGrid' ],
+                    
+                    plugins: [ 'dayGrid', 'interaction'],
                     header: {
                         left: '',
                         center: 'title',
@@ -646,124 +713,6 @@ if (!logged())
                 });
 
                 calendar.render();
-            }
-
-            function registerToEventWith(joueursID)
-            {
-
-                    $.post('assets/sql/interface.php',
-                        {
-                            function: 'registerToEventWith',
-                            aid: aid,
-                            eid: eid,
-                            ids: JSON.stringify(joueursID),
-                        }, function(data) {
-                                console.log(data);
-                                if (data)
-                                {
-                                    alert('Une erreur est survenue!\n' + data);
-                                } else {
-                                    document.location.reload(true);
-                                }
-
-                        });
-                        
-
-            }
-
-            function registerSOSpartenaire()
-            {
-                    $.post('assets/sql/interface.php',
-                        {
-                            function: 'registerSOSpartenaire',
-                            aid: aid,
-                            eid: eid,
-                        }, function(data) {
-                                if (data)
-                                {
-                                    alert('Une erreur est survenue!\n' + data);
-                                } else {
-                                   document.location.reload(true);
-                                }
-
-                        });
-            }
-       
-            function unregisterSOSpartenaire(joueursId)
-            {
-
-                    // L'array joueursId contient tout les joueurs cochés, or il ne nous contient pas.
-                    // Quand on s'inscrit on souhaite ne plus être sur la liste SOS partenaire, ainsi que nos partenaires inscrits.
-
-                    joueursId.push(aid);
-
-                    $.post('assets/sql/interface.php',
-                        {
-                            function: 'unregisterSOSpartenaire',
-                            players: JSON.stringify(joueursId),
-                            eid: eid,
-                        }, function(data) {
-                            console.log(data);
-                                if (data)
-                                {
-                                   alert('Une erreur est survenue!\n' + data);
-                                } else {
-                                   document.location.reload(true);
-                                }
-
-                        });
-            }
-       
-
-            function notifyRegisterByMail(eid, ids)
-            {
-
-                ids.push(aid);
-
-                $mailContent = [];
-                $.post('assets/sql/interface.php',
-                    {
-                        function: 'createRegistrationNotificationMailForEvent',
-                        eid: eid,
-                        ids: ids,
-                    }, function(data) {
-                        mailContent = JSON.parse(data);
-                    });
-
-                $.post('assets/sql/interface.php',
-                {
-                    function: 'sendMail',
-                    mailContent: mailContent,
-                }, function(data) {
-                    console.log(data);
-                });
-
-
-            }
-
-            function notifiyUnRegisterByMail(eid, ids)
-            {
- 
-                $mailContent = [];
-                $.post('assets/sql/interface.php',
-                    {
-                        function: 'createUnRegistrationNotificationMailForEvent',
-                        eid: eid,
-                        ids: ids,
-                    }, function(data) {
-                        mailContent = JSON.parse(data);
-                        console.log(mailContent);
-
-                    });
-
-                $.post('assets/sql/interface.php',
-                {
-                    function: 'sendMail',
-                    mailContent: mailContent,
-                }, function(data) {
-                    console.log(data);
-                });
-
             }
 
         });
@@ -857,14 +806,10 @@ if (!logged())
                     <li>
                         <a href="profil.php"><span class="fa fa-gift mr-3"></span> Profil / Partenaires </a>
                     </li>
-
-                    <?php if ($_POST['statut'] == "admin")
-                    {
-                        echo '<li>
-                                <a href="admin.php"><span class="fa fa-table mr-3"></span>Gestion administrateur</a>
-                              </li>';
-                    }
-                    ?>
+                    
+                    <li>
+                        <a style="display: none" id="gestionBase" href="admin.php"><span class="fa fa-table mr-3"></span>Gestion administrateur</a>
+                    </li>
 
                     <li>
                         <a href="login.php?logoff"><span class="fa fa-sign-out mr-3"></span> Se déconnecter</a>

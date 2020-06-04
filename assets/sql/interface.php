@@ -84,6 +84,9 @@ if (isset($_POST['function']))
             case 'getAllPlayersRegistrations':
                 return getAllPlayersRegistrations(createPDO(), $_POST['aid']);
             break;
+            case 'updateEventDate':
+                return updateEventDate(createPDO(), $_POST['eid'], $_POST['startDate'], $_POST['endDate']);
+            break;
         }
 
 }
@@ -116,7 +119,9 @@ function getUser($PDO, $aid)
             ON A.idStatut = S.idStatut
             
             INNER JOIN niveau N
-            ON A.idNiveau = N.idNiveau";
+            ON A.idNiveau = N.idNiveau
+            
+            WHERE A.id = $aid";
 
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
@@ -436,7 +441,7 @@ function getAvailablePlayers($PDO, $eid)
 function getPlayersRegisteredForEvent($PDO, $eid)
 {
 
-    $req = "SELECT I.id as NumPaire,A.id, A.nom, A.prenom 
+    $req = "SELECT A.id, I.id as NumPaire, A.nom, A.prenom 
             FROM `inscrire` I
             
             INNER JOIN adherent A
@@ -678,7 +683,7 @@ function getPlayersRegisteredForSOSpartenaire($PDO, $eid, $aid)
     echo json_encode($curseur->fetchAll());
 
 }
-
+ 
 function getPlayersInfo($PDO, $ids)
 {
 
@@ -846,6 +851,23 @@ function getAllPlayersRegistrations($PDO, $aid)
     $curseur ->execute();
 
     echo json_encode($curseur->fetchAll());
+
+}
+
+function updateEventDate($PDO, $eid, $startDate, $endDate)
+{
+
+    $req = "UPDATE `evenement` 
+            SET `dteDebut` = '$startDate',
+                `dteFin` = '$endDate'
+                
+
+            WHERE `evenement`.`id` = $eid;";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+    
+    echo $curseur->errorInfo()[2];
 
 }
 
