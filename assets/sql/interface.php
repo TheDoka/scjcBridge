@@ -590,7 +590,7 @@ function getFormatedIds($except)
 
     for ($i=0; $i < sizeof($except); $i++) { 
         $notThem .= $except[$i][0] . ",";
-       
+        
     }
 
     $notThem = substr($notThem, 0, -1);
@@ -684,12 +684,10 @@ function getPlayersInfo($PDO, $ids)
 
     $req = "SELECT * 
             FROM adherent
-            WHERE id IN ($ids)
-            ORDER BY $ids";
+            WHERE id IN ($ids)";
 
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
-
     
     return $curseur->fetchAll();
 }
@@ -730,9 +728,11 @@ function createRegistrationNotificationMailForEvent($PDO, $eid, $ids)
     // Récupère informations du réfèrent
     // [lastOne]
 
-    $ids = getFormatedIds($ids);
+    
+    $ids = getLowFormatedIds($ids);
     $playersInfos = getPlayersInfo($PDO, $ids);
-    $referant = $playersInfos[sizeof($playersInfos)-1];
+    $referant = $playersInfos[0];
+    
 
     $toMails = [];
     $players = "";
@@ -748,7 +748,8 @@ function createRegistrationNotificationMailForEvent($PDO, $eid, $ids)
         'subject' => "Notification d'inscription",
         'body' => nl2br(
             " Bonjour, \n" .
-            " Vous venez d'être inscrit au " . $eventInfo['titre'] . " par: " . $referant['nom'] . ' ' . $referant['prenom'] . "\n". 
+            " Vous venez d'être inscrit de '" . $eventInfo['titre'] . "' par: " . $referant['nom'] . ' ' . $referant['prenom'] . "\n". 
+            " Date/Heure: ". $eventInfo['dteDebut']. "\n" . 
             " Membres de la paire: \n $players \n" . 
             " Si vous souhaiter refuser ou annuler l'inscription cliquez ici: " . createUnregistrationLinkForEvent($referant[0], $referant['nom'], $eid). ".".
             " Ou rendez vous sur l'interface."
@@ -768,6 +769,7 @@ function createUnRegistrationNotificationMailForEvent($PDO, $eid, $ids)
     
     $ids = getFormatedIds($ids);
     $playersInfos = getPlayersInfo($PDO, $ids);
+    $referant = $playersInfos[0];
 
     $toMails = [];
     $players = "";
@@ -783,7 +785,7 @@ function createUnRegistrationNotificationMailForEvent($PDO, $eid, $ids)
         'subject' => "Notification de desinscription",
         'body' => nl2br(
             " Bonjour, \n" .
-            " Vous venez de vous desinscrire de " . $eventInfo['titre'] . "\n" .
+            " Vous venez d'être désinscrit de '" . $eventInfo['titre'] . "' par: " . $referant['nom'] . ' ' . $referant['prenom'] . "\n". 
             " Les joueurs suivants ont été desinscrits: \n " . $players. "\n" . 
             " Pour inspecter l'évenement cliquer ici: " . $site_url . "inscription.php?eid=" . $eid
         ),

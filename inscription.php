@@ -103,23 +103,20 @@ if (!logged())
                     let joueursID = [];
 
                     $('.inscrireAvec:checkbox:checked').each(function () {
-                            joueursID.push(this.id);
+                            joueursID.push(parseInt(this.id));
                     });
                     
                     
-                    let error = registerToEventWith(joueursID, aid);
+                    registerToEventWith(joueursID, aid);
 
-                    //should be false
-                    if (!error)
+                    if (SOSenabled)
                     {
-                        if (SOSenabled)
-                        {
-                            // On desinscrit les joueurs SOS
-                            unregisterSOSpartenaire(joueursID);
-                        }
-                        
-                        notifyRegisterByMail(eid, joueursID);
+                        // On desinscrit les joueurs SOS
+                        unregisterSOSpartenaire(joueursID);
                     }
+                    
+                    notifyRegisterByMail(eid, joueursID);
+                    
                     
 
                 }
@@ -136,11 +133,10 @@ if (!logged())
 
                     let joueursID = [aid];
                     
-                    error = registerToEventWith(joueursID, aid);                   
-                    if (!error)
-                    {
-                        notifyRegisterByMail(eid, joueursID);
-                    }
+                    registerToEventWith(joueursID, aid);                   
+
+                    notifyRegisterByMail(eid, joueursID);
+                    
                 }
 
             });
@@ -275,6 +271,7 @@ if (!logged())
                             eid: eid,
                         }, function(data) {
                             alreadyRegistered = JSON.parse(data);
+
                             if (data)
                             {
                                 inscrit = maSituationInscrits(alreadyRegistered);
@@ -507,7 +504,7 @@ if (!logged())
 
                         // Lit jusqu'a changement de paire et construit l'affichage
                         // pour la table.
-                        i=0;
+                        
                         while (i < data.length && data[i]['NumPaire'] == pid)
                         {
                             noms     += data[i]['nom'] + "</br>";
@@ -665,12 +662,12 @@ if (!logged())
                                 if (data)
                                 {
                                     alert('Une erreur est survenue!\n' + data);
-                                    return true;
                                 } else {
                                     document.location.reload(true);
                                 }
 
                         });
+                        
 
             }
 
@@ -755,6 +752,8 @@ if (!logged())
                         ids: ids,
                     }, function(data) {
                         mailContent = JSON.parse(data);
+                        console.log(mailContent);
+
                     });
 
                 $.post('assets/sql/interface.php',

@@ -21,14 +21,17 @@ if (!logged())
 
         <!-- Jquery -->    
             <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
-
+        
+         <!-- Popper --> 
+            <script src="assets/js/popper.js"></script>
+        
         <!-- BOOTSTRAP -->
             <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" rel="stylesheet"  crossorigin="anonymous">
             <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
-       
-        <!-- Popper --> 
-            <script src="assets/js/popper.js"></script>
-        
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.1/css/bootstrap-select.css" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.1/js/bootstrap-select.min.js"></script>
+
+
         <!-- FontAwesome -->    
             <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
 
@@ -41,6 +44,7 @@ if (!logged())
             <script src='assets/js/fullcalendar/core/main.js'></script>
             <script src='assets/js/fullcalendar/interaction/main.js'></script>
             <script src='assets/js/fullcalendar/daygrid/main.js'></script>
+            <script src='assets/js/fullcalendar/core/locales/fr.js'></script>
 
          <!-- FullCalendar --> 
             <script src='assets/js/utils.js'></script>
@@ -68,10 +72,31 @@ if (!logged())
                     $('#sidebar').toggleClass('active');
                 });
 
+                getUser(aid);
+                
+                function getUser(aid)
+                {
+
+                    $.post('assets/sql/interface.php',
+                    {
+                        function: 'getUser',
+                        aid: aid
+                    }, function(data) {
+                        data = JSON.parse(data);
+                        statut = data['statut'];
+                    });
+
+                }
+
                 var calendarEl = document.getElementById('calendar');
 
+                if (statut == "Administrateur")
+                {
+                    alert('admin');
+                }
+
                 var calendar = new FullCalendar.Calendar(calendarEl, {
-                    locale: 'fr',
+                    locale: 'FR',
                     height: 650,
                     plugins: [ 'interaction', 'dayGrid' ],
                     header: {
@@ -133,7 +158,7 @@ if (!logged())
                     eventClick:function(event)
                     {
                         event = event.event;
-
+                        //statut = "membre";
                         if (event['classNames'][1] == 'inscrire')
                         {
 
@@ -168,26 +193,7 @@ if (!logged())
                     },
                 });
 
-                callendarImport();
-
-                getUser(aid);
-                function getUser(aid)
-                {
-
-                    $.post('assets/sql/interface.php',
-                    {
-                        function: 'getUser',
-                        aid: aid
-                    }, function(data) {
-                        data = JSON.parse(data);
-                        statut = data['statut'];
-                    });
-
-                }
-        
-                // TO REMOVE
-                statut = "membre";
-
+                callendarImport();           
                 calendar.render();
 
                 function callendarImport()
@@ -281,6 +287,7 @@ if (!logged())
                         if (isInArray(registeredForEvents, event[0]))
                         {
                             title += "★ ";
+                            classNames.push("inscrit");
                         }
                         title += event['titre'];
 
@@ -295,14 +302,58 @@ if (!logged())
 
                     });
 
-                    
-                    
 
                 }  
 
+                $('.fc-today-button').after('<select class="selectpicker" multiple data-live-search="false">'+
+                                                '<option id="dC" selected>Compétitions</option>'+
+                                                '<option id="dT" selected>Tournois</option>'+
+                                                '<option id="dPL" selected>Parties Libres</option>'+
+                                                '<option id="dES" selected>Evénements spéciaux</option>'+
+                                                '<option id="dIN" selected>Afficher événements inscrits</option>'+
+                                            '</select>');
+                $('select').selectpicker();
+
+                $('.selectpicker').on('change', function(){
+                    var selected = []; //array to store value
+                    $(this).find("option:selected").each(function(key,value){
+                        selected.push(value.id); //push the text to array
+                    });
+                    /*
+
+                        dC  = Compétitions
+                        dT  = Tournois
+                        dPL = Parties Libres
+                        dES = Evénements spéciaux
+                        dIN = Evenements inscrits
+
+                    */
+                    
+                    if (selected.includes('dC'))
+                    {
+                        $('.competition').show();
+                    } else {$('.competition').hide();}
+                    if (selected.includes('dT'))
+                    {
+                        $('.tournoi').show();
+                    } else {$('.tournoi').hide();}
+                    if (selected.includes('dPL'))
+                    {
+                        $('.partieLibre').show();
+                    } else {$('.partieLibre').hide();}
+                    if (selected.includes('dES'))
+                    {
+                        $('.evenement').show();
+                    } else {$('.evenement').hide();}
+                    if (selected.includes('dIN'))
+                    {
+                        $('.inscrit').show();
+                    } else {$('.inscrit').hide();}
 
 
-                
+                        
+                });
+
             });
 
  
@@ -313,6 +364,15 @@ if (!logged())
 
     </head>
 
+
+<style>
+
+.bootstrap-select .dropdown-toggle .filter-option{
+
+    position: relative;
+}
+
+</style>
 
     <body>
         
@@ -360,7 +420,6 @@ if (!logged())
             <div id="content" class="p-4 p-md-5 pt-5">
                 
                 <h2>Évènements à venir</h2>
-                
 
                 <div id='calendar'></div>
 
