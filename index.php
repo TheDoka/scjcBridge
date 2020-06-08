@@ -180,9 +180,7 @@ if (!logged())
 
 
                     },
-
-                    viewSkeletonRender: function()
-                    {
+                    datesRender : function(){
                         $('.fc-today-button').after('<select class="selectpicker" multiple data-live-search="false">'+
                                                         '<option id="dC" selected>Compétitions</option>'+
                                                         '<option id="dT" selected>Tournois</option>'+

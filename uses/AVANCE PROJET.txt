@@ -1,3 +1,17 @@
+8/05/2020
+inscription.php: refonte totale du système d'inscription
+				 * inscription par paire plutôt que par équipe
+				 * couleurs lors de la selection (rouge paire1, bleu paire2, vert remplaçants)
+				 * partie libre inscription/desinscription fonctionnelle
+				 * mail ok
+				 * inscription ok en groupe sur compétition
+				 * affichage par paire dans le tableaux dispo -> pas le mieux
+
+index.php: fix bug selection catégorie ne s'afficher pas après avoir bouger de date
+
+bdd: paire
+	 inscrire
+
 04/05/2020
 * Commentaires de fonctions, ménages, optimisations, fix de bugs (BCP)
 index.php: partie administration

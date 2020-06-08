@@ -41,23 +41,24 @@ function getUser(aid)
     Inscrit [] joueursID à un évenement eid.
     @return /
 */
-function registerToEventWith(aid, eid, joueursID)
+function registerToEventWith(eid, joueursID)
 {
 
         $.post('assets/sql/interface.php',
             {
                 function: 'registerToEventWith',
-                aid: aid,
                 eid: eid,
                 ids: JSON.stringify(joueursID),
             }, function(data) {
                     console.log(data);
+                    /*
                     if (data)
                     {
                         alert('Une erreur est survenue!\n' + data);
                     } else {
                         document.location.reload(true);
                     }
+                    */
 
             });
             

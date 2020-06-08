@@ -64,8 +64,10 @@ if (!logged())
             });
 
             $(document).on('click', '.desinscription', function (e) {
-                inscriptionID = e.target.id;
-                unregister(inscriptionID);
+
+                iid = e.target.id;
+                unregisterPaires(iid);
+
             });
 
             function getCheckedIds()
@@ -79,16 +81,29 @@ if (!logged())
                 return joueursID;
             }
 
+            var checked = 0;
             $(document).on('change', '.inscrireAvec', function (e) {
 
-
+                
                 /*
                     Si paire est égal à 0, l'inscription aura atteint son quota
                 */
                 if(this.checked) {
                     if (paire > 0 )
                     {
+
+                        if (checked > 2) { 
+                            $(this).parent().addClass("remplacant");
+                        } else {
+                            if (checked > 0 ){
+                                $(this).parent().addClass("paire2"); 
+                            } else {
+                                $(this).parent().addClass("paire1"); 
+                            }
+                        }
                         paire--;
+                        checked++;
+                        
                     } else {
                         alert("Impossible d'inscrire un autre joueur, veuillez vérifier le nombre de joueurs ajoutés.");
                         this.checked = false;
@@ -96,6 +111,7 @@ if (!logged())
 
                 } else {
                     paire++;
+                    checked--;
                 }
                 
                 /*
@@ -118,23 +134,26 @@ if (!logged())
                 if (confirm("Êtes-vous sûr de vouloir vous inscrire à l'évenement?"))
                 {
                 
-                    let joueursID = getCheckedIds();
-                    
-                    if (typeEvenement != 3)
-                    {
-                        registerToEventWith(aid, eid, joueursID);
-                    } else {
-                        // Compétition
-                        // On va inserer notre paire 
+                    let joueursID = [];
+                    // On se met dans l'array;
+                    joueursID.push(aid);
+                    // On ajoute les autres membres
+                    joueursID = joueursID.concat(getCheckedIds());
+
+                    for (let i = joueursID.length; 6 >= joueursID.length; i++) {
+                        joueursID.push("NULL");  
                     }
+
+                    registerToEventWith(eid, joueursID);
+       
 
                     if (SOSenabled)
                     {
                         // On desinscrit les joueurs SOS
-                        unregisterSOSpartenaire(aid, eid, joueursID);
+                        //unregisterSOSpartenaire(aid, eid, joueursID);
                     }
                     
-                    notifyRegisterByMail(aid, eid, joueursID);
+                    //notifyRegisterByMail(aid, eid, joueursID);
                     
                     
 
@@ -151,9 +170,13 @@ if (!logged())
                 {
 
                     let joueursID = [aid];
-                    
-                    registerToEventWith(aid, eid, joueursID);                   
+                    for (let i = joueursID.length; 6 >= joueursID.length; i++) {
+                        joueursID.push("NULL");  
+                    }
 
+                    registerToEventWith(eid, joueursID);                   
+
+                    return;
                     notifyRegisterByMail(aid, eid, joueursID);
                     
                 }
@@ -184,7 +207,6 @@ if (!logged())
                ordering: false,
                info: false,
                pageLength: 10,
-               
                language: {
                     "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/French.json"
                     
@@ -307,7 +329,9 @@ if (!logged())
                             }
 
                         });
-                     
+       
+                        
+
 
                     if (SOSenabled)
                     {
@@ -495,11 +519,17 @@ if (!logged())
                 }
             }
 
-            function unregister(iid)
+            function unregisterPaires(iid)
             {
 
                 if (confirm("Êtes-vous sûr de vouloir vous desinscrire de l'évenement?"))
                 {
+
+                        /*
+                            Envoi un mail à l'ensemble des personnes inscrite avec cette paire
+                        */
+                       console.log(iid);
+
                         $.post('assets/sql/interface.php',
                         {
                             function: 'getMembersFromIIDForEvent',
@@ -507,9 +537,18 @@ if (!logged())
                         }, function(data) {
                             
                                 let ids = JSON.parse(data);
-                                console.log(ids);
-                                notifiyUnRegisterByMail(aid, eid, ids);
+                                //console.log(ids);
+                                //notifiyUnRegisterByMail(aid, eid, ids);
 
+                        });
+
+                        $.post('assets/sql/interface.php',
+                        {
+                            function: 'deletePaireAssociatedWithIID',
+                            iid: iid,
+                        }, function(data) {
+
+                            console.log(data);
                         });
 
                         $.post('assets/sql/interface.php',
@@ -517,17 +556,15 @@ if (!logged())
                             function: 'unregisterFromEvent',
                             iid: iid,
                         }, function(data) {
-                            
+                                console.log(data);
                                 if (data)
                                 {
-                                    alert('Une erreur est survenue!\n' + data);
+                                    //alert('Une erreur est survenue!\n' + data);
                                 } else {
-                                    document.location.reload(true);
+                                    //document.location.reload(true);
                                 }
 
                         });
-
-
                     
 
                 }
@@ -536,6 +573,8 @@ if (!logged())
 
             function maSituationInscrits(data)
             {
+
+                // I.Id, P.pid as NumPaire, A.id, A.nom, A.prenom
 
                 if (data.length > 0)
                 {
@@ -546,7 +585,6 @@ if (!logged())
                         i++;
                     }
 
-
                     var noms = "";
                     var prenoms = "";
 
@@ -554,81 +592,101 @@ if (!logged())
                     if (i < data.length)
                     {
 
-                        // ID de la paire/inscription               
+                        // ID de l'inscription               
+                        var iid = data[i]['iid'];
+                       
+                        // ID de de la paire  
                         var pid = data[i]['NumPaire'];
-
-                        /* 
-                            Récupères le nombre de membre de la paire
-                            à savoir, les membres sont tous cote a cote
-                            dans l'array car la requête est faite avec un
-                            order by sur l'id de la paire.
-                        */
 
                         // Lit jusqu'a changement de paire et construit l'affichage
                         // pour la table.
                         
-                        while (i < data.length && data[i]['NumPaire'] == pid)
+                        while (i < data.length && data[i]['iid'] == iid)
                         {
-
                             noms     += data[i]['nom'] + "</br>";
                             prenoms  += data[i]['prenom'] + "</br>";
                             i++;
                         }
 
-                        var membresDeLaPaire = i;
+                        var totalInscrit = i;
 
                         $('#tableSituation > tbody').append(
                             '<tr>' +
+                                `<td> ${iid}</td>` +
                                 `<td> ${pid}</td>` +
                                 `<td>${noms}</td>` +
                                 `<td>${prenoms}</td>` +
-                                `<td><button id="${pid}" type="button" class="btn btn-danger desinscription">Se desincrire</button></td>` +
+                                `<td><button id="${iid}" type="button" class="btn btn-danger desinscription">Se desincrire</button></td>` +
                             '</tr>'
                         );
 
-                        own_pid = pid;
+                        own_iid = iid;
                     } else {
-                        own_pid = -1;
+                        own_iid = -1;
                     }
                         
                         i = 0;
 
-                        while (i < data.length)
-                        {
-                            
-                            pid = data[i]['NumPaire'];
-                            noms = "";
-                            prenoms = "";
-                            
-                            if (pid != own_pid)
-                            {
-                                while (i < data.length && pid == data[i]['NumPaire'])
-                                {
-                                    pid = data[i]['NumPaire'];
-                                    noms     += data[i]['nom'] + "</br>";
-                                    prenoms  += data[i]['prenom'] + "</br>";
-                                    i++;
+                        noms = "";
+                        prenoms = "";
+                        pid = data[0]['NumPaire'];
+                        iid = data[0]['iid'];
 
-                                }
-                            
-                                
-                                $('#tableInscrit > tbody').append(
+                        var first = false;
+                        var rowspan = "1";
+
+         
+                        data.forEach(element => {
+                                            
+                            if (iid != own_iid)
+                            {
+                                if (pid == element['NumPaire'])
+                                {
+                                    noms     += element['nom'] + "</br>";
+                                    prenoms  += element['prenom'] + "</br>";
+                                    first = false;
+                                    
+                                } else {
+                                    
+                                    if (first)
+                                    {
+                                        rowspan = 3;
+                                    }
+
+                                    $('#tableInscrit > tbody').append(
                                     '<tr>' +
-                                        `<td> ${pid}</td>` +
+                                        `<td rowspan = ${rowspan}>${iid}</td>` +
                                         `<td>${noms}</td>` +
                                         `<td>${prenoms}</td>`+ +
                                     '</tr>'
-                                );
+                                    );
 
-                                
-                            } else {
-                                i++;
+                                    noms = element['nom'] + "</br>";
+                                    prenoms = element['prenom'] + "</br>";
+                                    
+                                    first = true;
+                                }
                             }
+                            pid = element['NumPaire'];
+                            iid = element['iid'];
+                            
 
+
+                        });
+
+                        if (iid != own_iid)
+                        {
+                            $('#tableInscrit > tbody').append(
+                                    '<tr>' +
+                                        `<td>${iid}</td>` +
+                                        `<td>${noms}</td>` +
+                                        `<td>${prenoms}</td>`+ +
+                                    '</tr>'
+                            );
                         }
 
                     // Si notre paire id (c'est à dire nous même) est présent dans les inscrits et n'est pas égale à 'introuvable' alors : vrai sinon faux
-                    return own_pid != -1;
+                    return own_iid != -1;
                 }
 
 
@@ -650,6 +708,11 @@ if (!logged())
 
                 // On fait partie de la paire
                 paire = event['paires']-1; 
+                if (event['type'] == 3)
+                {
+                    paire = 6;
+                }
+
                 // Utile pour detecter les inscriptions de compétitions
                 typeEvenement = event['type'];
 
@@ -728,6 +791,17 @@ if (!logged())
 <style>
 
 
+    .paire1 {
+        background-color: red;
+    }
+
+    .paire2 {
+        background-color: blue;
+    }
+
+    .remplacant {
+        background-color: green;
+    }
 
     .LeftRightHeader { 
         overflow:auto;         
@@ -843,6 +917,7 @@ if (!logged())
                                 <thead>
                                     <tr>
                                     <th scope="col">#</th>
+                                    <th scope="col">#Paire</th>
                                     <th scope="col">Nom</th>
                                     <th scope="col">Prénom</th>
                                     <th scope="col">Options</th>
@@ -881,7 +956,8 @@ if (!logged())
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    
+
+
                                 </tbody>
                             </table>
                         </div>
@@ -904,7 +980,11 @@ if (!logged())
                                         </tr>
                                     </tr>
                                 </thead>
-                                <tbody> </tbody>
+                                <tbody> 
+
+
+                                
+                                </tbody>
                             </table>
 
                         <div class="pourInscrire JO">

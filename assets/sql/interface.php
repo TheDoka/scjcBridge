@@ -15,55 +15,55 @@ if (isset($_POST['function']))
 		{
 
 			case  'login': 
-				return connexion(createPDO(), $_POST['licenseId'], $_POST['pass']);
+				echo connexion(createPDO(), $_POST['licenseId'], $_POST['pass']);
             break;
             case  'getUser': 
-				return getUser(createPDO(), $_POST['aid']);
+				echo getUser(createPDO(), $_POST['aid']);
             break;
             case 'importEvents': 
-				return importEvents(createPDO(), $_POST['events'], $_POST['type']);
+				echo importEvents(createPDO(), $_POST['events'], $_POST['type']);
             break;
             case 'getEvents': 
-				return getEvents(createPDO());
+				echo getEvents(createPDO());
             break;
             case 'getEventInfo': 
-				return getEventInfoInterface(createPDO(), $_POST['eid']);
+				echo getEventInfo(createPDO(), $_POST['eid']);
             break;
             case 'getAvailablePlayers': 
 				return getAvailablePlayers(createPDO(), $_POST['eid']);
             break;
             case 'getPlayersRegisteredForEvent': 
-				return getPlayersRegisteredForEvent(createPDO(), $_POST['eid']);
+				echo getPlayersRegisteredForEvent(createPDO(), $_POST['eid']);
             break;
             case 'unregisterFromEvent': 
-				return unregisterFromEvent(createPDO(), $_POST['iid']);
+				echo unregisterFromEvent(createPDO(), $_POST['iid']);
 			break;
             case 'getPlayerFavorite': 
-				return getPlayerFavorite(createPDO(), $_POST['aid'], $_POST['except']);
+				echo getPlayerFavorite(createPDO(), $_POST['aid'], $_POST['except']);
             break;
             case 'unsetFromFavorite': 
-				return unsetFromFavorite(createPDO(), $_POST['aid'], $_POST['fid']);
+				echo unsetFromFavorite(createPDO(), $_POST['aid'], $_POST['fid']);
             break;
             case 'getEveryMembers': 
-				return getEveryMembers(createPDO(), $_POST['except']);
+				echo getEveryMembers(createPDO(), $_POST['except']);
             break;
             case 'addToFavorite': 
-				return addToFavorite(createPDO(), $_POST['aid'], $_POST['fid']);
+				echo addToFavorite(createPDO(), $_POST['aid'], $_POST['fid']);
             break;
             case 'registerToEventWith': 
-				return registerToEventWith(createPDO(), $_POST['aid'], $_POST['eid'], $_POST['ids']);
+				echo registerToEventWith(createPDO(), $_POST['eid'], $_POST['ids']);
             break;
             case 'registerSOSpartenaire':
-                return registerSOSpartenaire(createPDO(), $_POST['aid'], $_POST['eid']);
+                echo registerSOSpartenaire(createPDO(), $_POST['aid'], $_POST['eid']);
             break;
             case 'unregisterSOSpartenaire':
-                return unregisterSOSpartenaire(createPDO(), $_POST['players'], $_POST['eid']);
+                echo unregisterSOSpartenaire(createPDO(), $_POST['players'], $_POST['eid']);
             break; 
             case 'isRegisteredForSOSpartenaire':
-                return isRegisteredForSOSpartenaire(createPDO(), $_POST['aid'], $_POST['eid']);
+                echo isRegisteredForSOSpartenaire(createPDO(), $_POST['aid'], $_POST['eid']);
             break;
             case 'getPlayersRegisteredForSOSpartenaire':
-                return getPlayersRegisteredForSOSpartenaire(createPDO(), $_POST['eid'], $_POST['aid']);
+                echo getPlayersRegisteredForSOSpartenaire(createPDO(), $_POST['eid'], $_POST['aid']);
             break;
             case 'sendMail':
                 require_once('../php/mail.php');
@@ -76,16 +76,19 @@ if (isset($_POST['function']))
                 return createUnRegistrationNotificationMailForEvent(createPDO(), $_POST['eid'], $_POST['ids']);
             break;
             case 'getMembersFromIIDForEvent':
-                return getMembersFromIIDForEvent(createPDO(), $_POST['iid']);
+                echo json_encode(getMembersFromIIDForEvent(createPDO(), $_POST['iid']));
             break;
             case 'quickInsertUserAndFav':
-                return quickInsertUserAndFav(createPDO(), $_POST['aid'], $_POST['lastname'], $_POST['name'], $_POST['mail'], $_POST['license']);
+                echo quickInsertUserAndFav(createPDO(), $_POST['aid'], $_POST['lastname'], $_POST['name'], $_POST['mail'], $_POST['license']);
             break;
             case 'getAllPlayersRegistrations':
-                return getAllPlayersRegistrations(createPDO(), $_POST['aid']);
+                echo getAllPlayersRegistrations(createPDO(), $_POST['aid']);
             break;
             case 'updateEventDate':
-                return updateEventDate(createPDO(), $_POST['eid'], $_POST['startDate'], $_POST['endDate']);
+                echo updateEventDate(createPDO(), $_POST['eid'], $_POST['startDate'], $_POST['endDate']);
+            break;
+            case 'deletePaireAssociatedWithIID':
+                echo deletePaireAssociatedWithIID(createPDO(), $_POST['iid']);
             break;
         }
 
@@ -105,7 +108,7 @@ function connexion($PDO, $licenseId, $pass)
     
     $unClient = $curseur->fetch();
     
-    echo json_encode($unClient);
+    return json_encode($unClient);
     $curseur = null;
     
 }
@@ -128,7 +131,7 @@ function getUser($PDO, $aid)
     
     $unClient = $curseur->fetch();
     
-    echo json_encode($unClient);
+    return json_encode($unClient);
 }
 
 function importEvents($PDO, $evenements, $type)
@@ -227,7 +230,6 @@ function importEvents($PDO, $evenements, $type)
                     $secondStep .= "INSERT INTO `competition` 
                                     (`id`, `evenementId`, `catComp`, `division`, `stade`, `public`) 
                                     VALUES (NULL, '$eventId', 1, 1, 1, 1);";
-                    echo $req . "\n";
                 break;
 
             }
@@ -240,8 +242,8 @@ function importEvents($PDO, $evenements, $type)
     $curseur ->execute();
 
     $curseur->fetch();
-    // In case, respons with error message, it should be empty
-    echo $curseur->errorInfo()[2];
+    // In case, respond with error message, it should be empty
+    return $curseur->errorInfo()[2];
     $curseur = null;
 
 
@@ -334,7 +336,7 @@ function getEvents($PDO)
         $result = array_merge($result, $statement->fetchAll());
     }
 
-    $except = getFormatedIds($result);
+    $except = getFormatedIds($result, 0);
 
     $query = "SELECT * 
             FROM `evenement` 
@@ -345,7 +347,7 @@ function getEvents($PDO)
 
     $result = $result = array_merge($result, $statement->fetchAll());
 
-    echo json_encode($result);
+    return json_encode($result);
     
 }
 
@@ -409,13 +411,13 @@ function getEventInfo($PDO, $eid)
     
     $common += $curseur->fetch();
 
-    return $common;
+    return json_encode($common);
 }
 
 function getEventInfoInterface($PDO, $eid)
 {
     // Façon moche de permettre de reutiliser la fonction sans Jquery
-    echo json_encode(getEventInfo($PDO, $eid));
+    return json_encode(getEventInfo($PDO, $eid));
 }
 
 function getAvailablePlayers($PDO, $eid)
@@ -441,57 +443,192 @@ function getAvailablePlayers($PDO, $eid)
 function getPlayersRegisteredForEvent($PDO, $eid)
 {
 
-    $req = "SELECT A.id, I.id as NumPaire, A.nom, A.prenom 
+    $req = "SELECT I.Id as iid, P.pid as NumPaire, A.id, A.nom, A.prenom
             FROM `inscrire` I
+                        
+            INNER JOIN paire P
+            ON paire1 = P.pid
+            OR paire2 = P.pid
+            OR remplacant = P.pid 
             
-            INNER JOIN adherent A
-            ON A.id IN(`adherent`, `partenaire1`, `partenaire2`, `partenaire3`)
+            INNER JOIN adherent A 
+            ON A.id = P.adherent
             
-            WHERE `evenementId` = $eid;
-            ORDER BY I.id";
+            WHERE `evenementId` = $eid
+            ORDER BY NumPaire";
             
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
 
-    echo json_encode($curseur->fetchAll());
+    /*
+        [0] NumPaire
+        [1] Nom
+        [2] Prenom
+    */
+
+    return json_encode($curseur->fetchAll());
 
 
 }
 
-function registerToEventWith($PDO, $aid, $eid, $joueursID)
+function registerToEventWith($PDO, $eid, $joueursID)
 {
-    
+    /*
+        Format de l'array:
+        [0] id paire 1  <-> AID!
+        [1] id paire 1  NULL
+        
+        [2] id paire 2  NULL
+        [3] id paire 2  NULL
+
+        [4] id paire 3  NULL   
+        [5] id paire 3  NULL
+        [6] id paire 3  NULL
+    */
+
     $joueursID = json_decode($joueursID);
 
-    if (sizeof($joueursID) == 1)
-    {
-        $joueursID[1] = 'NULL';
-        $joueursID[2] = 'NULL';
-    }
+    /*
+        Particularité:
+         L'utilisation de 'LAST_INSERTED_ID' dans les requêtes présente un risque, je ne suis pas sûr que ce soi parfaitement syncrone. 
+         Si deux joeurs s'inscrivent en même temps, il est possible que le last inserted id soi partagé entre les deux requêtes.
+         Ce qui renderait l'inscription très étrange. Mais à priori il est conservé pour une session donnée.
+    */
 
-    $req = "INSERT INTO `inscrire` 
-            (`id`, `evenementId`, `adherent`, `partenaire1`, `partenaire2`, `partenaire3`) 
-            VALUES (NULL, '$eid', '$aid', $joueursID[0], $joueursID[1], $joueursID[2]);";
+
+    /*
+        Créer la première paire:
+    */
+    $req = "INSERT INTO `paire` 
+           (`pid`, `adherent`)
+           VALUES (NULL, '$joueursID[0]');
+           ";
+
+    if ($joueursID[1] != NULL)
+    {
+        $req .= "INSERT INTO `paire` 
+                (`pid`, `adherent`)
+                VALUES (LAST_INSERT_ID(), '$joueursID[1]');
+                ";
+    }
 
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
 
-    echo $curseur->errorInfo()[2];
+    $paire1 = $PDO->lastInsertId();
 
+
+    /*
+        Seconde paire 
+    */
+    if ($joueursID[2] != "NULL")
+    {
+        $req = "INSERT INTO `paire` 
+        (`pid`, `adherent`)
+        VALUES (NULL, '$joueursID[2]');
+       
+        INSERT INTO `paire` 
+        (`pid`, `adherent`)
+        VALUES (LAST_INSERT_ID(), '$joueursID[3]');
+        ";
+
+        $curseur = $PDO->prepare($req);
+        $curseur ->execute();
+
+        $paire2 = $PDO->lastInsertId();
+
+    } else {
+        echo '2null';
+        $paire2 = "NULL";
+    }
+
+    /*
+        Paire de remplaçants
+    */
+    if ($joueursID[4] != "NULL")
+    {
+
+        $req = "INSERT INTO `paire` 
+                (`pid`, `adherent`)
+                VALUES (NULL, '$joueursID[4]');
+                ";
+
+        if ($joueursID[5] != "NULL")
+        {
+            $req .= "INSERT INTO `paire` 
+                    (`pid`, `adherent`)
+                    VALUES (LAST_INSERT_ID(), '$joueursID[5]');
+                    ";
+        }
+
+        if ($joueursID[6] != "NULL")
+        {
+            $req .= "INSERT INTO `paire` 
+                    (`pid`, `adherent`)
+                    VALUES (LAST_INSERT_ID(), '$joueursID[6]');
+                    ";
+        }
+
+        $curseur = $PDO->prepare($req);
+        $curseur ->execute();
+
+        $remplacant = $PDO->lastInsertId();
+
+    } else {
+        $remplacant= "NULL";
+    }
+
+    /*
+
+        On éffectue l'inscription à l'évenement avec les paires données.
+
+    */
+
+    $req = "INSERT INTO `inscrire` 
+            (`id`, `evenementId`, `paire1`, `paire2`, `remplacant`) 
+            VALUES (NULL, $eid, $paire1, $paire2, $remplacant);";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
     
+    return $curseur->errorInfo()[2];
+
 }
 
 function unregisterFromEvent($PDO, $iid)
 {
 
+    /*
+        Supprime l'inscription
+    */
     $req = "DELETE 
             FROM `inscrire` 
-            WHERE `inscrire`.`id` = $iid";
+            WHERE `inscrire`.`id` = $iid;";
 
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
     
-    echo $curseur->errorInfo()[2];
+    return $curseur->errorInfo()[2];
+}
+
+function deletePaireAssociatedWithIID($PDO, $iid)
+{
+    $info = getMembersFromIIDForEvent($PDO, $iid);
+    // Récupère le numéro de paire de chaque adhérent
+    $paireIds = getFormatedIds($info, 3);
+
+    /*
+        Dissoud les paires
+    */
+    $req = "DELETE 
+            FROM `paire` 
+            WHERE `paire`.`pid` IN ($paireIds);";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+    return $curseur->errorInfo()[2];
+
 }
 
 function unregisterFromEventComplex($PDO, $aid, $eid)
@@ -504,7 +641,7 @@ function unregisterFromEventComplex($PDO, $aid, $eid)
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
 
-    echo $curseur->errorInfo()[2];
+    return $curseur->errorInfo()[2];
 }
 
 function getPlayerFavorite($PDO, $aid, $except)
@@ -513,7 +650,7 @@ function getPlayerFavorite($PDO, $aid, $except)
     $except = json_decode($except, true);
     
     // 1. Parse pour récupérer que les ids
-        $notThem = getFormatedIds($except);
+        $notThem = getFormatedIds($except, 0);
 
     $req = "SELECT idFavoris, nom, prenom
             FROM `favoris` 
@@ -531,7 +668,7 @@ function getPlayerFavorite($PDO, $aid, $except)
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
 
-    echo json_encode($curseur->fetchAll());
+    return json_encode($curseur->fetchAll());
 }
 
 function unsetFromFavorite($PDO, $aid, $fid)
@@ -545,7 +682,7 @@ function unsetFromFavorite($PDO, $aid, $fid)
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
 
-    echo $curseur->errorInfo()[2];
+    return $curseur->errorInfo()[2];
 }
 
 function addToFavorite($PDO, $aid, $fid)
@@ -557,7 +694,7 @@ function addToFavorite($PDO, $aid, $fid)
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
 
-    echo $curseur->errorInfo()[2];
+    return $curseur->errorInfo()[2];
 
 }
 
@@ -568,7 +705,7 @@ function getEveryMembers($PDO, $except)
     $except = json_decode($except, true);
 
     // 1. Parse pour récupérer que les ids
-        $notThem = getFormatedIds($except);
+        $notThem = getFormatedIds($except, 0);
 
     // 2. Exectute la requête qui n'inclura pas les except
     $req = "SELECT * 
@@ -582,19 +719,19 @@ function getEveryMembers($PDO, $except)
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
 
-    echo json_encode($curseur->fetchAll());
+    return json_encode($curseur->fetchAll());
 
 
 }
 
-function getFormatedIds($except)
+function getFormatedIds($except, $index)
 {
 
     // 1. Parse pour récupérer que les ids
     $notThem = "";
 
     for ($i=0; $i < sizeof($except); $i++) { 
-        $notThem .= $except[$i][0] . ",";
+        $notThem .= $except[$i][$index] . ",";
         
     }
 
@@ -631,26 +768,26 @@ function registerSOSpartenaire($PDO, $aid, $eid)
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
 
-    echo $curseur->errorInfo()[2];
+    return $curseur->errorInfo()[2];
 
 
 }
 
-function unregisterSOSpartenaire($PDO, $jouersId, $eid)
+function unregisterSOSpartenaire($PDO, $jouersID, $eid)
 {
 
-    $jouersId = json_decode($jouersId);
+    $jouersID = json_decode($jouersID);
 
-    $jouersId = getLowFormatedIds($jouersId);
+    $jouersID = getLowFormatedIds($jouersID);
 
     $req = "DELETE 
             FROM `sos` 
-            WHERE `idAdherent` IN ($jouersId) && `evenementId` = $eid";
+            WHERE `idAdherent` IN ($jouersID) && `evenementId` = $eid";
 
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
     
-    echo $curseur->errorInfo()[2];
+    return $curseur->errorInfo()[2];
 
 }
 
@@ -663,7 +800,7 @@ function isRegisteredForSOSpartenaire($PDO, $aid, $eid)
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
 
-    echo json_encode($curseur->fetchAll());
+    return json_encode($curseur->fetchAll());
 
 }
 
@@ -680,7 +817,7 @@ function getPlayersRegisteredForSOSpartenaire($PDO, $eid, $aid)
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
 
-    echo json_encode($curseur->fetchAll());
+    return json_encode($curseur->fetchAll());
 
 }
  
@@ -700,18 +837,23 @@ function getPlayersInfo($PDO, $ids)
 function getMembersFromIIDForEvent($PDO, $iid)
 {
 
-    $req = "SELECT A.id, A.nom, A.prenom 
+    $req = "SELECT A.id, A.nom, A.prenom, P.pid
             FROM `inscrire` I
+                        
+            INNER JOIN paire P
+            ON paire1 = P.pid
+            OR paire2 = P.pid
+            OR remplacant = P.pid 
             
-            INNER JOIN adherent A
-            ON A.id IN(`adherent`, `partenaire1`, `partenaire2`, `partenaire3`)
-
-            WHERE I.`id` = $iid";
+            INNER JOIN adherent A 
+            ON A.id = P.adherent
+            
+            WHERE I.id = $iid";
 
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
     
-    echo json_encode($curseur->fetchAll());
+    return $curseur->fetchAll();
 
 }
 
@@ -762,7 +904,7 @@ function createRegistrationNotificationMailForEvent($PDO, $eid, $ids)
         'to' => $toMails,
     );
 
-    echo json_encode($content);
+    return json_encode($content);
 
 
 }
@@ -772,7 +914,7 @@ function createUnRegistrationNotificationMailForEvent($PDO, $eid, $ids)
 
     global $site_url;
     
-    $ids = getFormatedIds($ids);
+    $ids = getFormatedIds($ids, 0);
     $playersInfos = getPlayersInfo($PDO, $ids);
     $referant = $playersInfos[0];
 
@@ -797,7 +939,7 @@ function createUnRegistrationNotificationMailForEvent($PDO, $eid, $ids)
         'to' => $toMails,
     );
 
-    echo json_encode($content);
+    return json_encode($content);
 
 }
 
@@ -836,7 +978,7 @@ function quickInsertUserAndFav($PDO, $aid, $lastname, $name, $mail, $license)
 
     addToFavorite($PDO, $aid, $fid);
 
-    echo $curseur->errorInfo()[2];
+    return $curseur->errorInfo()[2];
 
 }
 
@@ -850,7 +992,7 @@ function getAllPlayersRegistrations($PDO, $aid)
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
 
-    echo json_encode($curseur->fetchAll());
+    return json_encode($curseur->fetchAll());
 
 }
 
@@ -867,8 +1009,9 @@ function updateEventDate($PDO, $eid, $startDate, $endDate)
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
     
-    echo $curseur->errorInfo()[2];
+    return $curseur->errorInfo()[2];
 
 }
+
 
 ?>
