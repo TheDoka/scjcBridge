@@ -1,3 +1,20 @@
+9/05/2020
+inscription.php : Compétition:
+					Inscription normale, selection paire1 paire2 remplaçant
+					Si l'on est remplaçant d'une paire, on peut se retirer
+					Si l'on est inscrit dans une paire (pas remplaçant) on désinscrit l'intégralité
+					Possibilité de rejoindre une paire de remplaçants dans 'Inscrits' (au maximum 3 remplaçants dans cette paire, comme vu, au max 7)
+					fix mail 
+				fix affichage de paire
+				detection type de desinscription 
+				ménage dans le code et commentaires
+				selecteur de paires, détection paire impossible (modulo)
+
+				Tounroi:
+					desinscription d'une paire, le reste de la paire deveint une paire isolées
+					
+bdd: table isolées pour les paires retirées
+
 8/05/2020
 inscription.php: refonte totale du système d'inscription
 				 * inscription par paire plutôt que par équipe
