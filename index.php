@@ -66,6 +66,12 @@ if (!logged())
             $(document).ready(function(){
 
 
+                $('#sidebarCollapse').on('click', function () {
+                    $('#sidebar').toggleClass('active');
+                });
+                fullHeight();
+
+
                 var todayDate = new Date().toISOString().slice(0,10);
                 var aid = <?php echo intval($_COOKIE['logged']) ?>;
                 var user = getUser(aid);
@@ -75,20 +81,6 @@ if (!logged())
                 {
                     $('#gestionBase').show();
                 }
-
-                var fullHeight = function() {
-
-                    $('.js-fullheight').css('height', $(window).height());
-                    $(window).resize(function(){
-                        $('.js-fullheight').css('height', $(window).height());
-                    });
-
-                };
-                fullHeight();
-
-                $('#sidebarCollapse').on('click', function () {
-                    $('#sidebar').toggleClass('active');
-                });
        
                 var calendarEl = document.getElementById('calendar');
                 var calendar = new FullCalendar.Calendar(calendarEl, {
@@ -221,9 +213,9 @@ if (!logged())
                     }, function(data) {
 
                         registeredForEvents = JSON.parse(data);
-
+                        console.log(registeredForEvents);
                     });
-                    
+
                     events.forEach(event => {
                         /*
                         #type 
