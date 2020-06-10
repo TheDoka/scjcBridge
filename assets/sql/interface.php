@@ -103,8 +103,18 @@ if (isset($_POST['function']))
                 echo json_encode(getIIDWithPID(createPDO(), $_POST['pid']));
             break;
             case 'importIntoPairesIsolees':
-                echo json_encode(importIntoPairesIsolees(createPDO(), $_POST['eid'], $_POST['paires']));
+                echo importIntoPairesIsolees(createPDO(), $_POST['eid'], $_POST['paires']);
             break;
+            case 'getPairesIsoleesForEvent':
+                echo json_encode(getPairesIsoleesForEvent(createPDO(), $_POST['eid'], $_POST['exceptPID']));
+            break;
+            case 'getMembersOfPaireIsolee':
+                echo json_encode(getMembersOfPaireIsolee(createPDO(), $_POST['pid']));
+            break;
+            case 'deletePaireIsole':
+                echo deletePaireIsole(createPDO(), $_POST['pid']);
+            break;
+            
         }
 
 }
@@ -124,6 +134,43 @@ if (isset($_POST['function']))
         return sendQuery(req, type[0,1] -> return text/errorInfo);
 */
 
+function anhilatePaire($PDO, $pid, $eid)
+{
+
+    $iid = 0;
+
+    /*
+        I. On récupère l'id de l'inscription de la paire
+    */
+    $iid = getIIDWithPID($PDO, $pid)['iid'];
+
+    /*
+        II. Supprime la paire
+    */
+
+    unregisterPaire($PDO, $pid);
+
+    /*
+        II. On récupères les paires restantes
+    */
+    $pairesRestantes = getMembersFromIIDForEvent($PDO, $iid);
+     
+    if (sizeof($pairesRestantes) > 1)
+    {
+        /*
+            III. Supprime le reste des paires
+        */
+        deletePaireAssociatedWithIID($PDO, $iid);
+        
+        /*
+            IV. On importe les paires restante dans les paires isolées.
+        */
+
+        importIntoPairesIsolees($PDO, $eid, $pairesRestantes);
+    }
+
+}
+
 function connexion($PDO, $licenseId, $pass)
 {
     $pass = md5($pass);
@@ -135,9 +182,10 @@ function connexion($PDO, $licenseId, $pass)
     $curseur ->execute();
     
     $unClient = $curseur->fetch();
-    
-    return json_encode($unClient);
     $curseur = null;
+
+    return json_encode($unClient);
+    
     
 }
 
@@ -493,14 +541,44 @@ function getPlayersRegisteredForEvent($PDO, $eid)
 
 }
 
+function deletePaireIsole($PDO, $pid)
+{
+    $req = "DELETE 
+            FROM `isolees` 
+            WHERE `isolees`.`pid` = $pid";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+    return $curseur->errorInfo()[2];
+
+}
+
+function getMembersOfPaireIsolee($PDO, $pid)
+{
+
+    $req = "SELECT A.id, A.nom, A.prenom
+            FROM isolees 
+            
+            INNER JOIN adherent A
+            ON A.id = adherent
+            
+            WHERE isolees.pid = $pid";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+    return $curseur->fetchAll();
+}
+
 function registerToEventWith($PDO, $eid, $joueursID)
 {
     /*
         Format de l'array:
-        [0] id paire 1  <-> AID!
+        [0] id paire 1  <-> AID! <-> PID DE PAIRE ISOLEE
         [1] id paire 1  NULL
         
-        [2] id paire 2  NULL
+        [2] id paire 2  <-> NULL <-> PID DE PAIRE ISOLEE
         [3] id paire 2  NULL
 
         [4] id paire 3  NULL   
@@ -508,7 +586,7 @@ function registerToEventWith($PDO, $eid, $joueursID)
         [6] id paire 3  NULL
     */
 
-    $joueursID = json_decode($joueursID);
+    $joueursID = json_decode($joueursID);  
 
     /*
         Particularité:
@@ -521,38 +599,49 @@ function registerToEventWith($PDO, $eid, $joueursID)
     /*
         Créer la première paire:
     */
-    $req = "INSERT INTO `paire` 
-           (`pid`, `adherent`)
-           VALUES (NULL, '$joueursID[0]');
-           ";
-
-    if ($joueursID[1] != NULL)
+    if (!is_array($joueursID[0]) && !is_array($joueursID[1]))
     {
-        $req .= "INSERT INTO `paire` 
-                (`pid`, `adherent`)
-                VALUES (LAST_INSERT_ID(), '$joueursID[1]');
-                ";
+    
+        $req = "INSERT INTO `paire` 
+            (`pid`, `adherent`)
+            VALUES (NULL, '$joueursID[0]');
+            ";
+
+        if ($joueursID[1] != NULL)
+        {
+            $req .= "INSERT INTO `paire` 
+                    (`pid`, `adherent`)
+                    VALUES (LAST_INSERT_ID(), '$joueursID[1]');
+                    ";
+        }
+
+        $curseur = $PDO->prepare($req);
+        $curseur ->execute();
+
+        $paire1 = $PDO->lastInsertId();
+
+    } else {
+
+            // Selectionne la paire isolée
+            $pid = $joueursID[0][0]; 
+            $paire1 = trasnferIsolePaire(createPDO(), $pid);
     }
 
-    $curseur = $PDO->prepare($req);
-    $curseur ->execute();
-
-    $paire1 = $PDO->lastInsertId();
-
-
+    
     /*
         Seconde paire 
     */
-    if ($joueursID[2] != "NULL")
+    if (!is_array($joueursID[2]) && !is_array($joueursID[3]) && $joueursID[2] != "NULL")
     {
+
         $req = "INSERT INTO `paire` 
-        (`pid`, `adherent`)
-        VALUES (NULL, '$joueursID[2]');
-       
-        INSERT INTO `paire` 
-        (`pid`, `adherent`)
-        VALUES (LAST_INSERT_ID(), '$joueursID[3]');
-        ";
+                (`pid`, `adherent`)
+                VALUES (NULL, '$joueursID[2]');
+            
+                INSERT INTO `paire` 
+                (`pid`, `adherent`)
+                VALUES (LAST_INSERT_ID(), '$joueursID[3]');
+                ";
 
         $curseur = $PDO->prepare($req);
         $curseur ->execute();
@@ -560,7 +649,20 @@ function registerToEventWith($PDO, $eid, $joueursID)
         $paire2 = $PDO->lastInsertId();
 
     } else {
-        $paire2 = "NULL";
+        /*
+            Si c'est un array, c'est une paire isolée.
+        */
+        if (is_array($joueursID[2]))
+        {
+            // Selectionne la paire isolée
+            $pid = $joueursID[2][0];
+            $paire2 = trasnferIsolePaire(createPDO(), $pid);
+
+
+        } else {
+            $paire2 = "NULL";
+        }
+    
     }
 
     /*
@@ -613,6 +715,57 @@ function registerToEventWith($PDO, $eid, $joueursID)
     $curseur ->execute();
     
     return $curseur->errorInfo()[2];
+
+}
+
+/*
+
+    Transfère une paire isolée vers une paire
+    @return pid
+
+*/
+function trasnferIsolePaire($PDO, $pid)
+{
+
+    // Tranfère la paire isolée en paire et récupère le pid.
+    $paire = copyIsolePaire($PDO, $pid);
+
+    // Supprime paire isolée
+    deletePaireIsole($PDO, $pid);
+
+    return $paire;
+}
+
+/*
+    Génère les requêtes de création d'une paire via un pid de paire isolée
+    @return paireId
+*/
+function copyIsolePaire($PDO, $pid)
+{
+        /*
+            Récupère info des joueurs de la paire isolée
+        */
+        $joueurs = getMembersOfPaireIsolee($PDO, $pid);
+
+        $id = $joueurs[0]['id'];
+        $req = "INSERT INTO `paire` 
+                    (`pid`, `adherent`)
+                    VALUES (NULL, '$id');
+                ";
+
+        
+        for ($i=1; $i < sizeof($joueurs) ; $i++) { 
+                $id = $joueurs[$i]['id'];
+                $req .= "INSERT INTO `paire` 
+                        (`pid`, `adherent`)
+                        VALUES (LAST_INSERT_ID(), '$id');
+                ";
+        }
+
+        $curseur = $PDO->prepare($req);
+        $curseur ->execute();
+
+        return $PDO->lastInsertId();
 
 }
 
@@ -794,16 +947,16 @@ function registerSOSpartenaire($PDO, $aid, $eid)
 
 }
 
-function unregisterSOSpartenaire($PDO, $jouersID, $eid)
+function unregisterSOSpartenaire($PDO, $joueursID, $eid)
 {
 
-    $jouersID = json_decode($jouersID);
+    $joueursID = json_decode($joueursID);
 
-    $jouersID = getLowFormatedIds($jouersID);
+    $joueursID = getLowFormatedIds($joueursID);
 
     $req = "DELETE 
             FROM `sos` 
-            WHERE `idAdherent` IN ($jouersID) && `evenementId` = $eid";
+            WHERE `idAdherent` IN ($joueursID) && `evenementId` = $eid";
 
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
@@ -894,7 +1047,7 @@ function createRegistrationNotificationMailForEvent($PDO, $eid, $ids)
     */
 
     // Récupère informations du réfèrent
-    // [lastOne]
+    // [0]
 
     
     $ids = getLowFormatedIds($ids);
@@ -981,7 +1134,7 @@ function createUnregistrationLinkForEvent($aid, $nom, $eid)
     */
 
     global $site_url;
-
+    
     $link = $site_url . "api.php?token=" . md5($aid . $nom) . "&f=unre&eid=" . $eid;
     return $link;
 
@@ -1114,6 +1267,7 @@ function getIIDWithPID($PDO, $pid)
 
 function importIntoPairesIsolees($PDO, $eid, $paires)
 {
+
     $req = "";
     for ($i=0; $i < sizeof($paires); $i++) { 
         $pid = $paires[$i]['pid'];
@@ -1122,8 +1276,29 @@ function importIntoPairesIsolees($PDO, $eid, $paires)
     }
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
-
+    
     return $curseur->errorInfo()[2];
+}
+
+function getPairesIsoleesForEvent($PDO, $eid, $exceptPID)
+{
+
+    $exceptPID = getLowFormatedIds($exceptPID);
+
+    $req = "SELECT I.pid, A.id, A.nom, A.prenom
+            FROM `isolees` I
+            
+            INNER JOIN adherent A
+            ON A.id = adherent
+
+            WHERE I.pid NOT IN ($exceptPID) && I.evenementId = $eid
+           ";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+    return $curseur->fetchAll();
+
 }
 
 ?>

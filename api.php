@@ -23,7 +23,7 @@
                     $eid = $_GET['eid'];
                     
                     unregisterFromEventComplex(createPDO(), $aid, $eid);
-                    redirect("inscription.php?eid=$eid");
+                    //redirect("inscription.php?eid=$eid");
                 break;
             }
             

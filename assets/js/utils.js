@@ -67,15 +67,17 @@ function registerToEventWith(eid, joueursID)
 
 
 /*
-    Supprime la paire pid
+    Supprime la paire pid des paires
 */
 function unregisterPaire(pid, eid)
 {
+    let iid = 0;
+    let error = "";
 
     /*
         I. On récupère l'id de l'inscription de la paire
     */
-    let iid = 0;
+    $.ajaxSetup({async: false});  
     $.ajax({
         type: "POST",
         async: false,
@@ -86,24 +88,27 @@ function unregisterPaire(pid, eid)
         },
         success: function(data)
         {
-            console.log(data);
             iid = JSON.parse(data)['iid'];
+            console.log(data);
 
         },
     });
-    
+
     /*
         II. Supprime la paire
-
+    */
     $.post('assets/sql/interface.php',
     {
         function: 'unregisterPaire',
         pid: pid,
         iid: iid,
     }, function(data) {
-        console.log(data);
+
+        if (data) {
+            error += "[2] " + data + "\n";
+        }
+
     });
-    */
 
     /*
         II. On récupères les paires restantes
@@ -115,40 +120,74 @@ function unregisterPaire(pid, eid)
         iid: iid,
     }, function(data) {
         pairesRestantes = JSON.parse(data);
-        console.log(pairesRestantes);
-
     });
 
-    /*
-        III. On supprime l'inscription
-        pairesRestantes = [];
+    if (pairesRestantes.length > 1)
+    {
+        /*
+            III. Supprime le reste des paires
+        */
         $.post('assets/sql/interface.php',
         {
-            function: 'unregisterFromEvent',
+            function: 'deletePaireAssociatedWithIID',
             iid: iid,
         }, function(data) {
-            
-            console.log(data);
-            
+            if (data) {
+                error += "[3] " + data + "\n";
+            }
         });
         
+        /*
+            IV. On importe les paires restante dans les paires isolées.
         */
-    /*
-        IV. On importe les paires restante dans les paires isolées.
-    */
 
+        $.post('assets/sql/interface.php',
+        {
+            function: 'importIntoPairesIsolees',
+            eid: eid,
+            paires: pairesRestantes,
+        }, function(data) {
+
+            if (data) {
+                error += "[4] " + data + "\n";
+            }
+
+        });
+
+    }
+
+    /*
+        V. On supprime l'inscription
+    */
     $.post('assets/sql/interface.php',
     {
-        function: 'importIntoPairesIsolees',
-        eid: eid,
-        paires: pairesRestantes,
+        function: 'unregisterFromEvent',
+        iid: iid,
     }, function(data) {
+        
+        if (data) {
+            error += "[5] " + data + "\n";
+        }
+        
+    });
 
+    return error;
+}
+
+/*
+    Supprime la paire pid des paires isolées
+*/
+function deletePaireIsolee(pid)
+{
+    $.post('assets/sql/interface.php',
+    {
+        function: 'deletePaireIsole',
+        pid: pid,
+    }, function(data) {
         console.log(data);
 
     });
 
-        
 }
 
 /*
@@ -197,6 +236,7 @@ function unregisterPaires(aid, eid, iid)
 
     });
         
+
 }
 
 /*
