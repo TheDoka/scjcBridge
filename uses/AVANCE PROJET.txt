@@ -1,3 +1,17 @@
+10/05/2020
+
+inscription.php: affichage fixé pour les inscrits/ma situation
+				 inscription pour tournoi
+				 bugs fixés
+				 paires isolées gestion, ajouter à l'inscription
+				 quitter les paires isolées
+à faire:
+Fix mail
+Fix api
+Fix affichage sur inscription (couleurs non cohérente)
+Fix inscription ordre d'inscription pose problème si selection paire puis joueur
+ 
+
 9/05/2020
 inscription.php : Compétition:
 					Inscription normale, selection paire1 paire2 remplaçant
