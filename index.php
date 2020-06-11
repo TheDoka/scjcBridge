@@ -63,6 +63,7 @@ if (!logged())
 
         <script type="text/javascript">
 
+
             $(document).ready(function(){
 
 
@@ -82,6 +83,7 @@ if (!logged())
                     $('#gestionBase').show();
                 }
        
+
                 var calendarEl = document.getElementById('calendar');
                 var calendar = new FullCalendar.Calendar(calendarEl, {
                     locale: 'FR',
@@ -173,14 +175,16 @@ if (!logged())
 
                     },
                     datesRender : function(){
-                        $('.fc-today-button').after('<select class="selectpicker" multiple data-live-search="false">'+
-                                                        '<option id="dC" selected>Compétitions</option>'+
-                                                        '<option id="dT" selected>Tournois</option>'+
-                                                        '<option id="dPL" selected>Parties Libres</option>'+
-                                                        '<option id="dES" selected>Evénements spéciaux</option>'+
-                                                        '<option id="dIN" selected>Afficher événements inscrits</option>'+
-                                                    '</select>');
-                        $('select').selectpicker();
+
+                            $('.fc-today-button').after('<select class="selectpicker" multiple data-live-search="false">'+
+                                                            '<option id="dC" selected>Compétitions</option>'+
+                                                            '<option id="dT" selected>Tournois</option>'+
+                                                            '<option id="dPL" selected>Parties Libres</option>'+
+                                                            '<option id="dES" selected>Evénements spéciaux</option>'+
+                                                            '<option id="dIN" selected>Afficher événements inscrits</option>'+
+                                                        '</select>');
+                            $('select').selectpicker();
+ 
                     }
                 });
 
@@ -278,6 +282,7 @@ if (!logged())
                         if (isInArray(registeredForEvents, event[0]))
                         {
                             title += "★ ";
+                            bcColor = '#0000ff';
                             classNames.push("inscrit");
                         }
                         title += event['titre'];

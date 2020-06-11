@@ -38,6 +38,10 @@ if (!logged())
             <script src="https://cdn.datatables.net/1.10.21/js/dataTables.bootstrap4.min.js"></script>
             <link rel="stylesheet" href="https://cdn.datatables.net/1.10.21/css/dataTables.bootstrap4.min.css">
         
+
+        <!-- Moment --> 
+            <script src="https://momentjs.com/downloads/moment-with-locales.min.js" crossorigin="anonymous"></script>
+       
         <!-- Main --> 
             <script src="assets/js/utils.js"></script>
 
@@ -106,6 +110,7 @@ if (!logged())
                         */
                         } else {
 
+
                             if (checked > 2) { 
                                 $(this).parent().addClass("paireRemplacant");
                             } else {
@@ -139,12 +144,16 @@ if (!logged())
                 /*
                     Vérifie paire cohérente
                 */
-
-                if (checked % 2 != 0 && checked <= paire)
+                if (ety == 3)
                 {
-                    buttonInscrire(true);
+                    if (checked >= paire-3)
+                    {
+                        buttonInscrire(true);
+                    } else {
+                        buttonInscrire(false);
+                    }
                 } else {
-                    if (checked > 3)
+                    if (checked == paire)
                     {
                         buttonInscrire(true);
                     } else {
@@ -170,12 +179,22 @@ if (!logged())
             $(document).on('click', '.inscription', function (e)
             {
             
-                let pid = e.target.id;
-                if (confirm('Êtes vous sûr de vouloir rejoindre la cet paire de remplaçant?'))
-                {
-                    registerRemplacant(aid, pid);
-                }
+                // Varie selon l'action, peut être pid/iid
 
+                let id = e.target.id;
+                // Créer la paire remplacante ou bien ajoute à la paire des remplacant
+                if (confirm('Êtes vous sûr de vouloir rejoindre cette équipe en tant que remplaçant?'))
+                {
+                    if ($(this).hasClass('new'))
+                    {
+                        let pid = createNewPaireRemplacement(id);
+                        registerRemplacant(aid, pid);
+                    } else {
+                        
+                        registerRemplacant(aid, id);
+                        
+                    }
+                }
             });
 
             $(document).on('click', '#buttonInscrire', function (e) {
@@ -284,10 +303,14 @@ if (!logged())
                             deletePaireIsolee(id);
                         } else {
                             // Desinscription de paire
-                            let error = unregisterPaire(id, eid);
-                            if (error.length > 0)
+                            if (confirm("Êtes-vous sûr de vouloir vous desinscrire de l'évenement?"))
                             {
-                                alert('Une erreur est survenue: \n' + error);
+                                let error = unregisterPaire(id, eid);
+                                if (error.length > 0)
+                                {
+                                    alert('Une erreur est survenue: \n' + error);
+                                }
+                                document.location.reload(true);
                             }
 
                         }
@@ -574,8 +597,9 @@ if (!logged())
                 createCallendarForOneEvent(event);
 
                 $('#titre').text(event['titre']);
-                $('#debut').text("Commence le : " + event['dteDebut']);
-                $('#fin').text("Fini le : " + event['dteFin']);
+                moment.locale('fr');
+                $('#debut').text("Commence le " + moment(event['dteDebut']).format("dddd Do MMMM YYYY à HH:MM "));
+                $('#fin').text("Fini le " + moment(event['dteFin']).format("dddd Do MMMM YYYY à HH:MM "));
                 $('#lieu').text("Place de l'évenement : " + event['commune'] + ", " + event['adresse']);
                 
                 ety = parseInt(event['type']);
@@ -856,12 +880,15 @@ if (!logged())
                                 break;
                             }
                         
-                        if (data.length > 3)
-                        {
-                            remplacant = [];
-                            paireRemplacant = parseInt(data[0]['NumPaire'])+2;
 
-                            for (let j = 0; j < data.length; j++) {
+                        if (data.length > 3 && data[i]['remplacant'] != "NULL")
+                        {
+                            
+                            paireRemplacant = data[i]['remplacant'];
+
+                            // Récupère tout les membres remplaçant de la paire
+                            remplacant = [];
+                            for (let j = i; j < data.length; j++) {
                                 if (data[j]['NumPaire'] == paireRemplacant)
                                 {    
                                     remplacant.push(parseInt(data[j]['id']));    
@@ -877,6 +904,7 @@ if (!logged())
                         // Lit jusqu'a changement d'inscription et construit l'affichage
                         // pour la table.
                         i=0;
+                        iid = data[i]['iid'];
                         while (i < data.length && data[i]['iid'] == iid)
                         {
                             noms     += data[i]['nom'] + "</br>";
@@ -913,7 +941,7 @@ if (!logged())
                             if (i < data.length && data[i]['iid'] == iid)
                             {
 
-                                while (i < data.length && data[i]['NumPaire'] == pid)
+                                while (i < data.length && data[i]['iid'] == iid)
                                 {
                                     noms    += data[i]['nom'] + "</br>";
                                     prenoms += data[i]['prenom'] + "</br>";
@@ -925,19 +953,23 @@ if (!logged())
                                 }
 
                         
-
-                                // Pour les compétitions, si la paire est une paire de remplaçant
-                                if (ety == 3 && added > 4)
+                                // Pour les compétitions, si la paire est une paire de remplaçant et vérifie si la paire est pleine 
+                                if (ety == 3 && added > 4 && added != 7 && !inscrit)
                                 {
-                                    // Vérifie si la paire est pleine 
-                                    if (added != 7)
-                                    {
-                                        option = `<button id="${pid}" class='btn btn-danger inscription remplacant'>S'ajouter en remplaçant</button>`;
-                                    }
-                                    
+                                    option = `<button id="${pid}" class='btn btn-danger inscription remplacant'>S'ajouter en remplaçant</button>`;
                                     added = 0;
                                 } else {
-                                    option = "";
+
+                                    // Si il n'y a pas de paire de remplaçant
+                                    if (ety == 3 && added == 4 && !inscrit)
+                                    {
+                                        option = `<button id="${iid}" class='btn btn-danger inscription remplacant new'>XX</button>`;;
+                                        added = 0;
+                                    } else {
+                                        option = "";
+                                    }
+                                    
+                                    
                                 }
 
                                 $('#tableInscrit > tbody').append(
@@ -1192,6 +1224,7 @@ if (!logged())
                                         <th scope="col">#</th>
                                         <th scope="col">Nom</th>
                                         <th scope="col">Prénom</th>
+                                        <th scope="col">Options</th>
                                         </tr>
                                     </tr>
                                 </thead>

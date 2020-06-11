@@ -95,21 +95,36 @@ function unregisterPaire(pid, eid)
     });
 
     /*
-        II. Supprime la paire
+        II. Recupère memebre de la paire qui va être désinscrite
     */
     $.post('assets/sql/interface.php',
     {
-        function: 'unregisterPaire',
+        function: 'getMembersOfPaire',
         pid: pid,
-        iid: iid,
     }, function(data) {
 
-        if (data) {
-            error += "[2] " + data + "\n";
-        }
-
+        data = JSON.parse(data);
+        notifiyUnRegisterByMail(eid, data);
+        
     });
 
+    /*
+        II. Supprime la paire
+    */
+        
+        $.post('assets/sql/interface.php',
+        {
+            function: 'unregisterPaire',
+            pid: pid,
+            iid: iid,
+        }, function(data) {
+            
+            if (data) {
+                error += "[2] " + data + "\n";
+            }
+            
+        });
+        
     /*
         II. On récupères les paires restantes
     */
@@ -120,10 +135,14 @@ function unregisterPaire(pid, eid)
         iid: iid,
     }, function(data) {
         pairesRestantes = JSON.parse(data);
+        console.log(pairesRestantes);
+
     });
 
     if (pairesRestantes.length > 1)
     {
+        notifiyPaireIsoleeByMail(eid, pairesRestantes);
+        
         /*
             III. Supprime le reste des paires
         */
@@ -265,6 +284,28 @@ function registerRemplacant(aid, pid)
 
 }
 
+/*
+    Donne une paire de remplacement a l'inscription IID
+    @return pid
+*/
+function createNewPaireRemplacement(iid)
+{
+
+    $.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        data:{
+            function: 'createNewPaireRemplacement',
+            iid: iid
+        },
+        success: function (data) {
+            pid = data;
+        },
+        async:   false
+    });
+
+    return pid;
+}
 
 /*
     Retire le joeur aid de la paire des remplaçants de l'inscription iid
@@ -284,7 +325,7 @@ function unregisterFromRemplacant(aid, iid)
             {
                 alert('Une erreur est survenue!\n' + data);
             } else {
-                //document.location.reload(true);
+                document.location.reload(true);
             }
             
 
@@ -406,6 +447,30 @@ function notifiyUnRegisterByMail(eid, ids)
     }, function(data) {
         console.log(data);
     });
+
+}
+
+/*
+    Créer et envoie une notification mail que le joueur s'est fait désinscrire et passe en paire isolée
+    de l'évenement: eid
+    aux ids: joueurs
+    @return /
+*/
+function notifiyPaireIsoleeByMail(eid, ids)
+{
+
+    $.post('assets/sql/interface.php',
+        {
+            function: 'createPaireIsoleeNotificationMailForEvent',
+            eid: eid,
+            ids: ids,
+        }, function(data) {
+
+            mailContent = JSON.parse(data);
+            console.log(mailContent);
+
+        });
+
 
 }
 

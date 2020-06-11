@@ -1,3 +1,13 @@
+11/05/2020
+inscription.php: fix affichage blanc sur situation
+				 fix ajouter/retire paires remplaçantes
+				 possibilité d'ajouter en remplaçant sur une paire vide sans remplaçant
+				 fix selection de paires
+				 date écrit en clair dans l'affichage évenemnt 
+				 		 
+reunion sur le projet 15h17h
+
+
 10/05/2020
 
 inscription.php: affichage fixé pour les inscrits/ma situation

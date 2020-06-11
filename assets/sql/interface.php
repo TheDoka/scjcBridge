@@ -111,8 +111,17 @@ if (isset($_POST['function']))
             case 'getMembersOfPaireIsolee':
                 echo json_encode(getMembersOfPaireIsolee(createPDO(), $_POST['pid']));
             break;
+            case 'getMembersOfPaire':
+                echo json_encode(getMembersOfPaire(createPDO(), $_POST['pid']));
+            break;
             case 'deletePaireIsole':
                 echo deletePaireIsole(createPDO(), $_POST['pid']);
+            break;
+            case 'createPaireIsoleeNotificationMailForEvent':
+                echo json_encode(createPaireIsoleeNotificationMailForEvent(createPDO(), $_POST['eid'], $_POST['ids']));
+            break;
+            case 'createNewPaireRemplacement':
+                echo createNewPaireRemplacement(createPDO(), $_POST['iid']);
             break;
             
         }
@@ -513,7 +522,7 @@ function getAvailablePlayers($PDO, $eid)
 function getPlayersRegisteredForEvent($PDO, $eid)
 {
 
-    $req = "SELECT A.id, A.nom, A.prenom, I.Id as iid, P.pid as NumPaire
+    $req = "SELECT A.id, A.nom, A.prenom, I.Id as iid, P.pid as NumPaire, I.paire1, I.paire2, I.remplacant
             FROM `inscrire` I
                         
             INNER JOIN paire P
@@ -564,6 +573,22 @@ function getMembersOfPaireIsolee($PDO, $pid)
             ON A.id = adherent
             
             WHERE isolees.pid = $pid";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+    return $curseur->fetchAll();
+}
+function getMembersOfPaire($PDO, $pid)
+{
+
+    $req = "SELECT A.id, A.nom, A.prenom
+            FROM paire 
+            
+            INNER JOIN adherent A
+            ON A.id = adherent
+            
+            WHERE paire.pid = $pid";
 
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
@@ -783,6 +808,24 @@ function unregisterFromEvent($PDO, $iid)
     $curseur ->execute();
     
     return $curseur->errorInfo()[2];
+}
+
+function createNewPaireRemplacement($PDO, $iid)
+{
+
+    $req = "SELECT MAX(`pid`)+1 as pid
+            FROM `paire`;
+
+            UPDATE `inscrire`
+            SET `remplacant` = (SELECT MAX(`pid`)+1 FROM `paire`)
+            WHERE `inscrire`.`id` = $iid;
+            ";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+    
+    return $curseur->fetchAll()[0][0];
+
 }
 
 function deletePaireAssociatedWithIID($PDO, $iid)
@@ -1108,6 +1151,39 @@ function createUnRegistrationNotificationMailForEvent($PDO, $eid, $ids)
         'body' => nl2br(
             " Bonjour, \n" .
             " Vous venez d'être désinscrit de '" . $eventInfo['titre'] . "' par: " . $referant['nom'] . ' ' . $referant['prenom'] . "\n". 
+            " Les joueurs suivants ont été desinscrits: \n " . $players. "\n" . 
+            " Pour inspecter l'évenement cliquer ici: " . $site_url . "inscription.php?eid=" . $eid
+        ),
+        'to' => $toMails,
+    );
+
+    return $content;
+
+}
+
+function createPaireIsoleeNotificationMailForEvent($PDO, $eid, $ids)
+{
+
+    global $site_url;
+    
+    $ids = getFormatedIds($ids, 0);
+    $playersInfos = getPlayersInfo($PDO, $ids);
+
+    $toMails = [];
+    $players = "";
+    foreach ($playersInfos as $key => $player) {
+        array_push($toMails, $player['mail']);
+        $players .= $player['nom'] . " " . $player['prenom'] . "\n";
+    }
+
+    // Recupère les information de l'évenement:
+    $eventInfo = getEventInfo($PDO, $eid);
+
+    $content[] = array(
+        'subject' => "Notification de desinscription/Paire isolée",
+        'body' => nl2br(
+            " Bonjour, \n" .
+            " Vous venez d'être désinscrit de '" . $eventInfo['titre'] . ", vous allez être placé en paire isolée". 
             " Les joueurs suivants ont été desinscrits: \n " . $players. "\n" . 
             " Pour inspecter l'évenement cliquer ici: " . $site_url . "inscription.php?eid=" . $eid
         ),
