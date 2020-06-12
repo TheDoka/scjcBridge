@@ -1,3 +1,15 @@
+12/05/2020
+inscription.php: refonte de l'affichage!!
+				 couleurs fixées, selection améliorée et plus cohérente:
+				 	tournoi: s'inscrire avec une personne forme une paire isolée (sur les /4)
+							 s'inscire avec une paire isolée en étant paire isolée forme une inscription 
+							 s'inscire en paire isolée avec deux joueurs forme une inscription
+
+				ergonomie: SOS partenaire apparait plus clair
+						   rafraichissement automatique des tableaux
+
+
+
 11/05/2020
 inscription.php: fix affichage blanc sur situation
 				 fix ajouter/retire paires remplaçantes

@@ -282,7 +282,7 @@ if (!logged())
                         if (isInArray(registeredForEvents, event[0]))
                         {
                             title += "★ ";
-                            bcColor = '#0000ff';
+                            bcColor = '#00a6ff';
                             classNames.push("inscrit");
                         }
                         title += event['titre'];
@@ -375,6 +375,14 @@ if (!logged())
 
 
 <style>
+
+.inscrit{
+    background-color: #00a6ff50;
+}
+
+.fc-event{
+    font-size: 1.5em;
+}
 
 .bootstrap-select .dropdown-toggle .filter-option{
 

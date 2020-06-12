@@ -57,53 +57,55 @@ if (!logged())
                     $('#sidebar').toggleClass('active');
                 });
 
+            var type = 0;
 
             $('#confirmImport').on('click',function(e){
 
-                if (imported_.length <= 0) 
-                {
-                    alert('Aucun fichier importé.');
-                } else {
-                
                     $.post('assets/sql/interface.php',
                         {
                             function: 'importEvents',
                             events: imported_,
-                            type: $('#importType option:selected').attr('id')
+                            type: type
                         }, function(data) {
                             if (data.length > 0)
                             {
-                                //alert("Une erreur est survenue: \n" + data);
+                                alert("Une erreur est survenue: \n" + data);
                                 console.log(data);
+                            } else {
+                                alert("Import éffectué avec succès!")
                             }
                     });
             
-                }
+  
 
 
             });
 
-            $('#submit-file').on("click",function(e){
+            $("input:file").change(function ()
+            {
+                checkParseAndDraw();
+            });
 
+            function checkParseAndDraw()
+            {
+                    
                 if ($("#import-form")[0].checkValidity() )
-                {
-                    e.preventDefault();
-                    $('#files').parse({
-                        config: {
-                            delimiter: "auto",
-                            complete: displayHTMLTable,
-                        },
-                        error: function(err, file)
-                        {
-                            alert('Une erreur est survenue, veuillez verifier le fichier. \,' + err + '\n' + file);
-                        }
-                    });
-                } else {
-                    alert('Aucun fichier importé.');
-                }
+                    {
+                        $('#files').parse({
+                            config: {
+                                delimiter: "auto",
+                                complete: displayHTMLTable,
+                            },
+                            error: function(err, file)
+                            {
+                                alert('Une erreur est survenue, veuillez verifier le fichier. \,' + err + '\n' + file);
+                            }
+                        });
+                    } else {
+                        alert('Aucun fichier importé.');
+                    }
 
-            });
-
+            }
             function displayHTMLTable(results){
                 var tdata = "";
                 var data = results.data;
@@ -143,6 +145,19 @@ if (!logged())
                 }
                 // La table prends les données
                 $("#parsed_csv_list").html(tdata);
+
+                switch(data[0][0].split(',').length)
+                {
+                    case 12: // compétition
+                        type = 3;
+                    break;
+                    case 7: // partie libre
+                        type = 2;
+                    break;
+                    case 11: // tournoi
+                        type = 1;
+                    break;
+                }
             }
 
         });
@@ -206,21 +221,13 @@ if (!logged())
                         <div class="custom-file">
                             <label style="width:400px" class="custom-file-label" for="files">Importer fichier .CSV</label>
                             <input type="file" id="files" class="form-control custom-file-input" accept=".csv" required />
+                            <button style="margin-left: 100px;" id="confirmImport" class="btn form-control btn-warning" type="button">Confirmer l'importation dans la base.</button>
                         </div>
-                        <div>
-                                <button type="submit" id="submit-file" class="btn btn-primary">Aperçu</button>
-                                <button id="confirmImport" class="btn form-control btn-warning" type="button">Confirmer l'importation dans la base.</button>
-                                <select class="form-control" id="importType">
-                                    <option id="1">Tournois</option>
-                                    <option id="2">Parties Libres</option>
-                                    <option id="3">Compétitions</option>
-                                </select>
-                            </div>
+
                     </div>
 
                         
 
-                    
                     
                 </form>
 

@@ -74,6 +74,8 @@ function unregisterPaire(pid, eid)
     let iid = 0;
     let error = "";
 
+
+    
     /*
         I. On récupère l'id de l'inscription de la paire
     */
@@ -204,7 +206,12 @@ function deletePaireIsolee(pid)
         pid: pid,
     }, function(data) {
         console.log(data);
+        if (data)
+        {
 
+        } else {
+            document.location.reload(true);
+        }
     });
 
 }
@@ -261,14 +268,40 @@ function unregisterPaires(aid, eid, iid)
 /*
     Ajoute le joeur aid à la paire pid
 */
-function registerRemplacant(aid, pid)
+function registerRemplacantToPid(aid, pid)
 {
 
     $.post('assets/sql/interface.php',
     {
-        function: 'registerRemplacant',
+        function: 'registerRemplacantToPid',
         aid: aid,
         pid: pid,
+    }, function(data) {
+            console.log(data);
+            
+            if (data)
+            {
+                alert('Une erreur est survenue!\n' + data);
+            } else {
+                document.location.reload(true);
+            }
+            
+
+    });
+
+}
+
+/*
+    Forme une paire isolée avec les joueurs
+*/
+function registerIsolees(eid, ids)
+{
+
+    $.post('assets/sql/interface.php',
+    {
+        function: 'registerIsolees',
+        eid: eid,
+        ids: ids,
     }, function(data) {
             console.log(data);
             

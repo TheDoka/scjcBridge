@@ -96,8 +96,11 @@ if (isset($_POST['function']))
             case 'unregisterFromRemplacant':
                 echo unregisterFromRemplacant(createPDO(), $_POST['aid'], $_POST['iid']);
             break;
-            case 'registerRemplacant':
-                echo registerRemplacant(createPDO(), $_POST['aid'], $_POST['pid']);
+            case 'registerRemplacantToPid':
+                echo registerRemplacantToPid(createPDO(), $_POST['aid'], $_POST['pid']);
+            break;
+            case 'registerIsolees':
+                echo registerIsolees(createPDO(), $_POST['eid'], $_POST['ids']);
             break;
             case 'getIIDWithPID':
                 echo json_encode(getIIDWithPID(createPDO(), $_POST['pid']));
@@ -599,9 +602,14 @@ function getMembersOfPaire($PDO, $pid)
 function registerToEventWith($PDO, $eid, $joueursID)
 {
     /*
+
+        // To do 
+        // inscription [] [] 
+        
+        
         Format de l'array:
         [0] id paire 1  <-> AID! <-> PID DE PAIRE ISOLEE
-        [1] id paire 1  NULL
+        [1] id paire 1  NULL <-> PID DE PAIRE ISOLEE
         
         [2] id paire 2  <-> NULL <-> PID DE PAIRE ISOLEE
         [3] id paire 2  NULL
@@ -614,16 +622,21 @@ function registerToEventWith($PDO, $eid, $joueursID)
     $joueursID = json_decode($joueursID);  
 
     /*
-        Particularité:
+        Particularités:
          L'utilisation de 'LAST_INSERTED_ID' dans les requêtes présente un risque, je ne suis pas sûr que ce soi parfaitement syncrone. 
          Si deux joeurs s'inscrivent en même temps, il est possible que le last inserted id soi partagé entre les deux requêtes.
          Ce qui renderait l'inscription très étrange. Mais à priori il est conservé pour une session donnée.
+
+        Index: il permet de savoir où commence la paire,
+        la paire deux peut commencer à l'index 1: si c'est une inscription de deux paire isolées.
+        la paire deux peut commencer à l'index 2: si c'est un rattachement d'une paire formée et une paire isolée.
+
     */
 
 
     /*
         Créer la première paire:
-    */
+    */    
     if (!is_array($joueursID[0]) && !is_array($joueursID[1]))
     {
     
@@ -644,28 +657,42 @@ function registerToEventWith($PDO, $eid, $joueursID)
         $curseur ->execute();
 
         $paire1 = $PDO->lastInsertId();
+        $index = 2;
 
     } else {
+        /*
+            Si [0] et [1] sont des array, ils représentent alors deux paires isolées.
+        */
+
+        // Selectionne la paire isolée
+        $pid = $joueursID[0][0]; 
+        $paire1 = trasnferIsolePaire(createPDO(), $pid);
+        $index = 1;
+
+        if (is_array($joueursID[1]))
+        {
 
             // Selectionne la paire isolée
-            $pid = $joueursID[0][0]; 
-            $paire1 = trasnferIsolePaire(createPDO(), $pid);
+            $pid = $joueursID[1][0]; 
+            $paire2 = trasnferIsolePaire(createPDO(), $pid);
+            $index = 2;
+        }
+
     }
 
-    
     /*
         Seconde paire 
     */
-    if (!is_array($joueursID[2]) && !is_array($joueursID[3]) && $joueursID[2] != "NULL")
+    if (!is_array($joueursID[$index]) && !is_array($joueursID[$index]) && $joueursID[$index] != "NULL")
     {
-
+        
         $req = "INSERT INTO `paire` 
                 (`pid`, `adherent`)
-                VALUES (NULL, '$joueursID[2]');
+                VALUES (NULL, '$joueursID[$index]');
             
                 INSERT INTO `paire` 
                 (`pid`, `adherent`)
-                VALUES (LAST_INSERT_ID(), '$joueursID[3]');
+                VALUES (LAST_INSERT_ID(), '" . $joueursID[$index+1] . "');
                 ";
 
         $curseur = $PDO->prepare($req);
@@ -674,21 +701,24 @@ function registerToEventWith($PDO, $eid, $joueursID)
         $paire2 = $PDO->lastInsertId();
 
     } else {
-        /*
-            Si c'est un array, c'est une paire isolée.
-        */
-        if (is_array($joueursID[2]))
+        if (!is_array($joueursID[0]) && !is_array($joueursID[1]))
         {
-            // Selectionne la paire isolée
-            $pid = $joueursID[2][0];
-            $paire2 = trasnferIsolePaire(createPDO(), $pid);
-
-
-        } else {
-            $paire2 = "NULL";
+            /*
+                Si c'est un array, c'est une paire isolée.
+            */
+            if (is_array($joueursID[2]))
+            {
+                $index = 2;
+                // Selectionne la paire isolée
+                $pid = $joueursID[$index][0];
+                $paire2 = trasnferIsolePaire(createPDO(), $pid);
+            } else {
+                $paire2 = "NULL";
+            }
         }
     
     }
+    
 
     /*
         Paire de remplaçants
@@ -727,15 +757,14 @@ function registerToEventWith($PDO, $eid, $joueursID)
     }
 
     /*
-
         On éffectue l'inscription à l'évenement avec les paires données.
-
     */
 
+        
     $req = "INSERT INTO `inscrire` 
-            (`id`, `evenementId`, `paire1`, `paire2`, `remplacant`) 
-            VALUES (NULL, $eid, $paire1, $paire2, $remplacant);";
-
+    (`id`, `evenementId`, `paire1`, `paire2`, `remplacant`) 
+    VALUES (NULL, $eid, $paire1, $paire2, $remplacant);";
+    
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
     
@@ -774,8 +803,8 @@ function copyIsolePaire($PDO, $pid)
 
         $id = $joueurs[0]['id'];
         $req = "INSERT INTO `paire` 
-                    (`pid`, `adherent`)
-                    VALUES (NULL, '$id');
+                (`pid`, `adherent`)
+                VALUES (NULL, '$id');
                 ";
 
         
@@ -1273,12 +1302,33 @@ function updateEventDate($PDO, $eid, $startDate, $endDate)
 
 }
 
-function registerRemplacant($PDO, $aid, $pid)
+function registerRemplacantToPid($PDO, $aid, $pid)
 {
     
     $req = "INSERT INTO `paire`
             (`pid`, `adherent`) 
             VALUES ($pid, $aid)";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+    
+    return $curseur->errorInfo()[2];    
+
+}
+
+function registerIsolees($PDO, $eid, $ids)
+{
+    
+    $req = "INSERT INTO `isolees` 
+            (`pid`, `evenementId`, `adherent`) 
+            VALUES (NULL, '$eid', '$ids[0]');";
+
+
+    for ($i=1; $i < sizeof($ids) ; $i++) { 
+        $req .= "INSERT INTO `isolees` 
+                (`pid`, `evenementId`, `adherent`) 
+                VALUES (LAST_INSERT_ID(), '$eid', '$ids[$i]');";
+    }
 
     $curseur = $PDO->prepare($req);
     $curseur ->execute();

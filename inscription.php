@@ -40,7 +40,12 @@ if (!logged())
         
 
         <!-- Moment --> 
-            <script src="https://momentjs.com/downloads/moment-with-locales.min.js" crossorigin="anonymous"></script>
+            <script src="https://momentjs.com/downloads/moment-with-locales.min.js" crossorigin="anonymous"></script>  
+ 
+        <!-- waitMe -->  
+            <link rel="stylesheet" href="assets/css/waitMe.min.css">
+            <script src="assets/js/waitMe.min.js" crossorigin="anonymous"></script>
+
        
         <!-- Main --> 
             <script src="assets/js/utils.js"></script>
@@ -59,32 +64,66 @@ if (!logged())
             function getCheckedIds()
             {
                 let joueursID = [];
-                // A refaire mdr
+                i=0;
                 $('.inscrireAvec:checkbox:checked').each(function () {
                         if ($(this).parent().hasClass('paire1'))
-                            joueursID.push(parseInt(this.id));
+                        {
+                            joueursID[i] = parseInt(this.id);
+                            i++;
+                        }
                 });
+                
                 $('.inscrireAvec:checkbox:checked').each(function () {
                         if ($(this).parent().hasClass('paire2'))
+                        {
                             if ($(this).hasClass('paire'))
                             {
                                 // Précise que c'est une paire   
-                                joueursID.push([parseInt(this.id)]);
+                                joueursID[i] = [parseInt(this.id)];
                             } else {
-                                joueursID.push(parseInt(this.id));
+                                joueursID[i] = parseInt(this.id);
                             }
+                            i++;
+                        }
                 });
+
                 $('.inscrireAvec:checkbox:checked').each(function () {
                         if ($(this).parent().hasClass('paireRemplacant'))
-                            joueursID.push(parseInt(this.id));
+                        {
+                            joueursID[i] = parseInt(this.id);
+                            i++;
+                        }
+                        
                 });
                 return joueursID;
             }
 
-            var checked = 0;
-            $(document).on('change', '.inscrireAvec', function (e) {
+   
+            // IMPORTANT ! 
 
-                
+            var aid = <?php echo intval($_COOKIE['logged']) ?>;
+            var user = getUser(aid);
+            var statut = user['statut'];
+            var anom = user['nom'];
+            var admin = user['statut'] == "Administrateur"; 
+            if (admin) $('#gestionBase').show();
+            var eid = <?php echo $_GET['eid'] ?>;
+            var ety = null;
+            var inscrit = false;
+            var paire = 0;
+            var typeEvenement = 0;
+            var SOSenabled = false;
+            var asBeenShown = false;
+            var paireIsolee = 0;
+
+
+            var checked = 0;
+            var paire1 = 1;
+            var paire2 = 0;
+            var remplacant = 0;
+
+            $(document).on('change', '.inscrireAvec', function (e) {
+  
                 if(this.checked) 
                 {
 
@@ -100,6 +139,7 @@ if (!logged())
                             {
                                 $(this).parent().addClass("paire2"); 
                                 checked = checked + 2;
+                                paire2 = 2;
                             } else {
                                 alert("Impossible d'inscrire un autre joueur, veuillez vérifier le nombre de joueurs ajoutés.");
                                 this.checked = false;
@@ -110,14 +150,22 @@ if (!logged())
                         */
                         } else {
 
-
-                            if (checked > 2) { 
-                                $(this).parent().addClass("paireRemplacant");
-                            } else {
-                                if (checked > 0 ){
-                                    $(this).parent().addClass("paire2"); 
+                            if (paire2 == 2) { 
+                                if (paire1 < 2)
+                                {
+                                    $(this).parent().addClass("paire1");
+                                    paire1++;
                                 } else {
+                                    $(this).parent().addClass("paireRemplacant");
+                                    remplacant++;
+                                }
+                            } else {
+                                if (paire1 < 2 ){
                                     $(this).parent().addClass("paire1"); 
+                                    paire1++;
+                                } else {
+                                    $(this).parent().addClass("paire2"); 
+                                    paire2++;
                                 }
                             }
                             checked++;
@@ -132,15 +180,38 @@ if (!logged())
                     if ($(this).hasClass('paire'))
                     {
                         checked = checked-2;
+                        paire2 = paire2 - 2;
+                        $(this).parent().removeClass("paire2"); 
                     } else {
                         checked--;
+                        
+                        if ($(this).parent().hasClass('paire1'))
+                        {                   
+                            $(this).parent().removeClass("paire1"); 
+                            paire1--;
+                        }
+                        if ($(this).parent().hasClass('paire2'))
+                        { 
+                            $(this).parent().removeClass("paire2"); 
+                            paire2--;
+                        }
+                        if ($(this).parent().hasClass('paireRemplacant'))
+                        {
+                            $(this).parent().removeClass("paireRemplacant"); 
+                            remplacant--;
+                        }
                     }
 
-                    $(this).parent().removeClass("paire1"); 
-                    $(this).parent().removeClass("paire2"); 
-                    $(this).parent().removeClass("paireRemplacant"); 
+                    
+                    
                 }
             
+                console.log("Paire 1: " + paire1 + "\n");
+                console.log("Paire 2: " + paire2 + "\n");
+                console.log("Paire r: " + remplacant + "\n");
+                console.log("chk: " + checked + "\n");
+                console.log("------------------------------------\n");
+
                 /*
                     Vérifie paire cohérente
                 */
@@ -153,20 +224,26 @@ if (!logged())
                         buttonInscrire(false);
                     }
                 } else {
-                    if (checked == paire)
+                    if (checked == 1 && ety == 1)
                     {
                         buttonInscrire(true);
                     } else {
-                        buttonInscrire(false);
+                        if (checked == paire)
+                        {
+                            buttonInscrire(true); 
+                        } else {
+                            buttonInscrire(false);
+                        }
+                        
                     }
                 }
 
             });
 
 
-            function buttonInscrire(en)
+            function buttonInscrire(state)
             {
-                if (en)
+                if (state)
                 {
                     $('#buttonInscrire').addClass("btn-primary");  
                     $('#buttonInscrire').prop('disabled', false);
@@ -188,10 +265,10 @@ if (!logged())
                     if ($(this).hasClass('new'))
                     {
                         let pid = createNewPaireRemplacement(id);
-                        registerRemplacant(aid, pid);
+                        registerRemplacantToPid(aid, pid);
                     } else {
                         
-                        registerRemplacant(aid, id);
+                        registerRemplacantToPid(aid, id);
                         
                     }
                 }
@@ -203,28 +280,51 @@ if (!logged())
                 {
                 
                     let joueursID = [];
-                    // On se met dans l'array;
-                    joueursID.push(aid);
+                    
+
+                    if (paireIsolee == 0)
+                    {
+                        // On se met dans l'array;
+                        joueursID.push(aid);
+                    } else {
+                        joueursID.push([paireIsolee]);
+                    }
                     // On ajoute les autres membres
                     joueursID = joueursID.concat(getCheckedIds());
+
                     console.log(joueursID);
 
-                    for (let i = joueursID.length; 6 >= joueursID.length; i++) {
-
-                        joueursID.push("NULL");  
-                    }
-
-                    registerToEventWith(eid, joueursID);       
-
-                    if (SOSenabled)
+                    /*
+                        Inscription avec une paire isolée
+                        Si tournoi et
+                        seulement moi et un adherent et une paire
+                        et cette paire doit être la paire 2
+                        [0] aid
+                        [1] joueur
+                        
+                    */
+                    if (ety == 1 && joueursID.length == 2 && paire == 3 && !Array.isArray(joueursID[1]))
                     {
-                        // On desinscrit les joueurs SOS
-                        unregisterSOSpartenaire(aid, eid, joueursID);
+                        registerIsolees(eid, joueursID);
+                    } else {
+                        
+                        for (let i = joueursID.length; 6 >= joueursID.length; i++) {
+
+                            joueursID.push("NULL");  
+                        }
+
+                        registerToEventWith(eid, joueursID);       
+
+                        if (SOSenabled)
+                        {
+                            // On desinscrit les joueurs SOS
+                            unregisterSOSpartenaire(aid, eid, joueursID);
+                        }
+                        
+                        //notifyRegisterByMail(aid, eid, joueursID);
+                   
+
                     }
-                    
-                   
-                    notifyRegisterByMail(aid, eid, joueursID);
-                   
                     
                 }
                 
@@ -341,6 +441,7 @@ if (!logged())
             var tableMesFavoris = $('#tableMesFavoris').DataTable({
                paging: false,
                ordering: false,
+               
                info: false,
                pageLength: 10,
                searching: false,
@@ -374,31 +475,53 @@ if (!logged())
                     { "width": "10%", "orderable": false }
                 ]
             });
+            
+            function run_waitMe()
+            {
+                $('.table').waitMe({
+                        effect: 'win8',
+                        text: 'Mise à jour...',
+                        bg: 'rgba(255,255,255,0.7)',
+                        color: '#000',
+                        maxSize: 100,
+                        waitTime: 1000,
+                        textPos: 'vertical',
+                        fontSize: '18px',
+                });
+            }
 
-            // IMPORTANT ! 
+            function main()
+            {
 
-            var aid = <?php echo intval($_COOKIE['logged']) ?>;
-            var user = getUser(aid);
-            var statut = user['statut'];
-            var anom = user['nom'];
-            var admin = user['statut'] == "Administrateur"; 
-            if (admin) $('#gestionBase').show();
-            var eid = <?php echo $_GET['eid'] ?>;
-            var ety = null;
-            var inscrit = false;
-            var paire = 0;
-            var typeEvenement = 0;
-            var SOSenabled = false;
+                initWithEvent();
+                
+                window.setInterval(function(){
+                    // Clear already existing elements
+                    run_waitMe();
+                    tableJoueurs.clear();
+                    tableMesFavoris.clear();
+                    tableSOSpartenaire.clear();
+                    $('#tableInscrit tbody > tr').remove();
+                    $('#tableSituation tbody > tr').remove();
+                    $('#tableSituation tbody > tr').remove();
+                    $('#tablePaireIsolee tbody > tr').remove();
+                    checked = 0;
+                    buttonInscrire(false);
+                    
+                    initWithEvent();
+                }, 10000);
+                
+            }
+            main();
 
 
-            initWithEvent();
 
             /*
                 Main: met en place l'affichage.
             */
             function initWithEvent()
             {
-                
+
                 // 1.             
                     // Populate and construct the calendar
                     // Also shows the description
@@ -461,12 +584,12 @@ if (!logged())
                         if (data.length > 0) 
                         {
                             populatePaireIsolee(data);
+
                             // Ajoute à les listes des déjà inscrits,
                             // l'index des fonctions qui prennent un $except est [0] c'est sensé être l'id du joueur
                             // ici l'id [1] correspond à l'id du joueur alors:
                             for (let index = 0; index < data.length; index++) {
                                 alreadyRegistered.push([parseInt(data[index]['id'])]);
-                                
                             }
                         }
                     });
@@ -474,10 +597,12 @@ if (!logged())
                     if (SOSenabled)
                     {
                         $('.pourInscrire').show();
-                        $('.JO').hide();    // Cache table joueurs
-                        $('.PA').hide();    // Cache table favoris
+                        $('.JO').hide();             // Cache table joueurs
+                        $('.PA').hide();             // Cache table favoris
+                        $('.paireIsolee').hide();    // Cache table des paires isolées
 
-                        $('#buttonSOS').show();
+                        $('#textSOS').show();
+                        $('#buttonSOS').text('Quitter SOS');
                         $('#tableSOS').show();
 
                     }
@@ -517,7 +642,7 @@ if (!logged())
                                 break;
                                                          
                                 case 1: // tournoi
-                                    $('#buttonSOS').show();
+                                    $('#textSOS').show();
                                     //$('#tableSOS').show();
 
 
@@ -583,7 +708,8 @@ if (!logged())
 
                             });
 
-                    }       
+                    }  
+ 
             }
 
 
@@ -594,8 +720,12 @@ if (!logged())
             {
 
                 // Common
-                createCallendarForOneEvent(event);
-
+                if (!asBeenShown)
+                {
+                    asBeenShown = true;
+                    createCallendarForOneEvent(event);
+                }
+                
                 $('#titre').text(event['titre']);
                 moment.locale('fr');
                 $('#debut').text("Commence le " + moment(event['dteDebut']).format("dddd Do MMMM YYYY à HH:MM "));
@@ -679,6 +809,9 @@ if (!logged())
                 calendar.render();
             }
 
+                
+            
+
 
             /*
                 Rempli la table SOS partenaire
@@ -729,12 +862,17 @@ if (!logged())
                         pid = data[0]['pid'];
                         let option = "";
                         i = 0;
+                    
                         while (i < data.length)
                         {
 
-
-                            if (data[i]['id'] == aid)
+                            // Si l'un des membres de la paire est nous même:
+                            if (data[i]['id'] == aid || data[i+1]['id'] == aid)
                             {
+                                paire1 = 2;
+                                paire2 = 0;
+                                checked = 1;
+                                paireIsolee = parseInt(data[i]['pid']);
                                 option = `<button id='${pid}' class='btn btn-danger desinscription paireIsolee'>Se retirer des paires isolées</button>`;
                             } else {
                                 option = `<input type='checkbox' class='inscrireAvec paire' id='${data[i]['pid']}'>`;
@@ -956,14 +1094,14 @@ if (!logged())
                                 // Pour les compétitions, si la paire est une paire de remplaçant et vérifie si la paire est pleine 
                                 if (ety == 3 && added > 4 && added != 7 && !inscrit)
                                 {
-                                    option = `<button id="${pid}" class='btn btn-danger inscription remplacant'>S'ajouter en remplaçant</button>`;
+                                    option = `<button id="${pid}" class='btn btn-danger inscription remplacant'>S'ajouter aux remplaçants</button>`;
                                     added = 0;
                                 } else {
 
                                     // Si il n'y a pas de paire de remplaçant
                                     if (ety == 3 && added == 4 && !inscrit)
                                     {
-                                        option = `<button id="${iid}" class='btn btn-danger inscription remplacant new'>XX</button>`;;
+                                        option = `<button id="${iid}" class='btn btn-danger inscription remplacant new'>S'ajouter en remplaçant</button>`;;
                                         added = 0;
                                     } else {
                                         option = "";
@@ -1021,7 +1159,6 @@ if (!logged())
 
 <style>
 
-
     .paire1 {
         background-color: red;
     }
@@ -1078,6 +1215,7 @@ if (!logged())
     .pourInscrire{
         display: none;
     }
+
 
 </style>
 
@@ -1145,6 +1283,7 @@ if (!logged())
   
                         <h3>Ma situation: </h3>
                             <table class="table" id="tableSituation">
+                            
                                 <thead>
                                     <tr>
                                     <th scope="col">#</th>
@@ -1175,7 +1314,8 @@ if (!logged())
                                 </table>
                         </div>
                         <div class="pourInscrire SOS">
-                            <h3 style="display: none;" id="buttonSOS">SOS Partenaire: <button class="btn btn-primary">Activer/Desactiver</button></h3>
+                            <h3 style="display: none;" id="textSOS" >SOS Partenaire: <button id="buttonSOS" class="btn btn-primary">Rejoindre SOS</button> </h3>
+                            
                             <table style="display: none;" class="table" id="tableSOS">
                                 <thead>
                                     <tr>
