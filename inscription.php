@@ -337,9 +337,9 @@ if (!logged())
                         seulement moi et un adherent et une paire
                         et cette paire doit être la paire 2
                         [0] aid
-                        [1] joueur
-                        
+                        [1] joueur 
                     */
+
                     if (ety == 1 && joueursID.length == 2 && paire == 3 && !Array.isArray(joueursID[1]))
                     {
                         registerIsolees(eid, joueursID);
@@ -350,7 +350,7 @@ if (!logged())
                             joueursID.push("NULL");  
                         }
 
-                        registerToEventWith(eid, joueursID);       
+                        //registerToEventWith(eid, joueursID);       
 
                         if (SOSenabled)
                         {
@@ -358,19 +358,19 @@ if (!logged())
                             unregisterSOSpartenaire(aid, eid, joueursID);
                         }
                         
-                        //notifyRegisterByMail(aid, eid, joueursID);
+                        notifyRegisterByMail(aid, eid, joueursID);
                    
                     }
-                    
-                    reload();
-                    
-
+                                        
                 }
                 
 
 
             });
 
+            /*
+                A SUPPRIMER  
+            */
             $(document).on('click', '#buttonInscrirePL', function (e) {
 
                 if (confirm("Êtes-vous sûr de vouloir vous inscrire à l'évenement?"))
@@ -434,6 +434,7 @@ if (!logged())
                     {
                         // Désinscription intégrale
                         unregisterPaires(aid, eid, id);
+                        
                     } else {    
                         // Tournoi
                         if ($(this).hasClass('paireIsolee') && confirm("Êtes-vous sûr de vouloir vous desinscrire de l'évenement?"))
@@ -449,7 +450,7 @@ if (!logged())
                                 {
                                     alert('Une erreur est survenue: \n' + error);
                                 }
-                                document.location.reload(true);
+                                ////document.location.reload(true);
                             }
 
                         }
@@ -550,9 +551,15 @@ if (!logged())
                 tableSOSpartenaire.clear();
                 $('#tableInscrit tbody > tr').remove();
                 $('#tableSituation tbody > tr').remove();
-                $('#tableSituation tbody > tr').remove();
                 $('#tablePaireIsolee tbody > tr').remove();
+
                 checked = 0;
+                paire1 = 1;
+                if (admin){ paire1--; } 
+                
+                paire2 = 0;
+                remplacant = 0;
+
                 buttonInscrire(false);
                 
                 initWithEvent();
@@ -685,7 +692,10 @@ if (!logged())
                                                          
                                 case 1: // tournoi
                                     $('#textSOS').show();
-                                    //$('#tableSOS').show();
+                                    if (paire == 1)
+                                    {
+                                        $('.paireIsolee').hide(); 
+                                    }
 
 
                                 break;
@@ -1091,6 +1101,10 @@ if (!logged())
                         // Lit jusqu'a changement d'inscription et construit l'affichage
                         // pour la table.
                         i=0;
+                        while (i < data.length && data[i]['iid'] != iid)
+                        {
+                            i++;
+                        }
                         iid = data[i]['iid'];
                         while (i < data.length && data[i]['iid'] == iid)
                         {

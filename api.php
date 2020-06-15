@@ -22,8 +22,8 @@
                     $aid = $info[0][0];
                     $eid = $_GET['eid'];
                     
-                    unregisterFromEventComplex(createPDO(), $aid, $eid);
-                    //redirect("inscription.php?eid=$eid");
+                    apiUnregisterPaire(createPDO(), $aid, $eid);
+                    redirect("inscription.php?eid=$eid");
                 break;
             }
             

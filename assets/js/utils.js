@@ -234,6 +234,7 @@ function unregisterPaires(aid, eid, iid)
         
             let ids = JSON.parse(data);
             console.log(ids);
+           
             notifiyUnRegisterByMail(eid, ids);
 
     });
@@ -414,7 +415,7 @@ function unregisterSOSpartenaire(aid, eid, joueursId)
                     {
                        alert('Une erreur est survenue!\n' + data);
                     } else {
-                       document.location.reload(true);
+                       //document.location.reload(true);
                     }
 
             });
@@ -428,6 +429,17 @@ function unregisterSOSpartenaire(aid, eid, joueursId)
 */
 function notifyRegisterByMail(aid, eid, ids)
 {
+    /*
+        On vérifie qu'il n'y a pas de paire isolée
+    */
+    if (ids.length > 1 && Array.isArray(ids[2]))
+    {
+        // Récupère les infos des joueurs de la paire isolée
+
+        
+    }
+    return;
+    ids = [];
 
     ids.push(aid);
 
@@ -439,6 +451,7 @@ function notifyRegisterByMail(aid, eid, ids)
             ids: ids,
         }, function(data) {
             mailContent = JSON.parse(data);
+            console.log(mailContent);
         });
 
     $.post('assets/sql/interface.php',

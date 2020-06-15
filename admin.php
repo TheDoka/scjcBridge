@@ -57,108 +57,109 @@ if (!logged())
                     $('#sidebar').toggleClass('active');
                 });
 
-            var type = 0;
+                var type = 0;
 
-            $('#confirmImport').on('click',function(e){
+                $('#confirmImport').on('click',function(e){
 
-                    $.post('assets/sql/interface.php',
-                        {
-                            function: 'importEvents',
-                            events: imported_,
-                            type: type
-                        }, function(data) {
-                            if (data.length > 0)
+                        $.post('assets/sql/interface.php',
                             {
-                                alert("Une erreur est survenue: \n" + data);
-                                console.log(data);
-                            } else {
-                                alert("Import éffectué avec succès!")
-                            }
-                    });
-            
-  
-
-
-            });
-
-            $("input:file").change(function ()
-            {
-                checkParseAndDraw();
-            });
-
-            function checkParseAndDraw()
-            {
-                    
-                if ($("#import-form")[0].checkValidity() )
-                    {
-                        $('#files').parse({
-                            config: {
-                                delimiter: "auto",
-                                complete: displayHTMLTable,
-                            },
-                            error: function(err, file)
-                            {
-                                alert('Une erreur est survenue, veuillez verifier le fichier. \,' + err + '\n' + file);
-                            }
+                                function: 'importEvents',
+                                events: imported_,
+                                type: type
+                            }, function(data) {
+                                if (data.length > 0)
+                                {
+                                    alert("Une erreur est survenue: \n" + data);
+                                    console.log(data);
+                                } else {
+                                    alert("Import éffectué avec succès!")
+                                }
                         });
-                    } else {
-                        alert('Aucun fichier importé.');
-                    }
+                
+    
 
-            }
-            function displayHTMLTable(results){
-                var tdata = "";
-                var data = results.data;
 
-                // On sauvegarde le resultat dans une autre variable pour pouvoir réutiliser lors de l'importation
-                    imported_ = results;
+                });
 
-                // On importe les header (doit toujours être la première ligne)
-                    tdata+= "<thead><tr>";
-                    var row = data[0];
-                    var cells = row.join(",").split(",");
+                $("input:file").change(function ()
+                {
+                    checkParseAndDraw();
+                });
+
+                function checkParseAndDraw()
+                {
                         
-                    for(j=0;j<cells.length;j++){
-                        tdata+= "<td>";
-                        tdata+= cells[j];
-                        tdata+= "</th>";
-                    }
-                    tdata+= "</tr></thead>";
+                    if ($("#import-form")[0].checkValidity() )
+                        {
+                            $('#files').parse({
+                                config: {
+                                    delimiter: "auto",
+                                    complete: displayHTMLTable,
+                                },
+                                error: function(err, file)
+                                {
+                                    alert('Une erreur est survenue, veuillez verifier le fichier. \,' + err + '\n' + file);
+                                }
+                            });
+                        } else {
+                            alert('Aucun fichier importé.');
+                        }
 
-                // On importe les données du CSV
-                for(i=1;i<data.length-1;i++){
-                    
-                    if (data[i][0] != ",,,,,")
-                    {
-                        tdata+= "<tr>";
-                        var row = data[i];
-                        
+                }
+                
+                function displayHTMLTable(results){
+                    var tdata = "";
+                    var data = results.data;
+
+                    // On sauvegarde le resultat dans une autre variable pour pouvoir réutiliser lors de l'importation
+                        imported_ = results;
+
+                    // On importe les header (doit toujours être la première ligne)
+                        tdata+= "<thead><tr>";
+                        var row = data[0];
                         var cells = row.join(",").split(",");
-
+                            
                         for(j=0;j<cells.length;j++){
                             tdata+= "<td>";
                             tdata+= cells[j];
                             tdata+= "</th>";
                         }
-                        tdata+= "</tr>";
+                        tdata+= "</tr></thead>";
+
+                    // On importe les données du CSV
+                    for(i=1;i<data.length-1;i++){
+                        
+                        if (data[i][0] != ",,,,,")
+                        {
+                            tdata+= "<tr>";
+                            var row = data[i];
+                            
+                            var cells = row.join(",").split(",");
+
+                            for(j=0;j<cells.length;j++){
+                                tdata+= "<td>";
+                                tdata+= cells[j];
+                                tdata+= "</th>";
+                            }
+                            tdata+= "</tr>";
+                        }
+                    }
+                    // La table prends les données
+                    $("#parsed_csv_list").html(tdata);
+
+                    switch(data[0][0].split(',').length)
+                    {
+                        case 12: // compétition
+                            type = 3;
+                        break;
+                        case 7: // partie libre
+                            type = 2;
+                        break;
+                        case 11: // tournoi
+                            type = 1;
+                        break;
                     }
                 }
-                // La table prends les données
-                $("#parsed_csv_list").html(tdata);
-
-                switch(data[0][0].split(',').length)
-                {
-                    case 12: // compétition
-                        type = 3;
-                    break;
-                    case 7: // partie libre
-                        type = 2;
-                    break;
-                    case 11: // tournoi
-                        type = 1;
-                    break;
-                }
-            }
 
         });
 

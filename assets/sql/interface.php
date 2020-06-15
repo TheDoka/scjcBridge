@@ -155,15 +155,16 @@ if (isset($_POST['function']))
         return sendQuery(req, type[0,1] -> return text/errorInfo);
 */
 
-function anhilatePaire($PDO, $pid, $eid)
+function apiUnregisterPaire($PDO, $aid, $eid)
 {
 
-    $iid = 0;
-
+    $userInfo = getRegistrationInformation($PDO, $aid, $eid);
+    
     /*
-        I. On récupère l'id de l'inscription de la paire
+        I. On récupère l'iid et le pid de l'inscription
     */
-    $iid = getIIDWithPID($PDO, $pid)['iid'];
+    $iid = $userInfo['iid'];
+    $pid = $userInfo['pid'];
 
     /*
         II. Supprime la paire
@@ -188,8 +189,36 @@ function anhilatePaire($PDO, $pid, $eid)
         */
 
         importIntoPairesIsolees($PDO, $eid, $pairesRestantes);
+
     }
 
+    /*
+        V. Supprime l'inscription
+    */
+    unregisterFromEvent($PDO, $iid);
+
+}
+
+function getRegistrationInformation($PDO, $aid, $eid)
+{
+    $req = "SELECT A.id, A.nom, A.prenom, I.Id as iid, P.pid as pid
+            FROM `paire` P
+                        
+            INNER JOIN inscrire I
+            ON paire1 = P.pid
+            OR paire2 = P.pid
+            OR remplacant = P.pid 
+            
+            INNER JOIN adherent A 
+            ON A.id = P.adherent
+            
+            WHERE `evenementId` = $eid && A.id = $aid";
+
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+    return $curseur->fetch();
 }
 
 function connexion($PDO, $licenseId, $pass)
@@ -1140,14 +1169,15 @@ function createRegistrationNotificationMailForEvent($PDO, $eid, $ids)
         
     */
 
-    // Récupère informations du réfèrent
-    // [0]
+    // Le référant est toujours la dernière personne.
+    $referant = $ids[sizeof($ids)-1];
 
-    
     $ids = getLowFormatedIds($ids);
     $playersInfos = getPlayersInfo($PDO, $ids);
-    $referant = $playersInfos[0];
-    
+
+    $i = 0;
+    while ($i < $playersInfos && $playersInfos[$i][0] != $referant) { $i++; }
+    $referant = $playersInfos[$i];
 
     $toMails = [];
     $players = "";
@@ -1184,7 +1214,9 @@ function createUnRegistrationNotificationMailForEvent($PDO, $eid, $ids)
     
     $ids = getFormatedIds($ids, 0);
     $playersInfos = getPlayersInfo($PDO, $ids);
-    $referant = $playersInfos[0];
+    
+    // Le référant est toujours la dernière personne.
+    $referant = $playersInfos[sizeof($playersInfos)-1];
 
  
     $toMails = [];

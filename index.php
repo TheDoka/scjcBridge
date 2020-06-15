@@ -382,95 +382,98 @@ if (!logged())
                 $('.fc-event').bind('contextmenu', function(e){
                     e.preventDefault();
 
-                    /* 
-                        Get the additionnal event info
-                    */
-                    let additionnal = JSON.parse(getEvent(current_event['id']));
-                    let lieux = JSON.parse(getLieux());
-                    let registered = JSON.parse(getPlayersRegisteredForEvent(current_event['id']));
-
-                    /*
-                        Empty form
-                    */
-                    $('#eventParticipants tbody').empty();
-                    $('#eventLieuEdit').empty();
-
-                    /*
-                        Populate Lieux
-                    */
-                    lieux.forEach(lieu => {
-                        $('#eventLieuEdit').append($('<option>', { 
-                            id: lieu['id'],
-                            text : lieu['commune'] + ' ' + lieu['adresse'], 
-                        }));
-                    });
-
-                    /*
-                        Populate table Participants
-                    */
-
-                    let i = 0;
-                    let noms = "";
-                    let prenoms = "";
-
-                    if (registered.length > 0)
+                    if (admin)
                     {
-                        let iid = registered[0]['iid'];
-                        while (i < registered.length)
-                        {
+                        /* 
+                            Get the additionnal event info
+                        */
+                        let additionnal = JSON.parse(getEvent(current_event['id']));
+                        let lieux = JSON.parse(getLieux());
+                        let registered = JSON.parse(getPlayersRegisteredForEvent(current_event['id']));
 
-                            if (i < registered.length && registered[i]['iid'] == iid)
+                        /*
+                            Empty form
+                        */
+                        $('#eventParticipants tbody').empty();
+                        $('#eventLieuEdit').empty();
+
+                        /*
+                            Populate Lieux
+                        */
+                        lieux.forEach(lieu => {
+                            $('#eventLieuEdit').append($('<option>', { 
+                                id: lieu['id'],
+                                text : lieu['commune'] + ' ' + lieu['adresse'], 
+                            }));
+                        });
+
+                        /*
+                            Populate table Participants
+                        */
+
+                        let i = 0;
+                        let noms = "";
+                        let prenoms = "";
+
+                        if (registered.length > 0)
+                        {
+                            let iid = registered[0]['iid'];
+                            while (i < registered.length)
                             {
 
-                                while (i < registered.length && registered[i]['iid'] == iid)
+                                if (i < registered.length && registered[i]['iid'] == iid)
                                 {
-                                    noms    += registered[i]['nom'] + "</br>";
-                                    prenoms += registered[i]['prenom'] + "</br>";
 
-                                    pid = registered[i]['NumPaire'];
-                                    i++;
+                                    while (i < registered.length && registered[i]['iid'] == iid)
+                                    {
+                                        noms    += registered[i]['nom'] + "</br>";
+                                        prenoms += registered[i]['prenom'] + "</br>";
+
+                                        pid = registered[i]['NumPaire'];
+                                        i++;
+
+                                    }
+
+                                    $('#eventParticipants > tbody').append(
+                                        `<tr>` +
+                                            `<td>${iid}</td>` +
+                                            `<td>${noms}</td>` +
+                                            `<td>${prenoms}</td>`+
+                                    '</tr>'
+                                    );
+                                        
+
+
+                                    if (i < registered.length && registered[i]['NumPaire'] != pid)
+                                    {
+                                        noms    = "";
+                                        prenoms = "";
+                                        pid = registered[i]['NumPaire'];
+                                        iid = registered[i]['iid'];
+                                    }
+
 
                                 }
-
-                                $('#eventParticipants > tbody').append(
-                                    `<tr>` +
-                                        `<td>${iid}</td>` +
-                                        `<td>${noms}</td>` +
-                                        `<td>${prenoms}</td>`+
-                                '</tr>'
-                                );
-                                    
-
-
-                                if (i < registered.length && registered[i]['NumPaire'] != pid)
-                                {
-                                    noms    = "";
-                                    prenoms = "";
-                                    pid = registered[i]['NumPaire'];
-                                    iid = registered[i]['iid'];
-                                }
-
 
                             }
-
                         }
+                        
+                        $('#' + additionnal['lieu']).prop('selected', true);
+                        $('#eventLieuEdit').selectpicker("refresh");
+                        
+
+                        $('#eventPaireEdit').val(additionnal['paires']).change();
+
+                        
+
+                        $('#eventNameEdit').val(additionnal['titre']);
+                        $('#eventPrixEdit').val(additionnal['prix']);
+
+                        $('#dteDebutEdit').val(moment(current_event['start']).format("YYYY-MM-DDTHH:mm:ss"));
+                        $('#dteFinEdit').val(moment(current_event['end']).format("YYYY-MM-DDTHH:mm:ss"));
+                    
+                        $("#createEventModal").modal('show');
                     }
-                    
-                    $('#' + additionnal['lieu']).prop('selected', true);
-                    $('#eventLieuEdit').selectpicker("refresh");
-                    
-
-                    $('#eventPaireEdit').val(additionnal['paires']).change();
-
-                    
-
-                    $('#eventNameEdit').val(additionnal['titre']);
-                    $('#eventPrixEdit').val(additionnal['prix']);
-
-                    $('#dteDebutEdit').val(moment(current_event['start']).format("YYYY-MM-DDTHH:mm:ss"));
-                    $('#dteFinEdit').val(moment(current_event['end']).format("YYYY-MM-DDTHH:mm:ss"));
-                   
-                    $("#createEventModal").modal('show');
 
                 });
 
@@ -521,7 +524,7 @@ if (!logged())
                         
                         console.log(event);
                         updateEvent(event);
-                        document.reload();
+                        document.location.reload();
                     }
 
 
@@ -532,7 +535,7 @@ if (!logged())
                     
                     doc.autoTable({html: '#eventParticipants'})
                                         
-                    doc.save(current_event['title'] + "-" + moment(new Date()).format('DD/MM/YYYY') + ".pdf");
+                    doc.save($('#eventNameEdit').val() + "-" + moment(new Date()).format('DD/MM/YYYY') + ".pdf");
  
                 });
 
