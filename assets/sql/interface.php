@@ -24,16 +24,19 @@ if (isset($_POST['function']))
 				echo importEvents(createPDO(), $_POST['events'], $_POST['type']);
             break;
             case 'getEvents': 
-				echo getEvents(createPDO());
+				echo json_encode(getEvents(createPDO()));
             break;
             case 'getEventInfo': 
 				echo json_encode(getEventInfo(createPDO(), $_POST['eid']));
+            break;
+            case 'getLieux': 
+				echo json_encode(getLieux(createPDO()));
             break;
             case 'getAvailablePlayers': 
 				return getAvailablePlayers(createPDO(), $_POST['eid']);
             break;
             case 'getPlayersRegisteredForEvent': 
-				echo getPlayersRegisteredForEvent(createPDO(), $_POST['eid']);
+				echo json_encode(getPlayersRegisteredForEvent(createPDO(), $_POST['eid']));
             break;
             case 'unregisterFromEvent': 
 				echo unregisterFromEvent(createPDO(), $_POST['iid']);
@@ -126,8 +129,14 @@ if (isset($_POST['function']))
             case 'createNewPaireRemplacement':
                 echo createNewPaireRemplacement(createPDO(), $_POST['iid']);
             break;
-            
+            case 'updateEvent':
+                echo updateEvent(createPDO(), $_POST['event']);
+            break;
+            case 'deleteEvent':
+                echo deleteEvent(createPDO(), $_POST['eid'], $_POST['ety']);
+            break;
         }
+
 
 }
 
@@ -435,8 +444,21 @@ function getEvents($PDO)
 
     $result = $result = array_merge($result, $statement->fetchAll());
 
-    return json_encode($result);
+    return $result;
     
+}
+
+function getLieux($PDO)
+{
+
+
+    $req = "SELECT * 
+            FROM `lieu`";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+    return $curseur->fetchAll();
 }
 
 function getEventInfo($PDO, $eid)
@@ -548,7 +570,7 @@ function getPlayersRegisteredForEvent($PDO, $eid)
         [2] Prenom
     */
 
-    return json_encode($curseur->fetchAll());
+    return $curseur->fetchAll();
 
 
 }
@@ -609,7 +631,7 @@ function registerToEventWith($PDO, $eid, $joueursID)
         
         Format de l'array:
         [0] id paire 1  <-> AID! <-> PID DE PAIRE ISOLEE
-        [1] id paire 1  NULL <-> PID DE PAIRE ISOLEE
+        [1] id paire 1  NULL <-> PID DE PAIRE ISOLEE <-> PID Paire2
         
         [2] id paire 2  <-> NULL <-> PID DE PAIRE ISOLEE
         [3] id paire 2  NULL
@@ -1425,6 +1447,105 @@ function getPairesIsoleesForEvent($PDO, $eid, $exceptPID)
 
     return $curseur->fetchAll();
 
+}
+
+function updateEvent($PDO, $event)
+{
+
+    /*
+        event[0] id
+             [1] titre
+             [2] dteDebut
+             [3] dteFin
+             [4] prix
+             [5] lieu
+             [6] paires
+
+    */
+    
+    $req = "UPDATE `evenement` 
+            SET 
+            `titre`= :titre,
+            `dteDebut`= :dteDebut,
+            `dteFin`= :dteFin,
+            `prix`= :prix,
+            `lieu`= :lieu,
+            `paires`= :paires 
+            WHERE `id` = :id";
+
+    $curseur = $PDO->prepare($req);
+    $curseur->execute($event);
+
+    return $curseur->errorInfo()[2];
+
+}
+
+function deleteEvent($PDO, $eid, $ety)
+{
+
+    /*
+        Desinscrit les personnes inscrites à l'évenement
+    */
+
+    $registered = getPlayersRegisteredForEvent($PDO, $eid);
+    
+    // récupère les inscriptions
+    $inscriptions = getFormatedIds($registered, 3);
+    // récupère les numéros de paire
+    $paires = getFormatedIds($registered, 4);
+
+
+    /*
+        Supprime les paires, paires isolées, joueurs sos et inscriptions associés à l'évenement
+    */
+    $req = "";
+
+    if ($inscriptions)
+    {
+        $req .= "DELETE FROM `inscrire`
+                 WHERE `inscrire`.`id` IN ($inscriptions); 
+                ";
+    }
+
+    if ($paires)
+    {
+        $req .= "DELETE FROM `paire`
+                 WHERE `paire`.`pid` IN ($paires);
+                ";
+    }
+
+
+    $req .= "DELETE FROM `sos`
+             WHERE `sos`.`evenementId` = $eid; 
+            
+             DELETE FROM `isolees`
+             WHERE `isolees`.`evenementId` = $eid; 
+            ";
+
+    switch ($ety)
+    {
+        case 1: // Tournois
+            $req .= "DELETE FROM `tournoi` WHERE `tournoi`.`evenementId` = $eid;";
+        break;
+
+        case 2: // Partie Libre
+            $req .= "DELETE FROM `partieLibre` WHERE `partieLibre`.`evenementId` = $eid;";
+        break; 
+        
+        case 3: // Compétition
+            $req .= "DELETE FROM `competition` WHERE `competition`.`evenementId` = $eid;";
+        break;
+    }    
+
+    $req .= "DELETE 
+             FROM `evenement` 
+             WHERE `evenement`.`id` = $eid;";
+
+    $curseur = $PDO->prepare($req);
+    $curseur->execute();
+
+    return $curseur->errorInfo()[2];
+    
 }
 
 ?>

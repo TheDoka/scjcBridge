@@ -419,7 +419,7 @@ if (!logged())
                         <a href="index.php"><span class="fa fa-home mr-3"></span> Agenda</a>
                     </li>
 
-                    <li>
+                    <li class="active">
                         <a href="profil.php"><span class="fa fa-gift mr-3active"></span> Profil / Partenaires </a>
                     </li>
 

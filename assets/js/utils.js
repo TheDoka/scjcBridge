@@ -508,6 +508,84 @@ function notifiyPaireIsoleeByMail(eid, ids)
 }
 
 /*
+
+    Récupère les informations d'un événement
+    @return evenement
+*/
+
+function getEvent(eid)
+{
+
+    
+    return $.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'getEventInfo',
+            eid: eid,
+        },
+    }).responseText;
+
+    
+
+}
+
+function updateEvent(event)
+{
+    $.post('assets/sql/interface.php',
+    {
+        function: 'updateEvent',
+        event: event,
+    }, function(data) {
+        if (data)
+        {
+            alert('Une erreur est surveneue: \n' + data);
+        }
+
+    });
+
+}
+
+
+function getLieux()
+{
+    return $.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        data:{
+            function: 'getLieux',
+        },
+    }).responseText; 
+}
+
+function getPlayersRegisteredForEvent(eid)
+{
+    return $.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        data:{
+            function: 'getPlayersRegisteredForEvent',
+            eid: eid,
+        },
+    }).responseText; 
+
+}
+
+function deleteEvent(eid, ety)
+{
+    $.post('assets/sql/interface.php',
+    {
+        function: 'deleteEvent',
+        eid: eid,
+        ety: ety,
+    }, function(data) {
+        console.log(data);
+
+    });
+}
+
+/*
     Resize la fenêtre pour cacher la navbar.
 */
 function fullHeight() {

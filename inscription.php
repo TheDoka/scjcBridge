@@ -119,6 +119,10 @@ if (!logged())
 
             var checked = 0;
             var paire1 = 1;
+            if (admin)
+            {
+                paire1 = 0;
+            } 
             var paire2 = 0;
             var remplacant = 0;
 
@@ -137,9 +141,28 @@ if (!logged())
                         {
                             if (checked + 2 <= paire)
                             {
-                                $(this).parent().addClass("paire2"); 
-                                checked = checked + 2;
-                                paire2 = 2;
+                                if (admin)
+                                {
+                                    if (checked == 2 && paire2 == 2)
+                                    {
+                                        $(this).parent().addClass("paire1");
+                                        checked = checked + 2;
+                                        paire1 = 2;
+                                    } else {
+                                        $(this).parent().addClass("paire2"); 
+                                        checked = checked + 2;
+                                        paire2 = 2;
+                                    }
+                                } else {
+                                
+                                    $(this).parent().addClass("paire2"); 
+                                    checked = checked + 2;
+                                    paire2 = 2;
+
+                                }
+
+
+                                
                             } else {
                                 alert("Impossible d'inscrire un autre joueur, veuillez vérifier le nombre de joueurs ajoutés.");
                                 this.checked = false;
@@ -179,9 +202,23 @@ if (!logged())
                 } else {
                     if ($(this).hasClass('paire'))
                     {
-                        checked = checked-2;
-                        paire2 = paire2 - 2;
-                        $(this).parent().removeClass("paire2"); 
+
+                            if ($(this).parent().hasClass("paire2"))
+                            {
+                                checked = checked-2;
+                                paire2 = paire2 - 2;
+                                $(this).parent().removeClass("paire2"); 
+                            } else {
+                                checked = checked-2;
+                                paire1 = paire1 - 2;
+                                $(this).parent().removeClass("paire1"); 
+                                
+                            }
+
+                        
+                           
+
+
                     } else {
                         checked--;
                         
@@ -282,17 +319,17 @@ if (!logged())
                     let joueursID = [];
                     
 
-                    if (paireIsolee == 0)
+                    if (paireIsolee == 0 && !admin)
                     {
                         // On se met dans l'array;
                         joueursID.push(aid);
                     } else {
-                        joueursID.push([paireIsolee]);
+                        if (!admin)
+                            joueursID.push([paireIsolee]);
                     }
+
                     // On ajoute les autres membres
                     joueursID = joueursID.concat(getCheckedIds());
-
-                    console.log(joueursID);
 
                     /*
                         Inscription avec une paire isolée
@@ -323,9 +360,11 @@ if (!logged())
                         
                         //notifyRegisterByMail(aid, eid, joueursID);
                    
-
                     }
                     
+                    reload();
+                    
+
                 }
                 
 
@@ -496,25 +535,28 @@ if (!logged())
                 initWithEvent();
                 
                 window.setInterval(function(){
-                    // Clear already existing elements
-                    run_waitMe();
-                    tableJoueurs.clear();
-                    tableMesFavoris.clear();
-                    tableSOSpartenaire.clear();
-                    $('#tableInscrit tbody > tr').remove();
-                    $('#tableSituation tbody > tr').remove();
-                    $('#tableSituation tbody > tr').remove();
-                    $('#tablePaireIsolee tbody > tr').remove();
-                    checked = 0;
-                    buttonInscrire(false);
-                    
-                    initWithEvent();
+                    reload();
                 }, 10000);
                 
             }
             main();
 
-
+            function reload()
+            {
+                // Clear already existing elements
+                run_waitMe();
+                tableJoueurs.clear();
+                tableMesFavoris.clear();
+                tableSOSpartenaire.clear();
+                $('#tableInscrit tbody > tr').remove();
+                $('#tableSituation tbody > tr').remove();
+                $('#tableSituation tbody > tr').remove();
+                $('#tablePaireIsolee tbody > tr').remove();
+                checked = 0;
+                buttonInscrire(false);
+                
+                initWithEvent();
+            }
 
             /*
                 Main: met en place l'affichage.
@@ -734,8 +776,15 @@ if (!logged())
                 
                 ety = parseInt(event['type']);
 
-                // On fait partie de la paire
-                paire = event['paires']-1; 
+                if (!admin)
+                {
+                    // On fait partie de la paire
+                    paire = event['paires']-1; 
+                } else {
+                    //Permet de former des inscriptions sans nous même
+                    paire = event['paires'];
+                }
+               
                 if (event['type'] == 3)
                 {
                     paire = 6;
@@ -1110,6 +1159,11 @@ if (!logged())
                                     
                                 }
 
+                                if (admin)
+                                {
+                                    option += `<button id='${pid}' type='button' class='btn btn-danger desinscription evenement'>Desincrire</button>`;
+                                }
+
                                 $('#tableInscrit > tbody').append(
                                     `<tr>` +
                                         `<td>${iid}</td>` +
@@ -1241,9 +1295,9 @@ if (!logged())
                     <li>
                         <a href="index.php"><span class="fa fa-home mr-3"></span> Agenda</a>
                     </li>
-
-                    <li>
-                        <a href="#"><span class="fa fa-users mr-3 active"></span> Inscription</a>
+                    
+                    <li class="active">
+                        <a href="#"><span class="fa fa-users mr-3active"></span> Inscription</a>
                     </li>
 
                     <li>
