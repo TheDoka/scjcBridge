@@ -36,11 +36,11 @@ Une relation étroite avec les clients a été nécessaire, ne connaissant rien 
 ![Image Introuvable, vérifier le contenu du dossier 'uses'](uses/agendaeditevent.png)
 
 ### Inscription
-## Exemple d'évenement lorsequ'on est inscrit
+#### Exemple d'évenement lorsequ'on est inscrit
 ![Image Introuvable, vérifier le contenu du dossier 'uses'](uses/evenementinscrit.png)
-## Inscription à un tournoi, en rouge notre paire, en bleu une deuxième paire
+#### Inscription à un tournoi, en rouge notre paire, en bleu une deuxième paire
 ![Image Introuvable, vérifier le contenu du dossier 'uses'](uses/evenemeninscription.png)
-## Exemple inscription en compétition
+#### Exemple inscription en compétition
 ![Image Introuvable, vérifier le contenu du dossier 'uses'](uses/evenenementinscriptionparticularite.png)
 
 ### Gestion Profil
