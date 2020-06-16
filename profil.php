@@ -174,20 +174,10 @@ if (!logged())
 
 
                 // II. Get Joueurs
+                let joueurs = getEveryMembers(favoris);
+                listeJoueurs(joueurs);
+                
 
-                $.post('assets/sql/interface.php',
-                    {
-                        function: 'getEveryMembers',
-                        except: JSON.stringify(favoris),
-                    }, function(data) {
-                        joueurs = JSON.parse(data);
-                        if (data)
-                        {
-
-                            listeJoueurs(joueurs);
-                        }
-
-                    });
 
             }
 

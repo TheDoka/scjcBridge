@@ -35,6 +35,13 @@ if (!logged())
          <!-- Papaparse -->     
             <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.1.0/papaparse.min.js" crossorigin="anonymous"></script>
 
+        <!-- DataTable --> 
+            <script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
+            <script src="https://cdn.datatables.net/1.10.21/js/dataTables.bootstrap4.min.js"></script>
+            <link rel="stylesheet" href="https://cdn.datatables.net/1.10.21/css/dataTables.bootstrap4.min.css">
+
+        <!-- Main -->
+            <script src="assets/js/utils.js"></script>
 
         <script type="text/javascript">
 
@@ -43,15 +50,105 @@ if (!logged())
 
             $(document).ready(function(){
 
-                var fullHeight = function() {
 
-                    $('.js-fullheight').css('height', $(window).height());
-                    $(window).resize(function(){
-                        $('.js-fullheight').css('height', $(window).height());
-                    });
+                var tableJoueurs = $('#tableJoueurs').DataTable({
+                        ordering: false,
+                        pageLength: 10,
+                        
+                    language: {
+                            "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/French.json"
+                            
+                    },
+                    columns: [
+                            { "width": "10%"},
+                            { "width": "30%"},
+                            { "width": "30%"},
+                            { "width": "15%", "orderable": false }
+                        ]
+                });
 
-                };
+
                 fullHeight();
+                init();
+
+                function init()
+                {
+                    /*
+                        Populate players table
+                    */
+
+                    initTableJoueurs();
+
+                }
+
+                $('.retirerBase').on('click', function (e) {
+                    let id = e.target.id;
+                });
+
+                $('.validerStatut').on('click', function (e) {
+
+                    let id = e.target.id;
+                    let statut = $(`#${id}.statut`).val();
+                    
+                    if (updateUserStatut(id, statut))
+                    {
+                        alert('Une erreur est survenue!');
+                    } else {
+                        document.location.reload();
+                    }
+
+                });
+
+                function initTableJoueurs()
+                {
+
+                    let data = getEveryMembers([]);
+                    var statut = 0;
+
+                    var e1, e2, e3, e4;
+                    for (let i = 0; i < data.length; i++) {
+                        statut = data[i]['idStatut'];
+                        var e1 = e2 = e3 = e4 = "";
+                        console.log(statut);
+                        switch (parseInt(statut))
+                        {
+                            case 1: e1 = "selected"; break; // Administrateur
+                            case 4: e2 = "selected"; break; // Externe
+                            case 3: e3 = "selected"; break; // Sympathisant
+                            case 2: e4 = "selected"; break; // Membre
+                        }
+                        //<button style="width: 100%;" id="${data[i][0]}" type="button" class="btn btn-danger retirerBase">Supprimer de la base</button>
+                        tableJoueurs.row.add([
+                                            i+1,
+                                            data[i]['nom'],
+                                            data[i]['prenom'],
+                                            `<td>
+
+                                                <div class="input-group mb-3"> 
+                                                    <div class="input-group-prepend"> 
+                                                        <label class="input-group-text">Statut</label> 
+                                                    </div> 
+
+                                                    <select class="custom-select statut" id="${data[i][0]}"> 
+                                                        <option value="2" ${e4}>Membre</option> 
+                                                        <option value="3" ${e3}>Sympatisant</option> 
+                                                        <option value="4" ${e2}>Externe</option> 
+                                                        <option value="1" ${e1}>Administrateur</option> 
+                                                    </select> 
+
+                                                    <div class="input-group-append"> 
+                                                        <button style="width: 100%;" id="${data[i][0]}" type="button" class="btn btn-dark validerStatut">Valider</button>
+                                                    </div> 
+
+                                                </div> 
+                                        
+                                            </td>`
+                                        ]).node().id = i;
+                    }
+                    tableJoueurs.draw();
+
+
+                }
 
                 $('#sidebarCollapse').on('click', function () {
                     $('#sidebar').toggleClass('active');
@@ -61,6 +158,8 @@ if (!logged())
 
                 $('#confirmImport').on('click',function(e){
 
+                    if (imported_.length > 0)
+                    {
                         $.post('assets/sql/interface.php',
                             {
                                 function: 'importEvents',
@@ -75,7 +174,9 @@ if (!logged())
                                     alert("Import éffectué avec succès!")
                                 }
                         });
-                
+                    } else {
+                        alert('Veuillez importer un fichier.');
+                    }
     
 
 
@@ -161,6 +262,8 @@ if (!logged())
                     }
                 }
 
+
+
         });
 
         </script>
@@ -168,6 +271,15 @@ if (!logged())
 
     </head>
 
+
+    <style>
+
+        #content{
+            background-color: #ffffff;
+        }
+
+
+    </style>
 
     <body>
         
@@ -216,39 +328,69 @@ if (!logged())
                 
                 <h2>Gestion de l'agenda</h2>
 
-                <form id="import-form" class="form-inline">
- 
-                    <div style="display: felx;">
-                        <div class="custom-file">
-                            <label style="width:400px" class="custom-file-label" for="files">Importer fichier .CSV</label>
-                            <input type="file" id="files" class="form-control custom-file-input" accept=".csv" required />
-                            <button style="margin-left: 100px;" id="confirmImport" class="btn form-control btn-warning" type="button">Confirmer l'importation dans la base.</button>
+                <div id="importBase" class="mb-5">
+
+                    <form id="import-form" class="form-inline">
+    
+                        <div style="display: felx;">
+                            <div class="custom-file">
+                                <label style="width:400px" class="custom-file-label" for="files">Importer fichier .CSV</label>
+                                <input type="file" id="files" class="form-control custom-file-input" accept=".csv" required />
+                                <button style="margin-left: 100px;" id="confirmImport" class="btn form-control btn-warning" type="button">Confirmer l'importation dans la base.</button>
+                            </div>
+
                         </div>
 
-                    </div>
+                            
 
                         
+                    </form>
 
                     
-                </form>
 
-                
+                    <table class='table table-striped table-bordered' id="parsed_csv_list">
+                        <thead>
+                            <tr>
+                                <th>Titre</th>
+                                <th>Date début</th>
+                                <th>Heure de début</th>
+                                <th>Date fin</th>
+                                <th>Heure de fin</th>
+                                <th>Type</th>
+                                <th>Lieu</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
 
-                <table class='table table-striped table-bordered' id="parsed_csv_list">
-                    <thead>
-                        <tr>
-                            <th>Titre</th>
-                            <th>Date début</th>
-                            <th>Heure de début</th>
-                            <th>Date fin</th>
-                            <th>Heure de fin</th>
-                            <th>Type</th>
-                            <th>Lieu</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
+                    </table>      
 
-                </table>      
+                </div>
+
+       
+                <div id="gestionUtilisateur">
+                        
+                        <h2 id="titre">Gestion des joueurs</h2>
+
+                            <table class="table table-sm" id="tableJoueurs">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Nom</th>
+                                        <th>Prénom</th>
+                                        <th>Options</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                
+                                </tbody>
+                            </table>
+
+                        </div>
+                        
+
+                </div>
+
+
 
             </div>
 

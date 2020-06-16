@@ -70,7 +70,7 @@ if (isset($_POST['function']))
             break;
             case 'sendMail':
                 require_once('../php/mail.php');
-                //return sendMail($_POST['mailContent']);
+                return sendMail($_POST['mailContent']);
             break;
             case 'createRegistrationNotificationMailForEvent':
                 echo json_encode(createRegistrationNotificationMailForEvent(createPDO(), $_POST['eid'], $_POST['ids']));
@@ -134,6 +134,12 @@ if (isset($_POST['function']))
             break;
             case 'deleteEvent':
                 echo deleteEvent(createPDO(), $_POST['eid'], $_POST['ety']);
+            break;
+            case 'updateUserStatut':
+                echo json_encode(updateUserStatut(createPDO(), $_POST['aid'], $_POST['statut']));
+            break;
+            case 'setUserLoggedState':
+                echo json_encode(setUserLoggedState(createPDO(), $_POST['aid'], $_POST['statut']));
             break;
         }
 
@@ -620,7 +626,7 @@ function deletePaireIsole($PDO, $pid)
 function getMembersOfPaireIsolee($PDO, $pid)
 {
 
-    $req = "SELECT A.id, A.nom, A.prenom
+    $req = "SELECT A.id, A.nom, A.prenom, A.mail
             FROM isolees 
             
             INNER JOIN adherent A
@@ -653,11 +659,6 @@ function getMembersOfPaire($PDO, $pid)
 function registerToEventWith($PDO, $eid, $joueursID)
 {
     /*
-
-        // To do 
-        // inscription [] [] 
-        
-        
         Format de l'array:
         [0] id paire 1  <-> AID! <-> PID DE PAIRE ISOLEE
         [1] id paire 1  NULL <-> PID DE PAIRE ISOLEE <-> PID Paire2
@@ -1158,6 +1159,16 @@ function createRegistrationNotificationMailForEvent($PDO, $eid, $ids)
 {
 
     /*
+        Format de l'array:
+        [0] id paire 1  <-> AID! <-> PID DE PAIRE ISOLEE
+        [1] id paire 1  NULL <-> PID DE PAIRE ISOLEE <-> PID Paire2
+        
+        [2] id paire 2  <-> NULL <-> PID DE PAIRE ISOLEE
+        [3] id paire 2  NULL
+
+        [4] id paire 3  NULL   
+        [5] id paire 3  NULL
+        [6] id paire 3  NULL
 
         Subject: Notification d'inscription
         Body: 
@@ -1169,15 +1180,52 @@ function createRegistrationNotificationMailForEvent($PDO, $eid, $ids)
         
     */
 
-    // Le référant est toujours la dernière personne.
+    $playersInfos = [];
+
     $referant = $ids[sizeof($ids)-1];
 
-    $ids = getLowFormatedIds($ids);
-    $playersInfos = getPlayersInfo($PDO, $ids);
+    // Inscription avec seul // avec paire normal
+    if ((!is_array($ids[0]) && !is_array($ids[1])) && !is_array($ids[2]))
+    {
 
-    $i = 0;
-    while ($i < $playersInfos && $playersInfos[$i][0] != $referant) { $i++; }
-    $referant = $playersInfos[$i];
+        // Le référant est toujours la dernière personne.
+        $ids = getLowFormatedIds($ids);
+        $playersInfos = getPlayersInfo($PDO, $ids);
+
+        $i = 0;
+        while ($i < sizeof($playersInfos) && $playersInfos[$i][0] != $referant) { $i++; }
+        $referant = $playersInfos[$i];
+
+    } else {
+
+        /*
+            On regarde si l'inscription contient des paires isolées, si c'est le cas, on récupère l'id des joueurs membres
+        */
+        $i = 0;
+        while (!is_array($ids[$i]))
+        {
+            $playersInfos[$i] = $ids[$i];
+            $i++;
+        }
+
+        $playersInfos = getLowFormatedIds($playersInfos);
+        $playersInfos = getPlayersInfo($PDO, $playersInfos);
+
+        while (is_array($ids[$i]))
+        {
+            $joueursPaire = getMembersOfPaireIsolee($PDO, $ids[$i][0]);
+
+            for ($j=0; $j < 2; $j++) { 
+                $playersInfos[$i+$j] = $joueursPaire[$j];
+                $i++;
+            }
+            $i++;
+        }
+
+        $playersInfos = array_merge($playersInfos, getPlayersInfo($PDO, $referant));
+        $referant = $playersInfos[sizeof($playersInfos)-1];
+
+    }
 
     $toMails = [];
     $players = "";
@@ -1578,6 +1626,35 @@ function deleteEvent($PDO, $eid, $ety)
 
     return $curseur->errorInfo()[2];
     
+}
+
+function updateUserStatut($PDO, $aid, $statut)
+{
+
+    $req = "UPDATE adherent
+            SET `idStatut` = $statut
+            WHERE id = $aid;
+           ";
+
+    $curseur = $PDO->prepare($req);
+    $curseur->execute();
+
+    return $curseur->errorInfo()[2];
+
+}
+
+function setUserLoggedState($PDO, $aid, $logged)
+{
+    $req = "UPDATE adherent
+            SET `logged` = $logged
+            WHERE id = $aid;
+        ";
+
+    $curseur = $PDO->prepare($req);
+    $curseur->execute();
+    
+    return $curseur->errorInfo()[2];
+
 }
 
 ?>

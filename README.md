@@ -12,10 +12,14 @@ Une relation étroite avec les clients a été nécessaire, ne connaissant rien 
 
 #### Ce qui à été fait
 * Authentification
-* Mise en place du calendrier : Importation d'événements, parties libres, compétitions, tounois depuis des fichiers .csv
+* Mise en place du calendrier : Importation et édition d'événements, parties libres, compétitions, tounois depuis des fichiers .csv
 * Agenda, qui permet de voir les événements, mais aussi les inspecter
 * Interface d'inscription, les utilisateurs forment des paires entre eux et s'inscrivent à un évenement
+* Mise à jour automatique du contenu des pages
 * Gestion de profil, gére les partenaires favoris de l'utilisateur
+* Gestion du statut des joueurs par l'administrateur
+* Export de liste de participants d'un évenement en pdf/csv
+* L'administrateur peut former des paires et inscrire les gens entre eux, comme les désinscrire
 * Système de mail: notification d'inscription, de désinscription
 * API sécurisée, pour l'instant l'API ne permet que de se désinscrire à un évenement.
 
@@ -24,11 +28,23 @@ Une relation étroite avec les clients a été nécessaire, ne connaissant rien 
 
 ### Agenda/Index
 ![Image Introuvable, vérifier le contenu du dossier 'uses'](uses/agendawk.png)
+![Image Introuvable, vérifier le contenu du dossier 'uses'](uses/planning.png)
 ![Image Introuvable, vérifier le contenu du dossier 'uses'](uses/agendam.png)
 ![Image Introuvable, vérifier le contenu du dossier 'uses'](uses/agendad.png)
+
+### Gestion d'un événement
+![Image Introuvable, vérifier le contenu du dossier 'uses'](uses/agendaeditevent.png)
+
+### Inscription
+## Exemple d'évenement lorsequ'on est inscrit
+![Image Introuvable, vérifier le contenu du dossier 'uses'](uses/evenementinscrit.png)
+## Inscription à un tournoi, en rouge notre paire, en bleu une deuxième paire
+![Image Introuvable, vérifier le contenu du dossier 'uses'](uses/evenemeninscription.png)
+## Exemple inscription en compétition
+![Image Introuvable, vérifier le contenu du dossier 'uses'](uses/evenenementinscriptionparticularite.png)
 
 ### Gestion Profil
 ![Image Introuvable, vérifier le contenu du dossier 'uses'](uses/favoris.png)
 
-### Page d'import
+### Page administrateur
 ![Image Introuvable, vérifier le contenu du dossier 'uses'](uses/importbasecsv.png)

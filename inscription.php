@@ -46,7 +46,6 @@ if (!logged())
             <link rel="stylesheet" href="assets/css/waitMe.min.css">
             <script src="assets/js/waitMe.min.js" crossorigin="anonymous"></script>
 
-       
         <!-- Main --> 
             <script src="assets/js/utils.js"></script>
 
@@ -64,12 +63,16 @@ if (!logged())
             function getCheckedIds()
             {
                 let joueursID = [];
-                i=0;
+
                 $('.inscrireAvec:checkbox:checked').each(function () {
                         if ($(this).parent().hasClass('paire1'))
                         {
-                            joueursID[i] = parseInt(this.id);
-                            i++;
+                            if ($(this).hasClass('paire'))
+                            {
+                                joueursID.push([parseInt(this.id)]);
+                            } else {
+                                joueursID.push(parseInt(this.id));
+                            }
                         }
                 });
                 
@@ -78,20 +81,17 @@ if (!logged())
                         {
                             if ($(this).hasClass('paire'))
                             {
-                                // Précise que c'est une paire   
-                                joueursID[i] = [parseInt(this.id)];
+                                joueursID.push([parseInt(this.id)]);
                             } else {
-                                joueursID[i] = parseInt(this.id);
+                                joueursID.push(parseInt(this.id));
                             }
-                            i++;
                         }
                 });
 
                 $('.inscrireAvec:checkbox:checked').each(function () {
                         if ($(this).parent().hasClass('paireRemplacant'))
                         {
-                            joueursID[i] = parseInt(this.id);
-                            i++;
+                            joueursID.push(parseInt(this.id));
                         }
                         
                 });
@@ -215,10 +215,6 @@ if (!logged())
                                 
                             }
 
-                        
-                           
-
-
                     } else {
                         checked--;
                         
@@ -315,17 +311,18 @@ if (!logged())
 
                 if (confirm("Êtes-vous sûr de vouloir vous inscrire à l'évenement?"))
                 {
-                
+                    
                     let joueursID = [];
                     
-
                     if (paireIsolee == 0 && !admin)
                     {
                         // On se met dans l'array;
                         joueursID.push(aid);
                     } else {
+                        
                         if (!admin)
                             joueursID.push([paireIsolee]);
+
                     }
 
                     // On ajoute les autres membres
@@ -344,29 +341,30 @@ if (!logged())
                     {
                         registerIsolees(eid, joueursID);
                     } else {
-                        
                         for (let i = joueursID.length; 6 >= joueursID.length; i++) {
 
                             joueursID.push("NULL");  
                         }
-
-                        //registerToEventWith(eid, joueursID);       
 
                         if (SOSenabled)
                         {
                             // On desinscrit les joueurs SOS
                             unregisterSOSpartenaire(aid, eid, joueursID);
                         }
-                        
+
                         notifyRegisterByMail(aid, eid, joueursID);
-                   
+                        registerToEventWith(eid, joueursID);    
+
+                
                     }
-                                        
+
                 }
                 
 
-
+        
             });
+
+
 
             /*
                 A SUPPRIMER  
@@ -450,7 +448,7 @@ if (!logged())
                                 {
                                     alert('Une erreur est survenue: \n' + error);
                                 }
-                                ////document.location.reload(true);
+                                document.location.reload(true);
                             }
 
                         }
@@ -462,7 +460,7 @@ if (!logged())
             });
 
             var tableJoueurs = $('#tableJoueurs').DataTable({
-               paging: false,
+               paging: true,
                ordering: false,
                info: false,
                pageLength: 10,
@@ -474,7 +472,7 @@ if (!logged())
                     { "width": "5%"},
                     { "width": "40%"},
                     { "width": "40%"},
-                    { "width": "10%", "orderable": false }
+                    { "width": "15%", "orderable": false }
                 ]
             });
 
@@ -490,10 +488,10 @@ if (!logged())
                     
                },
                columns: [
-                    { "width": "10%"},
+                    { "width": "5%"},
                     { "width": "40%"},
                     { "width": "40%"},
-                    { "width": "10%", "orderable": false }
+                    { "width": "15%", "orderable": false }
                 ]
             });
 
@@ -509,22 +507,22 @@ if (!logged())
                     
                },
                columns: [
-                    { "width": "10%"},
+                    { "width": "5%"},
                     { "width": "40%"},
                     { "width": "40%"},
-                    { "width": "10%", "orderable": false }
+                    { "width": "15%", "orderable": false }
                 ]
             });
             
-            function run_waitMe()
+            async function run_waitMe(object, txt, ms)
             {
-                $('.table').waitMe({
+                object.waitMe({
                         effect: 'win8',
-                        text: 'Mise à jour...',
+                        text: txt,
                         bg: 'rgba(255,255,255,0.7)',
                         color: '#000',
                         maxSize: 100,
-                        waitTime: 1000,
+                        waitTime: ms,
                         textPos: 'vertical',
                         fontSize: '18px',
                 });
@@ -545,7 +543,7 @@ if (!logged())
             function reload()
             {
                 // Clear already existing elements
-                run_waitMe();
+                run_waitMe($('.table'), 'Mise à jour...', 1000);
                 tableJoueurs.clear();
                 tableMesFavoris.clear();
                 tableSOSpartenaire.clear();
@@ -567,6 +565,7 @@ if (!logged())
 
             /*
                 Main: met en place l'affichage.
+                à clean
             */
             function initWithEvent()
             {
@@ -900,7 +899,7 @@ if (!logged())
                 for (let i = 0; i < data.length; i++) {
                 
                     tableJoueurs.row.add([
-                                        i,
+                                        i+1,
                                         data[i]['nom'],
                                         data[i]['prenom'],
                                         `<td><input type="checkbox" class="inscrireAvec" id="${data[i]['id']}"></input></td>`
@@ -932,6 +931,7 @@ if (!logged())
                                 paire2 = 0;
                                 checked = 1;
                                 paireIsolee = parseInt(data[i]['pid']);
+
                                 option = `<button id='${pid}' class='btn btn-danger desinscription paireIsolee'>Se retirer des paires isolées</button>`;
                             } else {
                                 option = `<input type='checkbox' class='inscrireAvec paire' id='${data[i]['pid']}'>`;
@@ -1357,7 +1357,7 @@ if (!logged())
                                     <th scope="col">#</th>
                                     <th scope="col">Nom</th>
                                     <th scope="col">Prénom</th>
-                                    <th scope="col">Options</th>
+                                    <th scope="col">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1408,7 +1408,7 @@ if (!logged())
                                     <th>#</th>
                                     <th>Nom</th>
                                     <th>Prénom</th>
-                                    <th>Options</th>
+                                    <th>Inscrire avec</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1432,7 +1432,7 @@ if (!logged())
                                         <th scope="col">#</th>
                                         <th scope="col">Nom</th>
                                         <th scope="col">Prénom</th>
-                                        <th scope="col">Options</th>
+                                        <th scope="col">Actions</th>
                                         </tr>
                                     </tr>
                                 </thead>
@@ -1450,9 +1450,9 @@ if (!logged())
                                     <thead>
                                         <tr>
                                             <th>#</th>
-                                            <th>Last</th>
-                                            <th>First</th>
-                                            <th>Options</th>
+                                            <th>Nom</th>
+                                            <th>Prénom</th>
+                                            <th>Inscrire avec</th>
                                         </tr>
                                     </thead>
                                     <tbody>

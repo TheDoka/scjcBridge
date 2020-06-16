@@ -415,7 +415,7 @@ function unregisterSOSpartenaire(aid, eid, joueursId)
                     {
                        alert('Une erreur est survenue!\n' + data);
                     } else {
-                       //document.location.reload(true);
+                       document.location.reload(true);
                     }
 
             });
@@ -429,17 +429,6 @@ function unregisterSOSpartenaire(aid, eid, joueursId)
 */
 function notifyRegisterByMail(aid, eid, ids)
 {
-    /*
-        On vérifie qu'il n'y a pas de paire isolée
-    */
-    if (ids.length > 1 && Array.isArray(ids[2]))
-    {
-        // Récupère les infos des joueurs de la paire isolée
-
-        
-    }
-    return;
-    ids = [];
 
     ids.push(aid);
 
@@ -597,6 +586,59 @@ function deleteEvent(eid, ety)
 
     });
 }
+
+function getEveryMembers(except)
+{
+
+    return JSON.parse($.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'getEveryMembers',
+            except: JSON.stringify(except),
+        },
+    }).responseText); 
+
+}
+
+function updateUserStatut(aid, statut)
+{
+
+    $.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        data:{
+            function: 'updateUserStatut',
+            aid: aid,
+            statut: statut,
+        },
+        success : function(e){ 
+            return e;
+        }
+    });
+
+}
+
+function setUserLoggedState(aid, statut)
+{
+
+    $.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        data:{
+            function: 'setUserLoggedState',
+            aid: aid,
+            statut: statut,
+        },
+        success : function(e){ 
+            console.log(e);
+            return e;
+        }
+    });
+
+}
+
 
 /*
     Resize la fenêtre pour cacher la navbar.

@@ -1,13 +1,15 @@
 <?php 
 
-include('assets/php/utils.php');
-include('assets/sql/sql.php');
+
+include('assets/sql/interface.php');
 
 
 if (sizeof($_GET) > 0)
 {
     if (empty($_GET['logoff'])) 
     {
+        setUserLoggedState(createPDO(), $_COOKIE['logged'], 'false');
+
         setcookie("logged", "", time()-3600);
     }
 } else {
@@ -28,6 +30,7 @@ if (sizeof($_GET) > 0)
         <!-- Jquery -->    
             <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
             <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
+           
         <!-- BOOTSTRAP -->
             <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" rel="stylesheet"  crossorigin="anonymous">
             <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
@@ -37,6 +40,9 @@ if (sizeof($_GET) > 0)
 
         <!-- LoginPage -->
             <link rel="stylesheet" href="assets/css/login.css">
+       
+        <!-- Main --> 
+            <script src="assets/js/utils.js"></script>
 
     </head>
 
@@ -49,7 +55,7 @@ if (sizeof($_GET) > 0)
             $(document).keypress(function(event){
                 var keycode = (event.keyCode ? event.keyCode : event.which);
                 if(keycode == '13'){
-                        preLogin(); 
+                    preLogin(); 
                 }
             });
 
@@ -90,14 +96,21 @@ if (sizeof($_GET) > 0)
                         console.log(data);
                         data = JSON.parse(data);
 
-                        if (data)
+                        if (data && data['logged'] == 0)
                         {
                             $.cookie('logged', data['id']);
                             $.cookie('nom', data['nom']);
                             $.cookie('prenom', data['prenom']);
+                            setUserLoggedState(data['id'], true);
+
                             window.location = 'index.php';
                         } else {
-                            $('#logError').text("Connexion impossible, veuillez réessayer")
+                            let error_msg = "Connexion impossible, veuillez réessayer";
+                            if (data['logged'] == 1)
+                            {
+                                error_msg = "Vous êtes déjà connecté!"
+                            } 
+                            $('#logError').text(error_msg);
                             $('#logError').show();
                         }
                 });

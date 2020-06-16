@@ -1,7 +1,18 @@
+16/05/2020
+index.php: ergonomie
+login.php: connexion impossible si déjà connecté
+admin.php: gestion statut des joueurs
+index.php: fix edit evenement
+		   vérification inscription évenement déjà passés
+inscription.php: mail ok pour l'inscription
+			     fix affichage
+
+
 15/05/2020
 index.php: edit/suppresion/export participants évenement terminé
 inscription.php: admin peut inscrire/desinscire les joueurs entre eux
-
+inscription.php: mail, référant en cours de fix
+api: desinscription ok
 
 12/05/2020
 inscription.php: refonte de l'affichage!!

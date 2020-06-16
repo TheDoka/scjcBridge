@@ -131,19 +131,24 @@ if (!logged())
                         bcColor = "";
                         classNames = [];
 
+                        var todayDate = moment(new Date($.now())).format("YYYY-MM-DD HH:mm:ss");
+                        var passed = event['dteDebut'] < todayDate;
+
                         switch (parseInt(event['type']))
                         {
                             case 0:
                                 bcColor = "#8e6eb7";
                                 classNames.push("evenement");
-                                classNames.push("inscrire");
                                 classNames.push("all");
+                                if (!passed)
+                                {
+                                    classNames.push("inscrire");
+                                }
                             break;
 
                             case 1:
                                 bcColor = "#e14658";
                                 classNames.push("tournoi");
-                                classNames.push("inscrire");
                                 if (event['DC'])
                                 {
 
@@ -151,22 +156,30 @@ if (!logged())
                                     classNames.push("sympathisant");
 
                                 } 
+
+                                if (!passed)
+                                {
+                                    classNames.push("inscrire");
+                                }
                             break;
 
                             case 2:
                                 bcColor = "#aaaaaa";
                                 classNames.push("partieLibre");
-                                classNames.push("inscrire");
 
                                 classNames.push("membre");
                                 classNames.push("sympathisant");
+                                if (!passed)
+                                {
+                                    classNames.push("inscrire");
+                                }
                             break;
                             
                             case 3: 
                                 bcColor = "#c0b3a0";
                                 classNames.push("competition");
                                 // On vérifie que la compétition n'a pas commencé
-                                if (event.stade == 3) // Stade d'inscription
+                                if (event.stade == 3 && !passed) // Stade d'inscription
                                 {
 
                                     classNames.push("inscrire");
@@ -275,9 +288,11 @@ if (!logged())
                     },
                     eventClick:function(event)
                     {
+
+      
                         event = event.event;
 
-                        if (event['classNames'][1] == 'inscrire' || admin)
+                        if (event['classNames'].includes('inscrire') || admin)
                         {
 
                             if (!event['classNames'].includes('all') && !admin)
@@ -310,6 +325,14 @@ if (!logged())
 
                     },
                     datesRender : function(){
+
+                            /*
+                                Clique droit sur les évenements, l'action ne se passe pas sur tout le document, alors il faut recréer le trigger à chaque nouvelle élément.
+                            */
+                            $('.fc-event').bind('contextmenu', function(e){
+                                e.preventDefault();
+                                showModal();
+                            });
 
                             $('.fc-today-button').after('<select class="selectpicker" multiple data-live-search="false">'+
                                                             '<option id="dC" selected>Compétitions</option>'+
@@ -376,11 +399,9 @@ if (!logged())
                     calendar.setOption('height', calHeight);
                 });
 
-                /*
-                    Clique droit sur les évenements
-                */
-                $('.fc-event').bind('contextmenu', function(e){
-                    e.preventDefault();
+
+                function showModal(e) {
+                    
 
                     if (admin)
                     {
@@ -474,8 +495,7 @@ if (!logged())
                     
                         $("#createEventModal").modal('show');
                     }
-
-                });
+                }
 
 
                 $('#deleteEventButton').on('click', function () {
@@ -554,7 +574,7 @@ if (!logged())
     }
 
     .fc-event{
-        font-size: 1.5em;
+        font-size: 1.25em;
     }
 
     .bootstrap-select .dropdown-toggle .filter-option{
