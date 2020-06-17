@@ -535,7 +535,7 @@ if (!logged())
                 
                 window.setInterval(function(){
                     reload();
-                }, 10000);
+                }, 30000);
                 
             }
             main();
@@ -543,7 +543,7 @@ if (!logged())
             function reload()
             {
                 // Clear already existing elements
-                run_waitMe($('.table'), 'Mise à jour...', 1000);
+                run_waitMe($('.table'), 'Mise à jour...', 2500);
                 tableJoueurs.clear();
                 tableMesFavoris.clear();
                 tableSOSpartenaire.clear();
@@ -650,6 +650,8 @@ if (!logged())
                         $('.paireIsolee').hide();    // Cache table des paires isolées
 
                         $('#textSOS').show();
+                        $('#textSOS').text('Cliquer pour vous désinscrire ');
+
                         $('#buttonSOS').text('Quitter SOS');
                         $('#tableSOS').show();
 
@@ -667,8 +669,27 @@ if (!logged())
                         }, function(data) {
                             
                             data = JSON.parse(data);
+
+                            // On s'ajoute en tant qu'inscrit SOS
+                            $('#tableSituation > tbody').append(
+                                '<tr>' +
+                                    `<td>1</td>` +
+                                    `<td>${user['nom']}</td>` +
+                                    `<td>${user['prenom']}</td>` +
+                                    `<td>/ Inscrit SOS</td>` +
+                                '</tr>'
+                            );
+
+                            tableSOSpartenaire.row.add([
+                                    1,
+                                    user['nom'],
+                                    user['prenom'],
+                                    `<td>Inscrit</td>`
+                                ]).node().id = 0;
+                            
                             // Ajoute les joueurs SOS à la liste des "déjà inscrits"
                             alreadyRegistered = alreadyRegistered.concat(data);
+                            
                             populateSOSpartenaire(data);
                         });
 
@@ -779,9 +800,12 @@ if (!logged())
                 
                 $('#titre').text(event['titre']);
                 moment.locale('fr');
-                $('#debut').text("Commence le " + moment(event['dteDebut']).format("dddd Do MMMM YYYY à HH:MM "));
-                $('#fin').text("Fini le " + moment(event['dteFin']).format("dddd Do MMMM YYYY à HH:MM "));
-                $('#lieu').text("Place de l'évenement : " + event['commune'] + ", " + event['adresse']);
+                console.log(moment(event['dteDebut']).add(15, 'minutes'));
+                console.log(moment(event['dteDebut']).toISOString());
+                $('#debut').text("Commence à " + moment(event['dteDebut']).format("HH:mm ") + '(' + moment(event['dteDebut']).add(15, 'minutes').format('HH:mm') + ' cartes en main.)');
+                
+                $('#fin').text("Fini à " + moment(event['dteFin']).format("HH:mm "));
+                $('#lieu').text("Lieu de l'évènement : " + event['commune'] + ", " + event['adresse']);
                 
                 ety = parseInt(event['type']);
 
@@ -808,10 +832,23 @@ if (!logged())
                 {
                     case 1:
                         // Tournoi
-                        $('#paire').text("Inscription par paire de " + event['paires']);
-                        tmp = "Apéro: " + event['apero'] +
-                              " / Repas: " + event['repas'];
-                        $('#more').text(tmp);
+                        if (event['paires'] == 2)
+                        {
+                            $('#paire').text("Inscription par paire de " + event['paires']);
+                        } else {
+                            $('#paire').text("Patton par " + event['paires']);
+                            
+                        }
+
+                        tmp = "En plus:<br>";
+
+                        if (event['apero'] == 1)
+                            tmp += "* Apéro amélioré <br>";
+                        
+                        if (event['repas'] == 1)
+                            tmp += "* P’tite bouffe partagée\n";
+                        
+                        $('#more').html(tmp);
                     break;
                     
                     case 2:
@@ -821,7 +858,12 @@ if (!logged())
                     case 3:
 
                         // Compétition
-                        $('#paire').text("Inscription par paire de " + event['paires']);
+                        if (event['paires'] == 2)
+                        {
+                            $('#paire').text("Inscription par paire de " + event['paires']);
+                        } else {
+                            $('#paire').text("Inscription par équipe");
+                        }
                         tmp = "Catégorie: " + event['catComp'] +
                               " / Division: " + event['division'] +
                               " / Public: " + event['public'] +
@@ -880,7 +922,7 @@ if (!logged())
                 for (let i = 0; i < data.length; i++) {
                 
                 tableSOSpartenaire.row.add([
-                                    i,
+                                    i+2,
                                     data[i]['nom'],
                                     data[i]['prenom'],
                                     `<td><input type="checkbox" class="inscrireAvec SOS" id="${data[i]['id']}"></input></td>`
@@ -906,6 +948,7 @@ if (!logged())
                                     ]).node().id = i;
                         
                 }
+
                 tableJoueurs.draw();
             }
 
@@ -1273,8 +1316,17 @@ if (!logged())
 
     .btn-mid20 {
         width: 20%;
-        
     }
+
+    .btn-circle.btn-xl {
+        width: 150px;
+        height: 150px;
+        padding: 10px 16px;
+        border-radius: 75px;
+        font-size: 20px;
+        line-height: 1.33;
+    }
+
 
     #inscriptArea{
         overflow-x: hidden;
@@ -1282,6 +1334,37 @@ if (!logged())
 
     .pourInscrire{
         display: none;
+    }
+
+    .my-legend{
+        opacity: 0.5;
+    }
+    .my-legend .legend-title {
+        text-align: left;
+        margin-bottom: 8px;
+        font-weight: bold;
+        font-size: 90%;
+    }
+    .my-legend .legend-scale ul {
+        margin: 0;
+        padding: 0;
+        float: left;
+        list-style: none;
+    }
+    .my-legend .legend-scale ul li {
+        display: block;
+        float: left;
+        width: 50px;
+        margin-bottom: 6px;
+        text-align: center;
+        font-size: 80%;
+        list-style: none;
+    }
+    .my-legend ul.legend-labels li span {
+        display: block;
+        float: left;
+        height: 15px;
+        width: 50px;
     }
 
 
@@ -1366,7 +1449,7 @@ if (!logged())
                             </table>
 
                         <div class="pourInscrire PA">
-                            <h3>Partenaire favoris: </h3>
+                            <h3>Mes partenaires favoris: </h3>
                                 <table class="table" id="tableMesFavoris">
                                     <thead>
                                         <tr>
@@ -1382,8 +1465,11 @@ if (!logged())
                                 </table>
                         </div>
                         <div class="pourInscrire SOS">
-                            <h3 style="display: none;" id="textSOS" >SOS Partenaire: <button id="buttonSOS" class="btn btn-primary">Rejoindre SOS</button> </h3>
-                            
+                            <div style="display: -webkit-inline-box"; >
+                                <h3 style="display: none;" id="textSOS" >Je suis seul, je m'inscris à SOS Partenaire: </h3> 
+                                <button id="buttonSOS" class="btn btn-primary">Rejoindre SOS</button> 
+                            </div>
+                                                       
                             <table style="display: none;" class="table" id="tableSOS">
                                 <thead>
                                     <tr>
@@ -1401,7 +1487,7 @@ if (!logged())
                         </div>
                         
                         <div style="display: none;" class="pourInscrire paireIsolee">
-                            <h3>Paire isolées: </h3>
+                            <h3>Paires disponibles: </h3>
                             <table class="table" id="tablePaireIsolee">
                                 <thead>
                                     <tr>
@@ -1445,7 +1531,7 @@ if (!logged())
 
                         <div class="pourInscrire JO">
                             
-                            <h3>Joueurs disponibles: </h3>
+                            <h3>Liste des joueurs: </h3>
                                 <table class="table" id="tableJoueurs">
                                     <thead>
                                         <tr>
@@ -1469,16 +1555,30 @@ if (!logged())
                     </div>
 
                 </div>
-                    
-                <footer class="footer">
-                        <div class="container-fluid">
-                            <div class="row text-center">
-                                <div style="padding: 1em; "class="col-lg-12">      
-                                    <button id="buttonInscrire" type="button" class="btn btn-secondary btn-lg btn-mid20" disabled>S'inscire</button>
+
+ 
+
+
+                <div class="row" style="position: fixed; bottom: 0; width: auto;">
+  
+                        <div style="padding: 1em;">      
+                            <button id="buttonInscrire" type="button" class="btn btn-secondary btn-circle btn-xl btn-mid20" disabled>S'inscrire</button>
+                        </div>
+
+                        <div style="margin-top: 30%;" class='my-legend'>
+                            <div class='legend-title'>Légende</div>
+                                <div class='legend-scale'>
+                                    <ul class='legend-labels'>
+                                        <li><span style='background:#FF0000'></span>Paire 1</li>
+                                        <li><span style='background:#0000FF;'></span>Paire 2</li>
+                                        <li><span style='background:#00FF00;'></span>Remplaçants</li>
+                                    </ul>
                                 </div>
                             </div>
-                        </div>        
-                 </footer>
+                        </div>
+
+                </div>
+  
 
             </div>
                 

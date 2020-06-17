@@ -620,6 +620,25 @@ function updateUserStatut(aid, statut)
 
 }
 
+function updateUserInfos(userInfos)
+{
+
+    $.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        data:{
+            function: 'updateUserInfos',
+            userInfos: JSON.stringify(userInfos),
+        },
+        success : function(e){ 
+            console.log(e);
+            return e;
+        }
+    });
+
+
+}
+
 function setUserLoggedState(aid, statut)
 {
 
@@ -636,6 +655,33 @@ function setUserLoggedState(aid, statut)
             return e;
         }
     });
+
+}
+
+function getAllStatut()
+{
+
+    return JSON.parse($.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'getAllStatut',
+        },
+    }).responseText);
+
+}
+function getAllNiveaux()
+{
+
+    return JSON.parse($.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'getAllNiveaux',
+        },
+    }).responseText);
 
 }
 

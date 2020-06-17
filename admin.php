@@ -81,67 +81,19 @@ if (!logged())
 
                 }
 
-                $('.retirerBase').on('click', function (e) {
-                    let id = e.target.id;
-                });
-
-                $('.validerStatut').on('click', function (e) {
-
-                    let id = e.target.id;
-                    let statut = $(`#${id}.statut`).val();
-                    
-                    if (updateUserStatut(id, statut))
-                    {
-                        alert('Une erreur est survenue!');
-                    } else {
-                        document.location.reload();
-                    }
-
-                });
-
                 function initTableJoueurs()
                 {
 
                     let data = getEveryMembers([]);
-                    var statut = 0;
 
-                    var e1, e2, e3, e4;
                     for (let i = 0; i < data.length; i++) {
-                        statut = data[i]['idStatut'];
-                        var e1 = e2 = e3 = e4 = "";
-                        console.log(statut);
-                        switch (parseInt(statut))
-                        {
-                            case 1: e1 = "selected"; break; // Administrateur
-                            case 4: e2 = "selected"; break; // Externe
-                            case 3: e3 = "selected"; break; // Sympathisant
-                            case 2: e4 = "selected"; break; // Membre
-                        }
-                        //<button style="width: 100%;" id="${data[i][0]}" type="button" class="btn btn-danger retirerBase">Supprimer de la base</button>
+
                         tableJoueurs.row.add([
                                             i+1,
                                             data[i]['nom'],
                                             data[i]['prenom'],
                                             `<td>
-
-                                                <div class="input-group mb-3"> 
-                                                    <div class="input-group-prepend"> 
-                                                        <label class="input-group-text">Statut</label> 
-                                                    </div> 
-
-                                                    <select class="custom-select statut" id="${data[i][0]}"> 
-                                                        <option value="2" ${e4}>Membre</option> 
-                                                        <option value="3" ${e3}>Sympatisant</option> 
-                                                        <option value="4" ${e2}>Externe</option> 
-                                                        <option value="1" ${e1}>Administrateur</option> 
-                                                    </select> 
-
-                                                    <div class="input-group-append"> 
-                                                        <button style="width: 100%;" id="${data[i][0]}" type="button" class="btn btn-dark validerStatut">Valider</button>
-                                                    </div> 
-
-                                                </div> 
-                                        
+                                                <button style="width: 100%;" id="${data[i][0]}" type="button" class="btn btn-dark inspecterJoueur">Inspecter</button>
                                             </td>`
                                         ]).node().id = i;
                     }
@@ -152,14 +104,88 @@ if (!logged())
 
                 $('#sidebarCollapse').on('click', function () {
                     $('#sidebar').toggleClass('active');
+
+                });
+
+
+                var id = 0;
+                $(document).on('click', '.inspecterJoueur', function(e) {
+                    /*
+                        Clear all forms
+                    */
+
+                    $('#statutJoueurEdit').empty();
+                    $('#niveauJoueurEdit').empty();
+
+                    id = e.target.id;
+                    let userInfo = getUser(id);
+                    let statuts = getAllStatut();
+                    let niveaux = getAllNiveaux();
+
+                    statuts.forEach(statut => {
+                        $('#statutJoueurEdit').append($('<option>', { 
+                            id: statut['idStatut'],
+                            text : statut['libelle'], 
+                        }));
+                    });
+                    niveaux.forEach(niveau => {
+                        $('#niveauJoueurEdit').append($('<option>', { 
+                            id: niveau['idNiveau'],
+                            text : niveau['numeroSerie'] 
+                        }));
+                    });
+
+                    console.log(userInfo);
+                    $('#statutJoueurEdit').val(userInfo['statut']);
+                    $('#niveauJoueurEdit').val(userInfo['Niveau']);
+                    
+
+
+                    $('#joueurNomEdit').val(userInfo['nom']);
+                    $('#joueurPrenomEdit').val(userInfo['prenom'])
+                    $('#joueurMailEdit').val(userInfo['mail'])
+                    $('#joueurTelEdit').val(userInfo['tel'])
+                    $('#joueurCommuneEdit').val(userInfo['commune'])
+                    $('#joueurLicenceEdit').val(userInfo['numeroLicense'])
+                    
+                    $("#joueurEditModal").modal('show');
+                });
+
+
+                $('#saveEditJoueurButton').on('click', function(e)
+                {
+
+                    var userInfo = {
+                        'id': id,
+                        'nom': $('#joueurNomEdit').val(),
+                        'prenom': $('#joueurPrenomEdit').val(),
+                        'mail': $('#joueurMailEdit').val(),
+                        'tel': $('#joueurTelEdit').val(),
+                        'commune': $('#joueurCommuneEdit').val(),
+                        'numeroLicense': $('#joueurLicenceEdit').val(),
+                        'statut': $('#statutJoueurEdit > :selected').attr('id'),
+                        'niveau': $('#niveauJoueurEdit > :selected').attr('id'),
+                    }
+
+                    if (confirm('Confimer les modifications?'))
+                    {
+                        updateUserInfos(userInfo);
+                    }
+                    
+                });
+
+                $('#deleteJoueurButton').on('click', function() {
+
+
+
+
                 });
 
                 var type = 0;
 
                 $('#confirmImport').on('click',function(e){
 
-                    if (imported_.length > 0)
-                    {
+     
                         $.post('assets/sql/interface.php',
                             {
                                 function: 'importEvents',
@@ -174,10 +200,7 @@ if (!logged())
                                     alert("Import éffectué avec succès!")
                                 }
                         });
-                    } else {
-                        alert('Veuillez importer un fichier.');
-                    }
-    
+                  
 
 
                 });
@@ -283,6 +306,89 @@ if (!logged())
 
     <body>
         
+        <!-- Modal for Joueur edit -->
+        <div class="modal fade" id="joueurEditModal" tabindex="-1" role="dialog" aria-labelledby="basicModal" aria-hidden="true">
+
+            <div class="modal-dialog">
+                <div class="modal-content">
+
+                    <div class="modal-header">
+                        <h4 class="modal-title">Inspection profil</h4>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+
+                    <div class="modal-body">
+
+                        <div class="input-group mb-3">
+                            <div class="input-group-prepend">
+                                <i class="input-group-text fa fa-user" aria-hidden="true"></i>
+                            </div>
+                            <input id="joueurNomEdit" type="text" class="form-control" placeholder="Nom" aria-label="Nom">                            
+                            <input id="joueurPrenomEdit" type="text" class="form-control" placeholder="Prenom" aria-label="Prenom">                            
+                        </div>
+
+                        <div class="input-group mb-3">
+
+                            <div class="input-group-prepend">
+                                <i class="input-group-text fa fa-envelope" aria-hidden="true"></i>
+                            </div>
+                            <input id="joueurMailEdit" type="text" class="form-control w-25" placeholder="mail" aria-label="mail">      
+
+                            <div class="input-group-prepend">
+                                <i class="input-group-text fa fa-phone" aria-hidden="true"></i>
+                            </div>
+                            <input id="joueurTelEdit" type="text" class="form-control" placeholder="Num. Téléphone" aria-label="joueurTelEdit"> 
+
+                        </div>
+
+                        <div class="input-group mb-3">
+
+                            <div class="input-group-prepend">
+                                <i class="input-group-text fa fa-building" aria-hidden="true"></i>
+                            </div>
+                            <input id="joueurCommuneEdit" type="text" class="form-control" placeholder="Commune" aria-label="joueurCommuneEdit"> 
+
+                        </div>
+                        
+                        <div class="input-group mb-3">
+
+                            <div class="input-group-prepend">
+                                <i class="input-group-text fa fa-code" aria-hidden="true"></i>
+                            </div>
+                            <input id="joueurLicenceEdit" type="text" class="form-control" placeholder="Num. Licence" aria-label="joueurLicense"> 
+
+                        </div>
+
+
+                        <div class="input-group mb-3"> 
+                            <div class="input-group-prepend"> 
+                                <label class="input-group-text">Statut</label> 
+                            </div> 
+
+                            <select class="custom-select" id="statutJoueurEdit"> </select> 
+
+                            <div class="input-group-prepend"> 
+                                <label class="input-group-text">Niveau</label> 
+                            </div> 
+
+                            <select class="custom-select" id="niveauJoueurEdit"> </select> 
+                           
+                        </div>
+
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
+                        <button id="deleteJoueurButton" type="button" class="btn btn-danger">Supprimer</button>
+                        <button id="saveEditJoueurButton" type="button" class="btn btn-primary">Sauvegarder les modifications</button>
+                    </div>
+            </div>
+            </div>
+        </div>
+
+   
         <div class="wrapper d-flex align-items-stretch">
             
             <nav id="sidebar">
@@ -326,52 +432,66 @@ if (!logged())
 
             <div id="content" class="p-4 p-md-5 pt-5">
                 
-                <h2>Gestion de l'agenda</h2>
+                <ul class="nav nav-tabs" id="myTab" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="home-tab" data-toggle="tab" href="#home" role="tab" aria-controls="home" aria-selected="true">Gestion de la base de données</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="profile-tab" data-toggle="tab" href="#profile" role="tab" aria-controls="profile" aria-selected="false">Gestion des utilisateurs</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="messages-tab" data-toggle="tab" href="#messages" role="tab" aria-controls="messages" aria-selected="false">Gestion des statuts/permissions</a>
+                    </li>
 
-                <div id="importBase" class="mb-5">
+                </ul>
 
-                    <form id="import-form" class="form-inline">
-    
-                        <div style="display: felx;">
-                            <div class="custom-file">
-                                <label style="width:400px" class="custom-file-label" for="files">Importer fichier .CSV</label>
-                                <input type="file" id="files" class="form-control custom-file-input" accept=".csv" required />
-                                <button style="margin-left: 100px;" id="confirmImport" class="btn form-control btn-warning" type="button">Confirmer l'importation dans la base.</button>
+                <div class="tab-content" id="myTabContent">
+
+                    <div class="tab-pane active" id="home" role="tabpanel" aria-labelledby="home-tab">
+                    
+                        <h2>Gestion de l'agenda</h2>
+                        <form id="import-form" class="form-inline">
+        
+                            <div style="display: felx;">
+                                <div class="custom-file">
+                                    <label style="width:400px" class="custom-file-label" for="files">Importer fichier .CSV</label>
+                                    <input type="file" id="files" class="form-control custom-file-input" accept=".csv" required />
+                                    <button style="margin-left: 100px;" id="confirmImport" class="btn form-control btn-warning" type="button">Confirmer l'importation dans la base.</button>
+                                </div>
+
                             </div>
 
-                        </div>
+                                
 
                             
+                        </form>
 
                         
-                    </form>
 
-                    
+                        <table class='table table-striped table-bordered' id="parsed_csv_list">
+                            <thead>
+                                <tr>
+                                    <th>Titre</th>
+                                    <th>Date début</th>
+                                    <th>Heure de début</th>
+                                    <th>Date fin</th>
+                                    <th>Heure de fin</th>
+                                    <th>Type</th>
+                                    <th>Lieu</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
 
-                    <table class='table table-striped table-bordered' id="parsed_csv_list">
-                        <thead>
-                            <tr>
-                                <th>Titre</th>
-                                <th>Date début</th>
-                                <th>Heure de début</th>
-                                <th>Date fin</th>
-                                <th>Heure de fin</th>
-                                <th>Type</th>
-                                <th>Lieu</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
+                        </table>      
 
-                    </table>      
+                    </div>
 
-                </div>
+        
+                    <div class="tab-pane" id="profile" role="tabpanel" aria-labelledby="profile-tab">
+                            
+                            <h2 id="titre">Gestion des joueurs</h2>
 
-       
-                <div id="gestionUtilisateur">
-                        
-                        <h2 id="titre">Gestion des joueurs</h2>
-
-                            <table class="table table-sm" id="tableJoueurs">
+                            <table class="table table-sm" id="tableJoueurs" style="width:100%;">
                                 <thead>
                                     <tr>
                                         <th>#</th>
@@ -385,12 +505,9 @@ if (!logged())
                                 </tbody>
                             </table>
 
-                        </div>
-                        
-
+                    </div>
+                            
                 </div>
-
-
 
             </div>
 

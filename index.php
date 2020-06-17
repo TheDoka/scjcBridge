@@ -305,7 +305,7 @@ if (!logged())
                                     {
                                         alert('Cet évenement est reservé aux membres ou aux sympathisants.')
                                         return;
-                                    } 
+                                    }
 
                                 }
 
@@ -493,7 +493,7 @@ if (!logged())
                         $('#dteDebutEdit').val(moment(current_event['start']).format("YYYY-MM-DDTHH:mm:ss"));
                         $('#dteFinEdit').val(moment(current_event['end']).format("YYYY-MM-DDTHH:mm:ss"));
                     
-                        $("#createEventModal").modal('show');
+                        $("#eventEditModal").modal('show');
                     }
                 }
 
@@ -588,7 +588,7 @@ if (!logged())
 
     
         <!-- Modal for event edit -->
-        <div class="modal fade" id="createEventModal" tabindex="-1" role="dialog" aria-labelledby="basicModal" aria-hidden="true">
+        <div class="modal fade" id="eventEditModal" tabindex="-1" role="dialog" aria-labelledby="basicModal" aria-hidden="true">
 
             <div class="modal-dialog">
                 <div class="modal-content">

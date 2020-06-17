@@ -141,6 +141,15 @@ if (isset($_POST['function']))
             case 'setUserLoggedState':
                 echo json_encode(setUserLoggedState(createPDO(), $_POST['aid'], $_POST['statut']));
             break;
+            case 'getAllStatut':
+                echo json_encode(getAllStatut(createPDO()));
+            break;
+            case 'getAllNiveaux':
+                echo json_encode(getAllNiveaux(createPDO()));
+            break;
+            case 'updateUserInfos':
+                echo updateUserInfos(createPDO(), $_POST['userInfos']);
+            break;
         }
 
 
@@ -245,9 +254,35 @@ function connexion($PDO, $licenseId, $pass)
     
 }
 
+function getAllStatut($PDO)
+{
+
+    $req = "SELECT * 
+            FROM `statut`";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+    return $curseur->fetchAll();
+
+}
+
+function getAllNiveaux($PDO)
+{
+
+    $req = "SELECT * 
+            FROM `niveau`";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+    return $curseur->fetchAll();
+
+}
+
 function getUser($PDO, $aid)
 {
-    $req = "SELECT `id`,`nom`,`prenom`,`mail`,`tel`,`commune`,`sexe`,`password`,`numeroLicense`, S.libelle as statut, N.numeroSerie as Niveau
+    $req = "SELECT `id`,`nom`,`prenom`,`mail`,`tel`,`commune`,`sexe`,`password`,`numeroLicense`, A.`idStatut`, S.libelle as statut, A.`idNiveau`, N.numeroSerie as Niveau
             FROM adherent A
             
             INNER JOIN statut S
@@ -1638,6 +1673,30 @@ function updateUserStatut($PDO, $aid, $statut)
 
     $curseur = $PDO->prepare($req);
     $curseur->execute();
+
+    return $curseur->errorInfo()[2];
+
+}
+
+function updateUserInfos($PDO, $userInfo)
+{
+
+    $userInfo = json_decode($userInfo, true);
+    print_r($userInfo);
+    $req = "UPDATE `adherent` 
+            SET 
+            `nom`= :nom,
+            `prenom`= :prenom,
+            `mail`= :mail,
+            `tel`= :tel,
+            `commune`= :commune,
+            `numeroLicense`= :numeroLicense,
+            `idStatut`= :statut,
+            `idNiveau`= :niveau
+            WHERE `id` = :id";
+
+    $curseur = $PDO->prepare($req);
+    $curseur->execute($userInfo);
 
     return $curseur->errorInfo()[2];
 

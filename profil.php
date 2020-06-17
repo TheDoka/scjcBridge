@@ -145,7 +145,6 @@ if (!logged())
                 // 1.
                 // Populate tables
 
-                    
                 var favoris = [];
                 // I. Get favoris
                 $.ajax({
@@ -168,7 +167,7 @@ if (!logged())
                         }
                     },
                 });
-
+                
                 // On se rajoute à l'array, car on ne veut pas être afficher dans la liste de joueurs
                 favoris.push([aid]);
 
@@ -214,7 +213,7 @@ if (!logged())
                                     tableJoueurs.draw();
                                     
                                 }
-                               
+                                
                         });
                 }
 
@@ -270,7 +269,7 @@ if (!logged())
                     
 
                 }
-                tableJoueurs.draw();
+                tableMesFavoris.draw();
 
             }
 
