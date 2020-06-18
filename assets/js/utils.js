@@ -50,7 +50,6 @@ function registerToEventWith(eid, joueursID)
                 eid: eid,
                 ids: JSON.stringify(joueursID),
             }, function(data) {
-                    console.log(data);
                     
                     if (data)
                     {
@@ -69,7 +68,7 @@ function registerToEventWith(eid, joueursID)
 /*
     Supprime la paire pid des paires
 */
-function unregisterPaire(pid, eid)
+function unregisterPaire(pid, eid, aid)
 {
     let iid = 0;
     let error = "";
@@ -79,7 +78,6 @@ function unregisterPaire(pid, eid)
     /*
         I. On récupère l'id de l'inscription de la paire
     */
-    $.ajaxSetup({async: false});  
     $.ajax({
         type: "POST",
         async: false,
@@ -91,7 +89,7 @@ function unregisterPaire(pid, eid)
         success: function(data)
         {
             iid = JSON.parse(data)['iid'];
-            console.log(data);
+
 
         },
     });
@@ -106,14 +104,13 @@ function unregisterPaire(pid, eid)
     }, function(data) {
 
         data = JSON.parse(data);
-        notifiyUnRegisterByMail(eid, data);
+        notifiyUnRegisterByMail(eid, data, aid);
         
     });
 
     /*
         II. Supprime la paire
-    */
-        
+    */   
         $.post('assets/sql/interface.php',
         {
             function: 'unregisterPaire',
@@ -127,6 +124,7 @@ function unregisterPaire(pid, eid)
             
         });
         
+    
     /*
         II. On récupères les paires restantes
     */
@@ -137,7 +135,6 @@ function unregisterPaire(pid, eid)
         iid: iid,
     }, function(data) {
         pairesRestantes = JSON.parse(data);
-        console.log(pairesRestantes);
 
     });
 
@@ -205,7 +202,7 @@ function deletePaireIsolee(pid)
         function: 'deletePaireIsole',
         pid: pid,
     }, function(data) {
-        console.log(data);
+
         if (data)
         {
 
@@ -219,7 +216,7 @@ function deletePaireIsolee(pid)
 /*
     Effectue la désinscription, supprime les paires associés à l'inscription puis supprimme l'inscription.
 */
-function unregisterPaires(aid, eid, iid)
+function unregisterPaires(eid, iid, aid)
 {
 
     /*
@@ -233,9 +230,8 @@ function unregisterPaires(aid, eid, iid)
     }, function(data) {
         
             let ids = JSON.parse(data);
-            console.log(ids);
-           
-            notifiyUnRegisterByMail(eid, ids);
+
+            notifiyUnRegisterByMail(eid, ids, aid);
 
     });
 
@@ -245,7 +241,6 @@ function unregisterPaires(aid, eid, iid)
         iid: iid,
     }, function(data) {
 
-        console.log(data);
     });
 
     $.post('assets/sql/interface.php',
@@ -253,7 +248,7 @@ function unregisterPaires(aid, eid, iid)
         function: 'unregisterFromEvent',
         iid: iid,
     }, function(data) {
-            console.log(data);
+
             if (data)
             {
                 alert('Une erreur est survenue!\n' + data);
@@ -278,7 +273,7 @@ function registerRemplacantToPid(aid, pid)
         aid: aid,
         pid: pid,
     }, function(data) {
-            console.log(data);
+
             
             if (data)
             {
@@ -304,7 +299,7 @@ function registerIsolees(eid, ids)
         eid: eid,
         ids: ids,
     }, function(data) {
-            console.log(data);
+
             
             if (data)
             {
@@ -353,7 +348,7 @@ function unregisterFromRemplacant(aid, iid)
         aid: aid,
         iid: iid,
     }, function(data) {
-            console.log(data);
+
             
             if (data)
             {
@@ -410,7 +405,7 @@ function unregisterSOSpartenaire(aid, eid, joueursId)
                 players: JSON.stringify(joueursId),
                 eid: eid,
             }, function(data) {
-                console.log(data);
+
                     if (data)
                     {
                        alert('Une erreur est survenue!\n' + data);
@@ -440,16 +435,21 @@ function notifyRegisterByMail(aid, eid, ids)
             ids: ids,
         }, function(data) {
             mailContent = JSON.parse(data);
-            console.log(mailContent);
+
         });
 
-    $.post('assets/sql/interface.php',
-    {
-        function: 'sendMail',
-        mailContent: mailContent,
-    }, function(data) {
-        console.log(data);
-    });
+    $.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        data:{
+            function: 'sendMail',
+            mailContent: mailContent,
+        },
+        success: function (data) {
+
+        },
+        async:   true
+    });    
 
 
 }
@@ -459,29 +459,30 @@ function notifyRegisterByMail(aid, eid, ids)
     aux ids: joueurs
     @return /
 */
-function notifiyUnRegisterByMail(eid, ids)
+function notifiyUnRegisterByMail(eid, ids, ref)
 {
 
-    $mailContent = [];
+    mailContent = [];
     $.post('assets/sql/interface.php',
         {
             function: 'createUnRegistrationNotificationMailForEvent',
             eid: eid,
             ids: ids,
+            ref: ref,
         }, function(data) {
-
             mailContent = JSON.parse(data);
-            console.log(mailContent);
-
         });
-
-    $.post('assets/sql/interface.php',
-    {
-        function: 'sendMail',
-        mailContent: mailContent,
-    }, function(data) {
-        console.log(data);
-    });
+        
+    $.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        data:{
+            function: 'sendMail',
+            mailContent: mailContent,
+        },
+        success: function (data) {
+        },
+    });    
 
 }
 
@@ -502,9 +503,21 @@ function notifiyPaireIsoleeByMail(eid, ids)
         }, function(data) {
 
             mailContent = JSON.parse(data);
-            console.log(mailContent);
-
+            
         });
+
+    $.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        data:{
+            function: 'sendMail',
+            mailContent: mailContent,
+        },
+        success: function (data) {
+
+        },
+        async:   true
+    });    
 
 
 }
@@ -582,7 +595,6 @@ function deleteEvent(eid, ety)
         eid: eid,
         ety: ety,
     }, function(data) {
-        console.log(data);
 
     });
 }
@@ -631,7 +643,6 @@ function updateUserInfos(userInfos)
             userInfos: JSON.stringify(userInfos),
         },
         success : function(e){ 
-            console.log(e);
             return e;
         }
     });
@@ -651,7 +662,6 @@ function setUserLoggedState(aid, statut)
             statut: statut,
         },
         success : function(e){ 
-            console.log(e);
             return e;
         }
     });
@@ -685,6 +695,51 @@ function getAllNiveaux()
 
 }
 
+function deleteUser(aid)
+{
+    // Recupère tout les événement inscrits du joueurs:
+    $.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'deleteUser',
+            aid: aid,
+        },
+    });
+        
+}
+
+function getEvenementsRaccorde(eid)
+{
+
+    return JSON.parse($.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'getEvenementsRaccorde',
+            eid: eid,
+        },
+    }).responseText);
+        
+}
+
+function isRegisteredForEvent(eid, aid)
+{
+
+    return JSON.parse($.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'isRegisteredForEvent',
+            eid: eid,
+            aid: aid,
+        },
+    }).responseText);
+        
+}
 
 /*
     Resize la fenêtre pour cacher la navbar.

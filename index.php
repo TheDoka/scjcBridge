@@ -313,7 +313,7 @@ if (!logged())
 
                           
 
-                            if (confirm("Inspecter l'êvenement?"))
+                            if (confirm("Description du tournoi?"))
                             {
                                     window.location = 'inscription.php?eid=' + event.id;
                             }
@@ -516,7 +516,7 @@ if (!logged())
                         }
 
                         deleteEvent(current_event['id'], ety);
-
+                        document.location.reload();
                     }
                 });
                 $('#saveEditEventButton').on('click', function () {
@@ -533,13 +533,13 @@ if (!logged())
                         */
 
                         event = {
-                        id:      current_event['id'],
-                        titre:   $('#eventNameEdit').val(),
-                        dteDebut:$('#dteDebutEdit').val(),
-                        dteFin:  $('#dteFinEdit').val(),
-                        prix:    $('#eventPrixEdit').val(),
-                        lieu:    $('#eventLieuEdit').find('option:selected').attr('id'),
-                        paires:  $('#eventPaireEdit').val(),
+                            id:      current_event['id'],
+                            titre:   $('#eventNameEdit').val(),
+                            dteDebut:$('#dteDebutEdit').val(),
+                            dteFin:  $('#dteFinEdit').val(),
+                            prix:    $('#eventPrixEdit').val(),
+                            lieu:    $('#eventLieuEdit').find('option:selected').attr('id'),
+                            paires:  $('#eventPaireEdit').val(),
                         };
                         
                         console.log(event);
@@ -575,11 +575,6 @@ if (!logged())
 
     .fc-event{
         font-size: 1.25em;
-    }
-
-    .bootstrap-select .dropdown-toggle .filter-option{
-
-        position: relative;
     }
 
 </style>

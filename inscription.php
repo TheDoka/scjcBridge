@@ -309,7 +309,7 @@ if (!logged())
 
             $(document).on('click', '#buttonInscrire', function (e) {
 
-                if (confirm("Êtes-vous sûr de vouloir vous inscrire à l'évenement?"))
+                if (confirm("Confirmez-vous votre inscription ?"))
                 {
                     
                     let joueursID = [];
@@ -371,7 +371,7 @@ if (!logged())
             */
             $(document).on('click', '#buttonInscrirePL', function (e) {
 
-                if (confirm("Êtes-vous sûr de vouloir vous inscrire à l'évenement?"))
+                if (confirm("Confirmez-vous votre inscription?"))
                 {
 
                     let joueursID = [aid];
@@ -413,7 +413,7 @@ if (!logged())
                 // iid pour compétition et partie libres
                 // pid pour tournoi
                 let id = e.target.id;
-
+                alert(id);
                 /*
                     Désinscription de remplaçant
                     Désinscription intégrale
@@ -431,7 +431,7 @@ if (!logged())
                     if ($(this).hasClass('competition') && confirm("Êtes-vous sûr de vouloir vous desinscrire de l'évenement?"))
                     {
                         // Désinscription intégrale
-                        unregisterPaires(aid, eid, id);
+                        unregisterPaires(eid, id, aid);
                         
                     } else {    
                         // Tournoi
@@ -443,7 +443,8 @@ if (!logged())
                             // Desinscription de paire
                             if (confirm("Êtes-vous sûr de vouloir vous desinscrire de l'évenement?"))
                             {
-                                let error = unregisterPaire(id, eid);
+
+                                let error = unregisterPaire(id, eid, aid);
                                 if (error.length > 0)
                                 {
                                     alert('Une erreur est survenue: \n' + error);
@@ -644,6 +645,23 @@ if (!logged())
 
                     if (SOSenabled)
                     {
+                        // On s'ajoute en tant qu'inscrit SOS
+                        $('#tableSituation > tbody').append(
+                            '<tr>' +
+                                `<td>1</td>` +
+                                `<td>${user['nom']}</td>` +
+                                `<td>${user['prenom']}</td>` +
+                                `<td>/ Inscrit SOS</td>` +
+                            '</tr>'
+                        );
+
+                        tableSOSpartenaire.row.add([
+                                1,
+                                user['nom'],
+                                user['prenom'],
+                                `<td>Inscrit</td>`
+                        ]).node().id = 0;
+
                         $('.pourInscrire').show();
                         $('.JO').hide();             // Cache table joueurs
                         $('.PA').hide();             // Cache table favoris
@@ -654,6 +672,7 @@ if (!logged())
 
                         $('#buttonSOS').text('Quitter SOS');
                         $('#tableSOS').show();
+
 
                     }
 
@@ -669,24 +688,7 @@ if (!logged())
                         }, function(data) {
                             
                             data = JSON.parse(data);
-
-                            // On s'ajoute en tant qu'inscrit SOS
-                            $('#tableSituation > tbody').append(
-                                '<tr>' +
-                                    `<td>1</td>` +
-                                    `<td>${user['nom']}</td>` +
-                                    `<td>${user['prenom']}</td>` +
-                                    `<td>/ Inscrit SOS</td>` +
-                                '</tr>'
-                            );
-
-                            tableSOSpartenaire.row.add([
-                                    1,
-                                    user['nom'],
-                                    user['prenom'],
-                                    `<td>Inscrit</td>`
-                                ]).node().id = 0;
-                            
+                        
                             // Ajoute les joueurs SOS à la liste des "déjà inscrits"
                             alreadyRegistered = alreadyRegistered.concat(data);
                             
@@ -694,7 +696,7 @@ if (!logged())
                         });
 
                     // Si n'est pas inscrit et SOS desactivé
-                    if (!inscrit && !SOSenabled)
+                    if (!inscrit && !SOSenabled || admin)
                     {
                             $( ".pourInscrire" ).show();
 
@@ -703,13 +705,70 @@ if (!logged())
                                 case 0: // Evenement 
                                     $('.JO').hide();    // Cache table joueurs
                                     $('.PA').hide();    // Cache table favoris
+                                    $('#textSOSButtonSOS').hide(); // Cache SOS
                                     $('.paireIsolee').hide(); // Cache table paire isolée
                                     $('#buttonInscrire').removeAttr("disabled");
                                     $('#buttonInscrire').addClass("btn-primary");  
                                     $('#buttonInscrire').prop('disabled', false);
                                     $('#buttonInscrire').prop('id', 'buttonInscrirePL');
                                 break;
-                                                         
+                                         
+                                case 10:
+                                
+                                    $('#inscriptArea').empty();
+                                    $('#bottomAction').hide();
+
+                                    let raccordes = getEvenementsRaccorde(eid);                
+                                    let content = "";
+                                    let situation = [];
+                                    let situationText;
+                                    let option;
+                                    let pid = 0;
+                                    raccordes.forEach(event => {
+
+
+                                        situation = isRegisteredForEvent(event['evenementId'], aid);
+                                        
+                                        if (situation.length > 0)
+                                        {
+                                            console.log(situation);
+                                            situationText = "Inscrit(s) </br>";
+                                            situation.forEach(joueur => {
+                                                situationText += `${joueur['nom']} ${joueur['prenom']} </br>`;
+                                                pid = joueur['NumPaire'];
+                                            });
+                                            option = `<button id="${pid}" class='btn btn-danger desinscription tournoi'>Désinscrire</button>`;
+                                        } else { 
+                                            situationText = "Non inscrit";
+                                            option = `<a href="inscription.php?eid=${event['evenementId']}" class='btn btn-dark'>Voir l'évenement</a>`;
+                                        }
+
+                                        content += `<tr>
+                                                    <td><a href="inscription.php?eid=${event['evenementId']}">${event['titre']}</a></td>
+                                                    <td>${situationText}</td>
+                                                    <td>${option}</td>
+                                                </tr>
+                                                `;
+                                    });
+
+                                    var html = `<table class="table display" cellspacing="0" width="100%" id="tablePaireIsolee">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Nom de l'évenement</th><th>Situation</th><th>Actions</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                    ${content}
+                                                    </tbody>
+                                                </table>`
+                                   
+
+
+                                    $("#inscriptArea").append(html);
+
+
+                                break;
+
                                 case 1: // tournoi
                                     $('#textSOS').show();
                                     if (paire == 1)
@@ -724,6 +783,7 @@ if (!logged())
                                     $('.JO').hide();    // Cache table joueurs
                                     $('.PA').hide();    // Cache table favoris
                                     $('.paireIsolee').hide();
+                                    $('#textSOSButtonSOS').hide(); // Cache SOS
                                     $('#buttonInscrire').removeAttr("disabled");
                                     $('#buttonInscrire').addClass("btn-primary");  
                                     $('#buttonInscrire').prop('disabled', false);
@@ -737,10 +797,14 @@ if (!logged())
                             
                             var ignore = [];
 
-                            // On se rajoute à l'array, car on ne veut pas être afficher dans la liste de joueurs
-                            ignore.push([aid]);
+                            
 
-                            ignore = ignore.concat(alreadyRegistered);
+                            if (!admin) 
+                            {
+                                // On se rajoute à l'array, car on ne veut pas être afficher dans la liste de joueurs
+                                ignore.push([aid]);
+                                ignore = ignore.concat(alreadyRegistered);
+                            }
 
                             // V. Récupère favoris
                             var favoris = [];
@@ -800,8 +864,7 @@ if (!logged())
                 
                 $('#titre').text(event['titre']);
                 moment.locale('fr');
-                console.log(moment(event['dteDebut']).add(15, 'minutes'));
-                console.log(moment(event['dteDebut']).toISOString());
+
                 $('#debut').text("Commence à " + moment(event['dteDebut']).format("HH:mm ") + '(' + moment(event['dteDebut']).add(15, 'minutes').format('HH:mm') + ' cartes en main.)');
                 
                 $('#fin').text("Fini à " + moment(event['dteFin']).format("HH:mm "));
@@ -839,16 +902,21 @@ if (!logged())
                             $('#paire').text("Patton par " + event['paires']);
                             
                         }
+                        if (event['apero'] == 1 || event['repas'] == 1)
+                        {
+                            tmp = "En plus:<br>";
 
-                        tmp = "En plus:<br>";
+                            if (event['apero'] == 1)
+                                tmp += "* Apéro amélioré <br>";
+                            
+                            if (event['repas'] == 1)
+                                tmp += "* P’tite bouffe partagée\n";
+                            
+                            
+                            $('#more').html(tmp);
+                        }
 
-                        if (event['apero'] == 1)
-                            tmp += "* Apéro amélioré <br>";
                         
-                        if (event['repas'] == 1)
-                            tmp += "* P’tite bouffe partagée\n";
-                        
-                        $('#more').html(tmp);
                     break;
                     
                     case 2:
@@ -1265,110 +1333,115 @@ if (!logged())
         </script>
             
 
+        <style>
+
+            .paire1 {
+                background-color: red;
+            }
+
+            .paire2 {
+                background-color: blue;
+            }
+
+            .paireRemplacant {
+                background-color: green;
+            }
+
+            .LeftRightHeader { 
+                overflow:auto;         
+            } 
+
+            .left, .right { 
+                padding: 1em; 
+                background: white; 
+            } 
+
+            .left  { 
+                float: left; 
+                width: 30%; 
+                margin-top: 1%;
+                font-size: medium;
+            }
+
+            .right { 
+                float: right;  
+                width: 70%; 
+            } 
+
+            .eqL {
+                float: left;
+                width: 50%;
+                padding: 1em;
+                overflow-y: hidden;
+                overflow-x: hidden;
+            }
+            .eqR {
+                float: right;
+                width: 50%;
+                padding: 1em;
+                overflow-y: hidden;
+                overflow-x: hidden;
+            }
+
+            .btn-mid20 {
+                width: 20%;
+            }
+
+            .btn-circle.btn-xl {
+                width: 150px;
+                height: 150px;
+                padding: 10px 16px;
+                border-radius: 75px;
+                font-size: 20px;
+                line-height: 1.33;
+            }
+
+
+            #inscriptArea{
+                overflow-x: hidden;
+            }
+
+            .pourInscrire{
+                display: none;
+            }
+
+            .my-legend{
+                opacity: 0.5;
+            }
+            .my-legend .legend-title {
+                text-align: left;
+                margin-bottom: 8px;
+                font-weight: bold;
+                font-size: 90%;
+            }
+            .my-legend .legend-scale ul {
+                margin: 0;
+                padding: 0;
+                float: left;
+                list-style: none;
+            }
+            .my-legend .legend-scale ul li {
+                display: block;
+                float: left;
+                width: 50px;
+                margin-bottom: 6px;
+                text-align: center;
+                font-size: 80%;
+                list-style: none;
+            }
+            .my-legend ul.legend-labels li span {
+                display: block;
+                float: left;
+                height: 15px;
+                width: 50px;
+            }
+
+
+        </style>
+
+
     </head>
 
-
-<style>
-
-    .paire1 {
-        background-color: red;
-    }
-
-    .paire2 {
-        background-color: blue;
-    }
-
-    .paireRemplacant {
-        background-color: green;
-    }
-
-    .LeftRightHeader { 
-        overflow:auto;         
-    } 
-
-    .left, .right { 
-        padding: 1em; 
-        background: white; 
-    } 
-
-    .left  { 
-        float: left; 
-         width: 30%; 
-         margin-top: 1%;
-         font-size: medium;
-    }
-    
-    .right { 
-        float: right;  
-        width: 70%; 
-    } 
-
-    .eqL {
-        float: left;
-        width: 50%;
-        padding: 1em;
-    }
-    .eqR {
-        float: right;
-        width: 50%;
-        padding: 1em;
-    }
-
-    .btn-mid20 {
-        width: 20%;
-    }
-
-    .btn-circle.btn-xl {
-        width: 150px;
-        height: 150px;
-        padding: 10px 16px;
-        border-radius: 75px;
-        font-size: 20px;
-        line-height: 1.33;
-    }
-
-
-    #inscriptArea{
-        overflow-x: hidden;
-    }
-
-    .pourInscrire{
-        display: none;
-    }
-
-    .my-legend{
-        opacity: 0.5;
-    }
-    .my-legend .legend-title {
-        text-align: left;
-        margin-bottom: 8px;
-        font-weight: bold;
-        font-size: 90%;
-    }
-    .my-legend .legend-scale ul {
-        margin: 0;
-        padding: 0;
-        float: left;
-        list-style: none;
-    }
-    .my-legend .legend-scale ul li {
-        display: block;
-        float: left;
-        width: 50px;
-        margin-bottom: 6px;
-        text-align: center;
-        font-size: 80%;
-        list-style: none;
-    }
-    .my-legend ul.legend-labels li span {
-        display: block;
-        float: left;
-        height: 15px;
-        width: 50px;
-    }
-
-
-</style>
 
     <body>
         
@@ -1433,7 +1506,7 @@ if (!logged())
                     <div class="eqL">
   
                         <h3>Ma situation: </h3>
-                            <table class="table" id="tableSituation">
+                            <table class="table display" cellspacing="0" width="100%" id="tableSituation">
                             
                                 <thead>
                                     <tr>
@@ -1450,7 +1523,7 @@ if (!logged())
 
                         <div class="pourInscrire PA">
                             <h3>Mes partenaires favoris: </h3>
-                                <table class="table" id="tableMesFavoris">
+                                <table class="table display" cellspacing="0" width="100%" id="tableMesFavoris">
                                     <thead>
                                         <tr>
                                             <th>#</th>
@@ -1465,12 +1538,13 @@ if (!logged())
                                 </table>
                         </div>
                         <div class="pourInscrire SOS">
-                            <div style="display: -webkit-inline-box"; >
+
+                            <div calss="display" id="textSOSButtonSOS">
                                 <h3 style="display: none;" id="textSOS" >Je suis seul, je m'inscris à SOS Partenaire: </h3> 
                                 <button id="buttonSOS" class="btn btn-primary">Rejoindre SOS</button> 
                             </div>
                                                        
-                            <table style="display: none;" class="table" id="tableSOS">
+                            <table style="display: none;" class="table display" cellspacing="0" width="100%" id="tableSOS">
                                 <thead>
                                     <tr>
                                     <th>#</th>
@@ -1488,7 +1562,7 @@ if (!logged())
                         
                         <div style="display: none;" class="pourInscrire paireIsolee">
                             <h3>Paires disponibles: </h3>
-                            <table class="table" id="tablePaireIsolee">
+                            <table class="table display" cellspacing="0" width="100%" id="tablePaireIsolee">
                                 <thead>
                                     <tr>
                                     <th>#</th>
@@ -1511,7 +1585,7 @@ if (!logged())
 
 
                         <h3>Inscrits: </h3>
-                            <table class="table" id="tableInscrit">
+                            <table class="table display" cellspacing="0" width="100%" id="tableInscrit">
                                 <thead>
                                     <tr>
                                     <tr>
@@ -1532,7 +1606,7 @@ if (!logged())
                         <div class="pourInscrire JO">
                             
                             <h3>Liste des joueurs: </h3>
-                                <table class="table" id="tableJoueurs">
+                                <table class="table display" cellspacing="0" width="100%" id="tableJoueurs">
                                     <thead>
                                         <tr>
                                             <th>#</th>
@@ -1559,7 +1633,7 @@ if (!logged())
  
 
 
-                <div class="row" style="position: fixed; bottom: 0; width: auto;">
+                <div id="bottomAction" class="row" style="position: fixed; bottom: 0; width: auto;">
   
                         <div style="padding: 1em;">      
                             <button id="buttonInscrire" type="button" class="btn btn-secondary btn-circle btn-xl btn-mid20" disabled>S'inscrire</button>

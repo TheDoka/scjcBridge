@@ -70,13 +70,13 @@ if (isset($_POST['function']))
             break;
             case 'sendMail':
                 require_once('../php/mail.php');
-                return sendMail($_POST['mailContent']);
+                //return sendMail($_POST['mailContent']);
             break;
             case 'createRegistrationNotificationMailForEvent':
                 echo json_encode(createRegistrationNotificationMailForEvent(createPDO(), $_POST['eid'], $_POST['ids']));
             break;
             case 'createUnRegistrationNotificationMailForEvent':
-                echo json_encode(createUnRegistrationNotificationMailForEvent(createPDO(), $_POST['eid'], $_POST['ids']));
+                echo json_encode(createUnRegistrationNotificationMailForEvent(createPDO(), $_POST['eid'], $_POST['ids'], $_POST['ref']));
             break;
             case 'getMembersFromIIDForEvent':
                 echo json_encode(getMembersFromIIDForEvent(createPDO(), $_POST['iid']));
@@ -149,6 +149,15 @@ if (isset($_POST['function']))
             break;
             case 'updateUserInfos':
                 echo updateUserInfos(createPDO(), $_POST['userInfos']);
+            break;
+            case 'deleteUser':
+                echo json_encode(deleteUser(createPDO(), $_POST['aid']));
+            break;
+            case 'getEvenementsRaccorde':
+                echo json_encode(getEvenementsRaccorde(createPDO(), $_POST['eid']));
+            break;
+            case 'isRegisteredForEvent':
+                echo json_encode(isRegisteredForEvent(createPDO(), $_POST['eid'], $_POST['aid']));
             break;
         }
 
@@ -448,9 +457,8 @@ function makeEventTile($data, $type)
             $title = "Tournoi Débutant";
             if ($data[6] != "4T")
             {
-                $title = "Tournoi en ";
-                if ($data[7]) $title .= "IMP"; else $title .= "PTT";
-                $title .= " par " . $data[5];
+                if ($data[5] == 4) $title .= "Patton par 4"; else $title .= "Tournoi de régularité";
+                if ($data[7]) $title .= " (IMP)"; else $title .= "(%)";
             }
 
         break; 
@@ -471,22 +479,22 @@ function getEvents($PDO)
 {
 
     $result = [];
-    $autres = [];
 
+    /*
+        Récupères les informations des compétitons, tournois et parties libres
+    */
     $query = "SELECT * 
             FROM `evenement` E
             
             INNER JOIN competition C 
             ON E.`id` = C.evenementId;
             
-
             SELECT * 
             FROM `evenement` E
 
             INNER JOIN tournoi C 
             ON E.`id` = C.evenementId;
             
-
             SELECT * 
             FROM `evenement` E
 
@@ -505,6 +513,12 @@ function getEvents($PDO)
 
     $except = getFormatedIds($result, 0);
 
+    /*  
+        Remarquons l'inner join, si l'évenement n'était pas une compétitons/tournois/parties libres
+        alors il ne serait pas apparu dans la requête.
+        On récupère le reste des évenements qui ne sont liés à aucunes autre tables.
+    */
+
     $query = "SELECT * 
             FROM `evenement` 
             WHERE `id` NOT IN ($except);";
@@ -512,7 +526,50 @@ function getEvents($PDO)
     $statement = $PDO->prepare($query);
     $statement->execute();
 
-    $result = $result = array_merge($result, $statement->fetchAll());
+    $result = array_merge($result, $statement->fetchAll());
+
+    return $result;
+    
+}
+
+function getEventsOnly($PDO, $only)
+{
+
+    $result = [];
+
+    $query = "SELECT * 
+            FROM `evenement` E
+            
+            INNER JOIN competition C 
+            ON E.`id` = C.evenementId
+            
+            WHERE E.id IN ($only);
+
+            SELECT * 
+            FROM `evenement` E
+
+            INNER JOIN tournoi C 
+            ON E.`id` = C.evenementId
+            
+            WHERE E.id IN ($only);
+
+            SELECT * 
+            FROM `evenement` E
+
+            INNER JOIN partieLibre C 
+            ON E.`id` = C.evenementId
+            
+            WHERE E.id IN ($only);";
+
+    $statement = $PDO->prepare($query);
+    $statement->execute();
+
+    $result = $statement->fetchAll();
+    
+    for ($i=0; $i < 2; $i++) { 
+        $statement->nextRowset();
+        $result = array_merge($result, $statement->fetchAll());
+    }
 
     return $result;
     
@@ -540,7 +597,7 @@ function getEventInfo($PDO, $eid)
             INNER JOIN lieu L
              ON L.id = E.lieu 
              
-             WHERE E.`id` = $eid";
+            WHERE E.`id` = $eid";
 
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
@@ -1207,7 +1264,7 @@ function createRegistrationNotificationMailForEvent($PDO, $eid, $ids)
 
         Subject: Notification d'inscription
         Body: 
-            Vous venez d'être inscrit au [TITRE].
+            Vous venez d'être inscrit à l'événement: [TITRE].
             Vous êtes inscrits avec: 
                 * NOM prenom
                 * NOM prenom
@@ -1276,7 +1333,7 @@ function createRegistrationNotificationMailForEvent($PDO, $eid, $ids)
         'subject' => "Notification d'inscription",
         'body' => nl2br(
             " Bonjour, \n" .
-            " Vous venez d'être inscrit de '" . $eventInfo['titre'] . "' par: " . $referant['nom'] . ' ' . $referant['prenom'] . "\n". 
+            " Vous venez d'être inscrit à l'événement: '" . $eventInfo['titre'] . "' par: " . $referant['nom'] . ' ' . $referant['prenom'] . "\n". 
             " Date/Heure: ". $eventInfo['dteDebut']. "\n" . 
             " Membres de la paire: \n $players \n" . 
             " Si vous souhaiter refuser ou annuler l'inscription cliquez ici: " . createUnregistrationLinkForEvent($referant[0], $referant['nom'], $eid). ".".
@@ -1290,18 +1347,25 @@ function createRegistrationNotificationMailForEvent($PDO, $eid, $ids)
 
 }
 
-function createUnRegistrationNotificationMailForEvent($PDO, $eid, $ids)
+function createUnRegistrationNotificationMailForEvent($PDO, $eid, $ids, $ref)
 {
     
     global $site_url;
     
     $ids = getFormatedIds($ids, 0);
     $playersInfos = getPlayersInfo($PDO, $ids);
-    
-    // Le référant est toujours la dernière personne.
-    $referant = $playersInfos[sizeof($playersInfos)-1];
-
  
+    $i = 0;
+    while ($i < sizeof($playersInfos) && $playersInfos[$i][0] != $ref) { $i++; }
+    if ($i < sizeof($playersInfos))
+    {
+        $referant = $playersInfos[$i];
+    } else {
+        $referant['nom'] = "un";
+        $referant['prenom'] = "administrateur";
+    }
+
+
     $toMails = [];
     $players = "";
     foreach ($playersInfos as $key => $player) {
@@ -1316,8 +1380,8 @@ function createUnRegistrationNotificationMailForEvent($PDO, $eid, $ids)
         'subject' => "Notification de desinscription",
         'body' => nl2br(
             " Bonjour, \n" .
-            " Vous venez d'être désinscrit de '" . $eventInfo['titre'] . "' par: " . $referant['nom'] . ' ' . $referant['prenom'] . "\n". 
-            " Les joueurs suivants ont été desinscrits: \n " . $players. "\n" . 
+            " Vous venez d'être désinscrit de l'événement: '" . $eventInfo['titre'] . "' par: " . $referant['nom'] . ' ' . $referant['prenom'] . "\n". 
+            " Les joueurs suivants ont étés desinscrits: \n " . $players. "\n" . 
             " Pour inspecter l'évenement cliquer ici: " . $site_url . "inscription.php?eid=" . $eid
         ),
         'to' => $toMails,
@@ -1349,8 +1413,8 @@ function createPaireIsoleeNotificationMailForEvent($PDO, $eid, $ids)
         'subject' => "Notification de desinscription/Paire isolée",
         'body' => nl2br(
             " Bonjour, \n" .
-            " Vous venez d'être désinscrit de '" . $eventInfo['titre'] . ", vous allez être placé en paire isolée". 
-            " Les joueurs suivants ont été desinscrits: \n " . $players. "\n" . 
+            " Vous venez d'être désinscrit de '" . $eventInfo['titre'] . ", vous allez être placé en paire disponibles". 
+            " Seront placés: \n " . $players. "\n" . 
             " Pour inspecter l'évenement cliquer ici: " . $site_url . "inscription.php?eid=" . $eid
         ),
         'to' => $toMails,
@@ -1402,7 +1466,7 @@ function quickInsertUserAndFav($PDO, $aid, $lastname, $name, $mail, $license)
 function getAllPlayersRegistrations($PDO, $aid)
 {
 
-    $req = "SELECT `evenementId`
+    $req = "SELECT `evenementId`, I.id as iid, P.pid
             FROM `inscrire` I
                                     
             INNER JOIN paire P
@@ -1713,6 +1777,85 @@ function setUserLoggedState($PDO, $aid, $logged)
     $curseur->execute();
     
     return $curseur->errorInfo()[2];
+
+}
+
+function deleteUser($PDO, $aid)
+{
+
+    $registrations = getAllPlayersRegistrations($PDO, $aid);
+
+    $error = "";
+    $req = "";
+    foreach ($registrations as $key => $registration) {
+
+        // Supprime toutes les données en lien avec le joueurs
+        $req = "DELETE FROM `inscrire`
+                WHERE `inscrire`.`id` = $registration[1]; 
+
+                DELETE FROM `paire`
+                WHERE `paire`.`pid` = $registration[2];
+
+                DELETE FROM `sos`
+                WHERE `sos`.`idAdherent` = $aid;
+                
+                DELETE FROM `isolees`
+                WHERE `isolees`.`pid` = $registration[2];
+                ";
+    }
+
+    $req .= "DELETE FROM `favoris`
+             WHERE `favoris`.`idFavoris` = $aid OR `favoris`.`idAdherent` = $aid;
+
+             DELETE FROM `adherent`
+             WHERE `adherent`.`id` = $aid;";
+
+    $curseur = $PDO->prepare($req);
+    $curseur->execute();
+    $error .= $curseur->errorInfo()[2];
+    
+    return $error;
+
+}
+
+function getEvenementsRaccorde($PDO, $eid)
+{
+    $req = "SELECT Beid
+            FROM `raccorde`
+
+            WHERE `Aeid` = $eid";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+    $raccordes = getFormatedIds($curseur->fetchAll(), 0);
+
+
+    return getEventsOnly($PDO, $raccordes);;       
+
+}
+
+function isRegisteredForEvent($PDO, $eid, $aid)
+{
+    $req = "SELECT A.id, A.nom, A.prenom, I.Id as iid, P.pid as NumPaire, I.paire1, I.paire2, I.remplacant
+            FROM `inscrire` I
+                        
+            INNER JOIN paire P
+            ON paire1 = P.pid
+            OR paire2 = P.pid
+            OR remplacant = P.pid 
+            
+            INNER JOIN adherent A 
+            ON A.id = P.adherent
+            
+            WHERE `evenementId`= $eid AND $aid IN (SELECT adherent FROM paire WHERE pid = P.pid)
+            ORDER BY NumPaire";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+
+    return $curseur->fetchAll();       
 
 }
 

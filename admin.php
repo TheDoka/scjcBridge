@@ -108,7 +108,7 @@ if (!logged())
                 });
 
 
-                var id = 0;
+                var aid = 0;
                 $(document).on('click', '.inspecterJoueur', function(e) {
                     /*
                         Clear all forms
@@ -117,8 +117,8 @@ if (!logged())
                     $('#statutJoueurEdit').empty();
                     $('#niveauJoueurEdit').empty();
 
-                    id = e.target.id;
-                    let userInfo = getUser(id);
+                    aid = e.target.id;
+                    let userInfo = getUser(aid);
                     let statuts = getAllStatut();
                     let niveaux = getAllNiveaux();
 
@@ -156,7 +156,7 @@ if (!logged())
                 {
 
                     var userInfo = {
-                        'id': id,
+                        'id': aid,
                         'nom': $('#joueurNomEdit').val(),
                         'prenom': $('#joueurPrenomEdit').val(),
                         'mail': $('#joueurMailEdit').val(),
@@ -176,7 +176,13 @@ if (!logged())
 
                 $('#deleteJoueurButton').on('click', function() {
 
+                    if (confirm('Confirmer vous la suppression?'))
+                    {
+                        alert(aid);
+                        deleteUser(aid);
+                        
 
+                    }
 
 
                 });
@@ -434,20 +440,20 @@ if (!logged())
                 
                 <ul class="nav nav-tabs" id="myTab" role="tablist">
                     <li class="nav-item">
-                        <a class="nav-link active" id="home-tab" data-toggle="tab" href="#home" role="tab" aria-controls="home" aria-selected="true">Gestion de la base de données</a>
+                        <a class="nav-link active" id="bdd-tab" data-toggle="tab" href="#bdd" role="tab" aria-controls="bdd" aria-selected="true">Gestion de la base de données</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" id="profile-tab" data-toggle="tab" href="#profile" role="tab" aria-controls="profile" aria-selected="false">Gestion des utilisateurs</a>
+                        <a class="nav-link" id="users-tab" data-toggle="tab" href="#users" role="tab" aria-controls="users" aria-selected="false">Gestion des utilisateurs</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" id="messages-tab" data-toggle="tab" href="#messages" role="tab" aria-controls="messages" aria-selected="false">Gestion des statuts/permissions</a>
+                        <a class="nav-link" id="statuts-tab" data-toggle="tab" href="#statuts" role="tab" aria-controls="statuts" aria-selected="false">Gestion des statuts/permissions</a>
                     </li>
 
                 </ul>
 
                 <div class="tab-content" id="myTabContent">
 
-                    <div class="tab-pane active" id="home" role="tabpanel" aria-labelledby="home-tab">
+                    <div class="tab-pane active" id="bdd" role="tabpanel" aria-labelledby="bdd-tab">
                     
                         <h2>Gestion de l'agenda</h2>
                         <form id="import-form" class="form-inline">
@@ -487,7 +493,7 @@ if (!logged())
                     </div>
 
         
-                    <div class="tab-pane" id="profile" role="tabpanel" aria-labelledby="profile-tab">
+                    <div class="tab-pane" id="users" role="tabpanel" aria-labelledby="users-tab">
                             
                             <h2 id="titre">Gestion des joueurs</h2>
 
@@ -506,7 +512,11 @@ if (!logged())
                             </table>
 
                     </div>
-                            
+
+
+                    <div class="tab-pane" id="statuts" role="tabpanel" aria-labelledby="statuts-tab">
+                    </div>   
+
                 </div>
 
             </div>

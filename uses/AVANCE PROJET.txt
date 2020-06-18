@@ -1,3 +1,12 @@
+18/05/2020
+Fix mail: référant, désinscription, inscription, paire isolée
+admin.php: suppression joueur
+bdd: raccorde: permet de faire liés un évenement à un autre
+index.php/incsription.php: évenement type 10 -> évenement spéciaux auquel d'autres évenements sont raccrodés
+						   inscription/affichage/desinscription ok
+ergonomie: fix de petits bug d'affichages, sos s'affiche dans les compétitions et parties libres... css...
+
+ 
 17/05/2020
 inscription.php: modification érgonomie, nouveaux titres, nouveaux bouttons, légendes, sos + clair
 admin.php: revue érgonomie, édition joueur
