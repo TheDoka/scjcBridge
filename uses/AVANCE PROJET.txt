@@ -1,3 +1,12 @@
+19/05/2020
+index.php/inscription.php: evenemnt 10 (spéciaux) terminé inscription desinscription aux évenements liés et inscription auto lorsqu'on à rejoint l'un des évenement
+bdd: permissionStatut
+	 permission
+	 droit
+admin.php: gestion des statuts (ajout/suppresion/affichage dynamique)
+		   affichage permission/type évenement/permission réquises pour évenement
+
+
 18/05/2020
 Fix mail: référant, désinscription, inscription, paire isolée
 admin.php: suppression joueur

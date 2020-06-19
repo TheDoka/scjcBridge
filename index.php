@@ -80,6 +80,7 @@ if (!logged())
                 var todayDate = new Date().toISOString().slice(0,10);
                 var aid = <?php echo intval($_COOKIE['logged']) ?>;
                 var user = getUser(aid);
+
                 var statut = user['statut'];
                 var admin = user['statut'] == "Administrateur"; 
                 if (admin)
@@ -133,7 +134,7 @@ if (!logged())
 
                         var todayDate = moment(new Date($.now())).format("YYYY-MM-DD HH:mm:ss");
                         var passed = event['dteDebut'] < todayDate;
-
+ 
                         switch (parseInt(event['type']))
                         {
                             case 0:
@@ -180,6 +181,18 @@ if (!logged())
                                 classNames.push("competition");
                                 // On vérifie que la compétition n'a pas commencé
                                 if (event.stade == 3 && !passed) // Stade d'inscription
+                                {
+
+                                    classNames.push("inscrire");
+
+                                }
+                            break; 
+                            
+                            case 10: 
+                                bcColor = "#aa11cc";
+                                classNames.push("special");
+                                // On vérifie que la compétition n'a pas commencé
+                                if (!passed) // Stade d'inscription
                                 {
 
                                     classNames.push("inscrire");
@@ -355,6 +368,11 @@ if (!logged())
                 calendar.render();
 
                 $(document).on('change', '.selectpicker', function (e) {
+
+                    /*
+                        à refaire wtf
+                        s'inspirer de admin.php
+                    */
                     var selected = []; //array to store value
                     $(this).find("option:selected").each(function(key,value){
                         selected.push(value.id); //push the text to array

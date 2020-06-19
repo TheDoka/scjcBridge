@@ -319,10 +319,13 @@ if (!logged())
                         // On se met dans l'array;
                         joueursID.push(aid);
                     } else {
-                        
+
                         if (!admin)
                             joueursID.push([paireIsolee]);
 
+                        // Permet l'inscription de l'administrateur sur les événements ou une seule personne est requise
+                        if (admin && paire == 1)
+                            joueursID.push(aid);
                     }
 
                     // On ajoute les autres membres
@@ -341,6 +344,9 @@ if (!logged())
                     {
                         registerIsolees(eid, joueursID);
                     } else {
+                        /*
+                            Inscription normale
+                        */
                         for (let i = joueursID.length; 6 >= joueursID.length; i++) {
 
                             joueursID.push("NULL");  
@@ -364,28 +370,6 @@ if (!logged())
         
             });
 
-
-
-            /*
-                A SUPPRIMER  
-            */
-            $(document).on('click', '#buttonInscrirePL', function (e) {
-
-                if (confirm("Confirmez-vous votre inscription?"))
-                {
-
-                    let joueursID = [aid];
-                    for (let i = joueursID.length; 6 >= joueursID.length; i++) {
-                        joueursID.push("NULL");  
-                    }
-                    
-                    registerToEventWith(eid, joueursID);        
-                               
-                    notifyRegisterByMail(aid, eid, joueursID);
-
-                }
-
-            });
 
             $('#buttonSOS').on('click', function() {
 
@@ -413,7 +397,7 @@ if (!logged())
                 // iid pour compétition et partie libres
                 // pid pour tournoi
                 let id = e.target.id;
-                alert(id);
+
                 /*
                     Désinscription de remplaçant
                     Désinscription intégrale
@@ -515,7 +499,7 @@ if (!logged())
                 ]
             });
             
-            async function run_waitMe(object, txt, ms)
+            function run_waitMe(object, txt, ms)
             {
                 object.waitMe({
                         effect: 'win8',
@@ -544,7 +528,7 @@ if (!logged())
             function reload()
             {
                 // Clear already existing elements
-                run_waitMe($('.table'), 'Mise à jour...', 2500);
+                run_waitMe($('#content'), 'Mise à jour...', 2500);
                 tableJoueurs.clear();
                 tableMesFavoris.clear();
                 tableSOSpartenaire.clear();
@@ -695,8 +679,8 @@ if (!logged())
                             populateSOSpartenaire(data);
                         });
 
-                    // Si n'est pas inscrit et SOS desactivé
-                    if (!inscrit && !SOSenabled || admin)
+                    // Si n'est pas inscrit et SOS desactivé ou si c'est un évenement spécial
+                    if (!inscrit && !SOSenabled || ety == 10 || admin)
                     {
                             $( ".pourInscrire" ).show();
 
@@ -710,62 +694,13 @@ if (!logged())
                                     $('#buttonInscrire').removeAttr("disabled");
                                     $('#buttonInscrire').addClass("btn-primary");  
                                     $('#buttonInscrire').prop('disabled', false);
-                                    $('#buttonInscrire').prop('id', 'buttonInscrirePL');
                                 break;
                                          
                                 case 10:
                                 
                                     $('#inscriptArea').empty();
                                     $('#bottomAction').hide();
-
-                                    let raccordes = getEvenementsRaccorde(eid);                
-                                    let content = "";
-                                    let situation = [];
-                                    let situationText;
-                                    let option;
-                                    let pid = 0;
-                                    raccordes.forEach(event => {
-
-
-                                        situation = isRegisteredForEvent(event['evenementId'], aid);
-                                        
-                                        if (situation.length > 0)
-                                        {
-                                            console.log(situation);
-                                            situationText = "Inscrit(s) </br>";
-                                            situation.forEach(joueur => {
-                                                situationText += `${joueur['nom']} ${joueur['prenom']} </br>`;
-                                                pid = joueur['NumPaire'];
-                                            });
-                                            option = `<button id="${pid}" class='btn btn-danger desinscription tournoi'>Désinscrire</button>`;
-                                        } else { 
-                                            situationText = "Non inscrit";
-                                            option = `<a href="inscription.php?eid=${event['evenementId']}" class='btn btn-dark'>Voir l'évenement</a>`;
-                                        }
-
-                                        content += `<tr>
-                                                    <td><a href="inscription.php?eid=${event['evenementId']}">${event['titre']}</a></td>
-                                                    <td>${situationText}</td>
-                                                    <td>${option}</td>
-                                                </tr>
-                                                `;
-                                    });
-
-                                    var html = `<table class="table display" cellspacing="0" width="100%" id="tablePaireIsolee">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Nom de l'évenement</th><th>Situation</th><th>Actions</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                    ${content}
-                                                    </tbody>
-                                                </table>`
-                                   
-
-
-                                    $("#inscriptArea").append(html);
-
+                                    populateSpecialEvent(event);
 
                                 break;
 
@@ -787,7 +722,6 @@ if (!logged())
                                     $('#buttonInscrire').removeAttr("disabled");
                                     $('#buttonInscrire').addClass("btn-primary");  
                                     $('#buttonInscrire').prop('disabled', false);
-                                    $('#buttonInscrire').prop('id', 'buttonInscrirePL');
                                 break;
 
                                 case 3: // Compétition
@@ -978,7 +912,120 @@ if (!logged())
             }
 
                 
-            
+            function populateSpecialEvent(event)
+            {
+                let raccordes = getEvenementsRaccorde(eid);                
+                let content = "";
+                let situation = [];
+                let situationText;
+                let option;
+                let pid = 0;
+                let currEventSituation;
+                let i = 0;
+                raccordes.forEach(event => {
+
+                    situation = isRegisteredForEvent(event['evenementId'], aid);
+                    if (situation.length > 0)
+                    {
+                        console.log(situation);
+                        situationText = "Inscrit avec: </br>";
+                        i++;
+                        situation.forEach(joueur => {
+                            situationText += `${joueur['nom']} ${joueur['prenom']} </br>`;
+                            pid = joueur['NumPaire'];
+                        });
+                        switch (parseInt(event['type']))
+                        {
+                            case 0: // Evenement 
+                                option = `<button id='${pid}' type='button' class='btn btn-danger desinscription evenement'>Se desincrire</button>`;
+                            break;
+                                                    
+                            case 1: // tournoi
+                                option = `<button id='${pid}' type='button' class='btn btn-danger desinscription tournoi'>Se desincrire</button>`;
+                            break;
+
+                            case 2: // Partie Libre 
+                                option = `<button id='${pid}' type='button' class='btn btn-danger desinscription partieLibre'>Se desincrire</button>`;
+                            break;
+
+                            case 3: // Compétition
+                                option = `<button id='${iid}' type='button' class='btn btn-danger desinscription competition'>Se desincrire</button>`;
+                            break;
+                        }
+                        
+                    } else {           
+                        situationText = "Non inscrit";  
+                        option = `<a href="inscription.php?eid=${event['evenementId']}" class='btn btn-dark'>Voir l'évenement</a>`;
+                    }
+
+                    content += `<tr>
+                                    <td><a href="inscription.php?eid=${event['evenementId']}">${event['titre']}</a></td>
+                                    <td>${situationText}</td>
+                                    <td>${option}</td>
+                                </tr>
+                            `;
+                });
+
+                if (i == raccordes.length)
+                {
+                    currEventSituation = "Inscrit à tout.";
+
+                } else {
+                    if (i == 0)
+                    {
+                        currEventSituation = "Inscrit à rien.";
+                        situation = isRegisteredForEvent(eid, aid);
+                        if (situation.length > 0)
+                        {
+                            let joueursID = [];
+                            joueursID.push(aid);
+                            for (let i = joueursID.length; 6 >= joueursID.length; i++) {
+                                joueursID.push("NULL");  
+                            }
+
+                            unregisterPaires(eid, situation[0]['iid'], aid);
+                        }
+                    } else {
+                        if (i != raccordes.length)
+                        {
+                            // vérifie si l'on est déjà inscrit
+                            if (isRegisteredForEvent(eid, aid).length == 0)
+                            {
+                                let joueursID = [];
+                                joueursID.push(aid);
+                                for (let i = joueursID.length; 6 >= joueursID.length; i++) {
+                                    joueursID.push("NULL");  
+                                }
+                                registerToEventWith(eid, joueursID);
+                            }
+
+                            currEventSituation = "Partiellement inscrit.";
+                        }
+                    }
+                }
+
+                content += `<tr>
+                                <td><a href="#">Evenement actuel</a></td>
+                                <td>${currEventSituation}</td>
+                                <td>/</td>
+                                </tr>
+                            `;
+
+                var html = `<table class="table display" cellspacing="0" width="100%" id="tablePaireIsolee">
+                                <thead>
+                                    <tr>
+                                        <th>Nom de l'évenement</th><th>Situation</th><th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                ${content}
+                                </tbody>
+                            </table>`
+                
+
+
+                $("#inscriptArea").append(html);
+            }
 
 
             /*

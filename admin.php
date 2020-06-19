@@ -22,10 +22,14 @@ if (!logged())
         <!-- Jquery -->    
             <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
 
+        <!-- Popper --> 
+            <script src="assets/js/popper.js"></script>
+
         <!-- BOOTSTRAP -->
             <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" rel="stylesheet"  crossorigin="anonymous">
             <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
-        
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.1/css/bootstrap-select.css" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.1/js/bootstrap-select.min.js"></script>
         <!-- FontAwesome -->    
             <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
 
@@ -77,11 +81,199 @@ if (!logged())
                         Populate players table
                     */
 
-                    initTableJoueurs();
-
+                    populateTableJoueurs();
+                    
+                    populateTableStatut();
+                    populateTableEty();
+                    populateTablePermStatut();
+                    populateTablePermEty();
                 }
 
-                function initTableJoueurs()
+
+                function populateTableEty()
+                {
+                    let data = getEty(-1);
+
+                    data.forEach(typeEvent => {
+                        
+                        $('#tableEty').append(
+                            `<tr class="${typeEvent['libelle']}">
+                                <td>${typeEvent[0]}</td>
+                                <td>${typeEvent['libelle']}</td>
+                                <td><button style="width: 100%;" id="${typeEvent[0]}" type="button" class="btn btn-danger deleteEty">-</button></td>
+                            </tr>`
+                        );
+
+                    });
+
+                    $('#tableEty').append(
+                            `<tr>
+                                <td colspan=3><button style="width: 100%;" id="newEty" type="button" class="btn btn-dark">+</button></td>
+                            </tr>`
+                    );
+                } 
+
+                function populateTablePermEty()
+                {
+                    let data = getTypePermissionAndDroits(-1);
+                    console.log(data);
+                    let last = "";
+
+                    data.forEach(permission => {
+                        
+                        $('#tablePermEty').append(
+                            `<tr class="${permission['libelle']}">
+                                <td>${permission[0]}</td>
+                                <td>${permission['libelle']}</td>
+                                <td>${permission['droit']}</td>
+                                <td><button style="width: 100%;" id="${permission[0]}" type="button" class="btn btn-danger deletePermEty">-</button></td>
+                            </tr>`
+                        );
+
+                        if (permission['libelle'] != last)
+                        {
+                            $('#permEtyPicker').append(`<option class="${permission['libelle']}" selected>${permission['libelle']}</option>`);
+                            last = permission['libelle'];
+                        } 
+
+                    });
+
+                    $('#tablePermEty').append(
+                            `<tr>
+                                <td colspan=4><button style="width: 100%;" id="newPermEty" type="button" class="btn btn-dark">+</button></td>
+                            </tr>`
+                    );
+
+
+                }
+        
+                function populateTableStatut()
+                {
+                    let data = getAllStatut();
+                    let last = "";
+
+                    data.forEach(statut => {
+                        
+                        $('#tableStatut').append(
+                            `<tr class="${statut['libelle']}">
+                                <td>${statut[0]}</td>
+                                <td>${statut['libelle']}</td>
+                                <td>${statut['droits']}</td>
+                                <td><button style="width: 100%;" id="${statut[0]}" type="button" class="btn btn-danger deleteStatut">-</button></td>
+                            </tr>`
+                        );
+
+                        if (statut['libelle'] != last)
+                        {
+                            $('#permStatutPicker').append(`<option class="${statut['libelle']}" selected>${statut['libelle']}</option>`);
+                            last = statut['libelle'];
+                        } 
+
+                    });
+
+                    $('#tableStatut').append(
+                            `<tr>
+                                <td colspan=5><button style="width: 100%;" id="newStatut" type="button" class="btn btn-dark">+</button></td>
+                            </tr>`
+                    );
+                } 
+                            
+                function populateTablePermStatut()
+                {
+                    let data = permissionStatut(-1);
+
+                    data.forEach(typeEvent => {
+                        
+                        $('#tablePermStatut').append(
+                            `<tr class="${typeEvent['libelle']}">
+                                <td>${typeEvent[0]}</td>
+                                <td>${typeEvent['libelle']}</td>
+                                <td>${typeEvent['droit']}</td>
+                                <td><button style="width: 100%;" id="${typeEvent[0]}" type="button" class="btn btn-danger deletePermStatut">-</button></td>
+                            </tr>`
+                        );
+
+                    });
+
+                    $('#tablePermStatut').append(
+                            `<tr>
+                                <td colspan=4><button style="width: 100%;" id="newPermStatut" type="button" class="btn btn-dark">+</button></td>
+                            </tr>`
+                    );
+                } 
+
+
+                $('.selectFilter').on('change', function(e) {
+
+                    $(this).find("option:not(:selected)").each(function(key,value){
+                        $(".table ." + value.className).hide();
+                    });
+
+                    $(this).find("option:selected").each(function(key,value){
+                        $(".table ." + value.className).show();
+                    });
+
+                });
+
+                var added = 0;
+                $('#newStatut').on('click', function(e){
+                    added++;
+                    $('#tableStatut').prepend(
+                            `<tr>
+                                <td><input type="number" class="form-control" placeholder="id" aria-label="id" disabled></td>
+                                <td><input id="${added}" type="text" class="form-control statutLibelleEdit" placeholder="libelle" aria-label="libelle"></td>
+                                <td><input id="${added}" type="number" class="form-control statutPermEdit" placeholder="permission statut" aria-label="libelle"></td>
+                                <td><button id="${added}" style="width: 100%;" id="" type="button" class="btn btn-primary confirmNewStatut">+</button></td>
+                            </tr>`
+                        );
+
+
+                });
+
+
+
+                $(document).on('click', '.deleteStatut', function(e) {
+
+                    let z = e.target.id;
+
+                    let res = deleteStatut(z);
+                    if (!res)
+                    {
+                        // remove the row
+                        $(`#${z}.deleteStatut`).parent().parent().remove();
+                        alert('Supprimé avec succès.');
+                    } else {
+                        alert('Une erreur est survenue.\n' + res);
+                    }
+                });
+
+
+                $(document).on('click', '.confirmNewStatut', function(e) {
+                    let z = e.target.id;
+                    
+                    let libelle = $(`#${z}.statutLibelleEdit`).val();
+                    let permStatut = $(`#${z}.statutPermEdit`).val();
+                    
+                    var newStatut = [{
+                        
+                        libelle: libelle,
+                        droits: permStatut,
+                        
+                    }];
+
+                    let res = newStatuts(newStatut);
+                    if (!res)
+                    {
+                        alert('Ajouté avec succès.');
+                        document.location.reload();
+                    } else {
+                        alert('Une erreur est survenue.\n' + res);
+                    }
+
+                });
+
+
+                function populateTableJoueurs()
                 {
 
                     let data = getEveryMembers([]);
@@ -190,8 +382,9 @@ if (!logged())
                 var type = 0;
 
                 $('#confirmImport').on('click',function(e){
-
-     
+                    console.log(imported_);
+                    if (imported_.toString().length > 0) 
+                    {
                         $.post('assets/sql/interface.php',
                             {
                                 function: 'importEvents',
@@ -206,7 +399,9 @@ if (!logged())
                                     alert("Import éffectué avec succès!")
                                 }
                         });
-                  
+                    } else {
+                        alert('Veuilliez importer un fichier');
+                    }
 
 
                 });
@@ -307,7 +502,16 @@ if (!logged())
             background-color: #ffffff;
         }
 
+        .flex-container {
+            display: flex;
+            flex-wrap: wrap;
+            min-height: 100vh;
+        }
 
+        .flex-item {
+            min-width: 50%;
+            min-height: 50%;
+        }
     </style>
 
     <body>
@@ -515,6 +719,87 @@ if (!logged())
 
 
                     <div class="tab-pane" id="statuts" role="tabpanel" aria-labelledby="statuts-tab">
+
+                    <div id="" class="flex-container p-3">
+                        <div class="flex-item">
+                            <div class="row">
+                                <h4>Statuts</h4>
+                                <select id="permStatutPicker" class="selectpicker selectFilter" multiple data-live-search="false"></select>
+                            </div>
+                            <table class='table table-striped table-bordered' id="tableStatut">
+                                    <thead>
+                                        <tr>
+                                            <th>id</th>
+                                            <th>libelle</th>
+                                            <th>permission</th>
+                                            <th style="width:20%;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+
+                                </table>    
+
+                        </div>
+
+                        <div class="flex-item col">
+
+                            <h4>Permissions statut</h4>
+                                <table class='table table-striped table-bordered' id="tablePermStatut">
+                                        <thead>
+                                            <tr>
+                                                <th>id</th>
+                                                <th>libelle</th>
+                                                <th>droit</th>
+                                                <th style="width:20%;">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+
+                                    </table>   
+                           
+                        </div>
+
+                        <div class="flex-item">
+                            <div class="row">
+                                <h4>Type d'évenement</h4>
+                                <select id="permEtyPicker" class="selectpicker selectFilter" multiple data-live-search="false"></select>
+                            </div>
+                            
+                            <table class='table table-striped table-bordered' id="tableEty">
+                                    <thead>
+                                        <tr>
+                                            <th>id</th>
+                                            <th>libelle</th>
+                                            <th style="width:20%;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+
+                                </table>    
+                        </div>
+
+                        <div class="flex-item col">
+                            <h4>Permissions de type d'évenement</h4>
+                            <table class='table table-striped table-bordered' id="tablePermEty">
+                                    <thead>
+                                        <tr>
+                                        <th>id</th>
+                                            <th>libelle</th>
+                                            <th>droit</th>
+                                            <th style="width:20%;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+
+                                </table>     
+                        </div>
+
+                    </div>
+
+                     
+  
+
+
                     </div>   
 
                 </div>

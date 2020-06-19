@@ -218,7 +218,7 @@ function deletePaireIsolee(pid)
 */
 function unregisterPaires(eid, iid, aid)
 {
-
+    alert(iid);
     /*
         Envoi un mail à l'ensemble des personnes inscrite avec cette paire
     */
@@ -740,7 +740,94 @@ function isRegisteredForEvent(eid, aid)
     }).responseText);
         
 }
+function getTypePermissionAndDroits(ety)
+{
 
+    return JSON.parse($.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'getTypePermissionAndDroits',
+            ety: ety,
+        },
+    }).responseText);
+        
+}
+function getDroits()
+{
+
+    return JSON.parse($.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'getDroits',
+        },
+    }).responseText);
+        
+
+}
+
+function permissionStatut(statut)
+{
+
+    return JSON.parse($.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'permissionStatut',
+            statut: statut,
+        },
+    }).responseText);
+        
+}
+
+function getEty(ety)
+{
+
+    return JSON.parse($.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'getEty',
+            ety: ety,
+        },
+    }).responseText);
+        
+}
+
+function newStatuts(statuts)
+{
+
+    return JSON.parse($.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'newStatuts',
+            statuts: JSON.stringify(statuts),
+        },
+    }).responseText);
+        
+}
+
+function deleteStatut(sid)
+{
+
+    return JSON.parse($.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'deleteStatut',
+            sid: sid,
+        },
+    }).responseText);
+        
+}
 /*
     Resize la fenêtre pour cacher la navbar.
 */

@@ -159,6 +159,24 @@ if (isset($_POST['function']))
             case 'isRegisteredForEvent':
                 echo json_encode(isRegisteredForEvent(createPDO(), $_POST['eid'], $_POST['aid']));
             break;
+            case 'getTypePermissionAndDroits':
+                echo json_encode(getTypePermissionAndDroits(createPDO(), $_POST['ety']));
+            break;
+            case 'getDroits':
+                echo json_encode(getDroits(createPDO()));
+            break;
+            case 'permissionStatut':
+                echo json_encode(permissionStatut(createPDO(), $_POST['statut']));
+            break;
+            case 'getEty':
+                echo json_encode(getEty(createPDO(), $_POST['ety']));
+            break;
+            case 'newStatuts':
+                echo json_encode(newStatuts(createPDO(), $_POST['statuts']));
+            break;
+            case 'deleteStatut':
+                echo json_encode(deleteStatut(createPDO(), $_POST['sid']));
+            break;
         }
 
 
@@ -293,14 +311,15 @@ function getUser($PDO, $aid)
 {
     $req = "SELECT `id`,`nom`,`prenom`,`mail`,`tel`,`commune`,`sexe`,`password`,`numeroLicense`, A.`idStatut`, S.libelle as statut, A.`idNiveau`, N.numeroSerie as Niveau
             FROM adherent A
-            
+                        
             INNER JOIN statut S
             ON A.idStatut = S.idStatut
-            
+                        
             INNER JOIN niveau N
             ON A.idNiveau = N.idNiveau
-            
-            WHERE A.id = $aid";
+
+            WHERE id = $aid
+           ";
 
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
@@ -457,7 +476,7 @@ function makeEventTile($data, $type)
             $title = "Tournoi Débutant";
             if ($data[6] != "4T")
             {
-                if ($data[5] == 4) $title .= "Patton par 4"; else $title .= "Tournoi de régularité";
+                if ($data[5] == 4) $title = "Patton par 4"; else $title = "Tournoi de régularité";
                 if ($data[7]) $title .= " (IMP)"; else $title .= "(%)";
             }
 
@@ -1859,4 +1878,145 @@ function isRegisteredForEvent($PDO, $eid, $aid)
 
 }
 
+/*
+    Récupère la permission et les droits associès du type d'évenement
+    ~ ety: type d'évenement
+    @return [id, libelle, did, droit]
+*/
+function getTypePermissionAndDroits($PDO, $ety)
+{
+
+    $req = "SELECT DISTINCT P.id, P.libelle, P.droit as did, D.libelle as droit
+            FROM `typeEvenement` T
+            
+            INNER JOIN permission P
+            ON P.id = `permissionLvl`
+            
+            INNER JOIN droit D
+            ON P.droit = D.id
+           ";
+
+    if ($ety != -1)
+        $req .= "WHERE T.id = $ety";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+
+    return $curseur->fetchAll();        
+
+}
+
+/*
+    Récupère le contenu de la table 'droit'
+    @return id, libelle
+*/
+function getDroits($PDO)
+{
+
+    $req = "SELECT * 
+            FROM `droit`
+           ";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+    return $curseur->fetchAll();        
+
+}
+
+/*
+    Récupère la permission et les droits associès au statut
+    ~ statut: id statut
+    @return [id, libelle, did, droit]
+*/
+function permissionStatut($PDO, $statut)
+{
+
+    $req = "SELECT  P.id, P.libelle, D.id as did, D.libelle as droit
+            FROM `permissionStatut` P
+            
+            INNER JOIN droit D
+            ON D.id = P.droit
+           ";
+
+
+    if ($statut != -1)
+        $req .= "WHERE P.id = $statut";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+    return $curseur->fetchAll();        
+
+}
+
+/*
+    Récupère les type evenements
+    ~ ety: id évenement
+    @return [id, libelle, permissionLvl]
+*/
+function getEty($PDO, $ety)
+{
+
+    $req = "SELECT * 
+            FROM `typeEvenement`
+           ";
+
+
+    if ($ety != -1)
+        $req .= "WHERE id = $ety";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+    return $curseur->fetchAll();        
+
+}
+
+/*
+    Ajoute x nombre de statut
+    statuts: [libelle, droits]
+    @return PDO error
+*/
+function newStatuts($PDO, $statuts)
+{
+    $req = "";
+
+    $statuts = json_decode($statuts, true);
+    
+    foreach ($statuts as $statut){
+        $libelle = $statut['libelle'];
+        $droits = $statut['droits'];
+
+        $req .= "INSERT INTO `statut` 
+                (`idStatut`, `libelle`, `droits`) 
+                VALUES (NULL, '$libelle', '$droits');";
+    }
+
+    $curseur = $PDO->prepare($req);
+    $curseur->execute();
+    
+    return $curseur->errorInfo()[2];;      
+
+}
+
+/*
+    Supprime le statut 
+    sid: id statut
+    @return PDO error
+*/
+function deleteStatut($PDO, $sid)
+{
+    $req = "DELETE 
+            FROM `statut`
+            WHERE `statut`.`idStatut` = $sid
+           ";
+   
+    $curseur = $PDO->prepare($req);
+    $curseur->execute();
+    
+    return $curseur->errorInfo()[2];;      
+
+}
 ?>
