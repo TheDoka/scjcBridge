@@ -70,7 +70,7 @@ if (isset($_POST['function']))
             break;
             case 'sendMail':
                 require_once('../php/mail.php');
-                //return sendMail($_POST['mailContent']);
+                return sendMail($_POST['mailContent']);
             break;
             case 'createRegistrationNotificationMailForEvent':
                 echo json_encode(createRegistrationNotificationMailForEvent(createPDO(), $_POST['eid'], $_POST['ids']));
@@ -159,14 +159,14 @@ if (isset($_POST['function']))
             case 'isRegisteredForEvent':
                 echo json_encode(isRegisteredForEvent(createPDO(), $_POST['eid'], $_POST['aid']));
             break;
-            case 'getTypePermissionAndDroits':
-                echo json_encode(getTypePermissionAndDroits(createPDO(), $_POST['ety']));
+            case 'getPermissionEvenement':
+                echo json_encode(getPermissionEvenement(createPDO(), $_POST['ety']));
             break;
             case 'getDroits':
                 echo json_encode(getDroits(createPDO()));
             break;
-            case 'permissionStatut':
-                echo json_encode(permissionStatut(createPDO(), $_POST['statut']));
+            case 'gePermissionStatut':
+                echo json_encode(gePermissionStatut(createPDO(), $_POST['statut']));
             break;
             case 'getEty':
                 echo json_encode(getEty(createPDO(), $_POST['ety']));
@@ -176,6 +176,33 @@ if (isset($_POST['function']))
             break;
             case 'deleteStatut':
                 echo json_encode(deleteStatut(createPDO(), $_POST['sid']));
+            break;
+            case 'deletePermStatut':
+                echo json_encode(deletePermStatut(createPDO(), $_POST['sid'], $_POST['did']));
+            break;
+            case 'newPermStatut':
+                echo json_encode(newPermStatut(createPDO(), $_POST['permStatut']));
+            break;
+            case 'newEty':
+                echo json_encode(newEty(createPDO(), $_POST['ety']));
+            break; 
+            case 'newDroit':
+                echo json_encode(newDroit(createPDO(), $_POST['droit']));
+            break;
+            case 'deleteDroit':
+                echo json_encode(deleteDroit(createPDO(), $_POST['did']));
+            break;
+            case 'deleteEty':
+                echo json_encode(deleteEty(createPDO(), $_POST['ety']));
+            break;
+            case 'newPermEty':
+                echo json_encode(newPermEty(createPDO(), $_POST['permEty']));
+            break;
+            case 'deletePermEty':
+                echo json_encode(deletePermEty(createPDO(), $_POST['ety'], $_POST['did']));
+            break;
+            case 'updateEtyColor':
+                echo json_encode(updateEtyColor(createPDO(), $_POST['ety'], $_POST['color']));
             break;
         }
 
@@ -665,7 +692,7 @@ function getEventInfo($PDO, $eid)
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
     
-    $common += $curseur->fetch();
+    array_merge($common, $curseur->fetchAll());
 
     return $common;
 }
@@ -1879,21 +1906,23 @@ function isRegisteredForEvent($PDO, $eid, $aid)
 }
 
 /*
-    Récupère la permission et les droits associès du type d'évenement
+    Récupère les permissions et les droits associés aux types d'évenements
     ~ ety: type d'évenement
-    @return [id, libelle, did, droit]
+    @return [id, libelle, color, did, droit]
 */
-function getTypePermissionAndDroits($PDO, $ety)
+function getPermissionEvenement($PDO, $ety)
 {
 
-    $req = "SELECT DISTINCT P.id, P.libelle, P.droit as did, D.libelle as droit
-            FROM `typeEvenement` T
+    $req = "SELECT T.libelle as event, T.id as ety, T.color, D.libelle as droit, D.id as did
+            FROM permissionEvenement P
             
-            INNER JOIN permission P
-            ON P.id = `permissionLvl`
+            INNER JOIN typeEvenement T
+            ON T.id = P.typeEvenement
             
             INNER JOIN droit D
-            ON P.droit = D.id
+            ON D.id = P.`droit`
+
+            ORDER BY T.id
            ";
 
     if ($ety != -1)
@@ -1930,19 +1959,22 @@ function getDroits($PDO)
     ~ statut: id statut
     @return [id, libelle, did, droit]
 */
-function permissionStatut($PDO, $statut)
+function gePermissionStatut($PDO, $statut)
 {
 
-    $req = "SELECT  P.id, P.libelle, D.id as did, D.libelle as droit
-            FROM `permissionStatut` P
+    $req = "SELECT S.libelle as statut, S.idStatut as sid, D.libelle as droit, D.id as did
+            FROM permissionStatut P
             
-            INNER JOIN droit D
+            INNER JOIN statut S
+            ON S.idStatut = P.`idStatut`
+            
+            INNER JOIN droit D 
             ON D.id = P.droit
            ";
 
 
     if ($statut != -1)
-        $req .= "WHERE P.id = $statut";
+        $req .= "WHERE S.idStatut = $statut";
 
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
@@ -1987,11 +2019,92 @@ function newStatuts($PDO, $statuts)
     
     foreach ($statuts as $statut){
         $libelle = $statut['libelle'];
-        $droits = $statut['droits'];
 
         $req .= "INSERT INTO `statut` 
-                (`idStatut`, `libelle`, `droits`) 
-                VALUES (NULL, '$libelle', '$droits');";
+                (`idStatut`, `libelle`) 
+                VALUES (NULL, '$libelle');";
+    }
+
+    $curseur = $PDO->prepare($req);
+    $curseur->execute();
+    
+    return $curseur->errorInfo()[2];;      
+
+}
+
+/*
+    Ajoute x nombre de permissionStatut
+    statuts: [id, libelle, droit]
+    @return PDO error
+*/
+function newPermStatut($PDO, $permStatut)
+{
+    $req = "";
+
+    $permsStatuts = json_decode($permStatut, true);
+    
+    foreach ($permsStatuts as $permStatut){
+        $sid = $permStatut['sid'];
+        $did = $permStatut['did'];
+
+        $req .= "INSERT INTO `permissionStatut` 
+                (`idStatut`, `droit`) 
+                VALUES ($sid, $did);";
+    }
+
+    $curseur = $PDO->prepare($req);
+    $curseur->execute();
+    
+    return $curseur->errorInfo()[2];;      
+
+}
+
+/*
+    Ajoute x nombre de ety
+    ety: [libelle]
+    @return PDO error
+*/
+function newEty($PDO, $ety)
+{
+    
+    $req = "";
+
+    $etys = json_decode($ety, true);
+    
+    foreach ($etys as $ety){
+        $libelle = $ety['libelle'];
+        $color = $ety['color'];
+
+        $req .= "INSERT INTO `typeEvenement` 
+                (`id`, `libelle`, `color`) 
+                VALUES (NULL, '$libelle', '$color')";
+    }
+
+    $curseur = $PDO->prepare($req);
+    $curseur->execute();
+    
+    return $curseur->errorInfo()[2];;      
+
+}
+
+/*
+    Ajoute x nombre de droit
+    droit: [libelle]
+    @return PDO error
+*/
+function newDroit($PDO, $droit)
+{
+    
+    $req = "";
+
+    $droits = json_decode($droit, true);
+    
+    foreach ($droits as $droit){
+        $libelle = $droit['libelle'];
+
+        $req .= "INSERT INTO `droit` 
+                (`id`, `libelle`) 
+                VALUES (NULL, '$libelle')";
     }
 
     $curseur = $PDO->prepare($req);
@@ -2017,6 +2130,131 @@ function deleteStatut($PDO, $sid)
     $curseur->execute();
     
     return $curseur->errorInfo()[2];;      
+
+}
+
+/*
+    Supprime le droit 
+    did: id droit
+    @return PDO error
+*/
+function deleteDroit($PDO, $did)
+{
+    $req = "DELETE 
+            FROM `droit`
+            WHERE `droit`.`id` = $did
+           ";
+   
+    $curseur = $PDO->prepare($req);
+    $curseur->execute();
+    
+    return $curseur->errorInfo()[2];;      
+
+}
+/*
+    Supprime le type d'évenement 
+    ety: id type évenement
+    @return PDO error
+*/
+function deleteEty($PDO, $ety)
+{
+    $req = "DELETE 
+            FROM `typeEvenement`
+            WHERE `typeEvenement`.`id` = $ety
+           ";
+   
+    $curseur = $PDO->prepare($req);
+    $curseur->execute();
+    
+    return $curseur->errorInfo()[2];;      
+
+}
+
+/*
+    Supprime la permission evenement
+    ety: id type évenement
+    did: id type évenement
+    @return PDO error
+*/
+function deletePermEty($PDO, $ety, $did)
+{
+    $req = "DELETE 
+            FROM `permissionEvenement`
+            WHERE `typeEvenement` = $ety AND `droit` = $did;
+           ";
+   
+    $curseur = $PDO->prepare($req);
+    $curseur->execute();
+    
+    return $curseur->errorInfo()[2];;      
+}
+/*
+    Met à jour la couleur de l'évenement
+    ety: id type évenement
+    color: couleur hex
+    @return PDO error
+*/
+function updateEtyColor($PDO, $ety, $color)
+{
+
+    $req = "UPDATE `typeEvenement` 
+            SET `color` = '$color' 
+            WHERE `typeEvenement`.`id` = $ety;
+           ";
+   
+    $curseur = $PDO->prepare($req);
+    $curseur->execute();
+    
+    return $curseur->errorInfo()[2];
+
+}
+
+
+/*
+    Supprime le statut 
+    sid: id statut
+    @return PDO error
+*/
+function deletePermStatut($PDO, $sid, $did)
+{
+
+    $req = "DELETE 
+            FROM `permissionStatut`
+            WHERE `permissionStatut`.`idStatut` = $sid AND `permissionStatut`.`droit` = $did;
+           ";
+   
+    $curseur = $PDO->prepare($req);
+    $curseur->execute();
+    
+    return $curseur->errorInfo()[2];;      
+
+}
+
+/*
+    Ajoute une nouvelle permission d'évenement
+    sid: id statut
+    @return PDO error
+*/
+function newPermEty($PDO, $permEty)
+{
+
+    $req = "";
+
+    $permEtys = json_decode($permEty, true);
+    
+    foreach ($permEtys as $permEty){
+        $id = $permEty['id'];
+        $droit = $permEty['droit'];
+
+        $req .= "INSERT INTO `permissionEvenement` 
+                (`typeEvenement`, `droit`) 
+                VALUES ($id, $droit)";
+    }
+
+    $curseur = $PDO->prepare($req);
+    $curseur->execute();
+    
+    return $curseur->errorInfo()[2];;    
 
 }
 ?>

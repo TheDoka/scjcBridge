@@ -1,3 +1,20 @@
+23/05/2020
+index.php: slider des évenements charge depuis la base
+		   gestion des permissions dynamique
+
+admin.php: couleur sur les évenements, modification couleur évenement
+		   select pour l'entrer de nouvelles permissions id/droit...
+		   100% fonctionnel
+
+inscription.php: gestions des permissions, inscription/desinscription/se retirer de la paire/inscrire d'autres personnes que soi... etc...
+
+
+
+22/05/2020
+index.php: gestion des groupes/permissions pour l'accès aux évenements (en cours)
+admin.php: affichage/ajout/suppresion pourt toutes les tables
+		   dynamique
+
 19/05/2020
 index.php/inscription.php: evenemnt 10 (spéciaux) terminé inscription desinscription aux évenements liés et inscription auto lorsqu'on à rejoint l'un des évenement
 bdd: permissionStatut

@@ -105,8 +105,25 @@ if (!logged())
             var user = getUser(aid);
             var statut = user['statut'];
             var anom = user['nom'];
-            var admin = user['statut'] == "Administrateur"; 
-            if (admin) $('#gestionBase').show();
+            var permissionsJoueur = []; 
+            var tmpPermissionsJoueur = gePermissionStatut(user['idStatut']);
+            tmpPermissionsJoueur.forEach(permission => {
+                permissionsJoueur.push(parseInt(permission['did']));
+            });  
+            
+            if (havePermission(6))    // Permission 6: Droit accès de base
+            {
+                $('#gestionBase').show();
+            }
+
+            /*
+                Retourne si l'utilisateur à la permission
+            */
+            function havePermission(droit)
+            {
+                return permissionsJoueur.includes(droit)
+            }
+
             var eid = <?php echo $_GET['eid'] ?>;
             var ety = null;
             var inscrit = false;
@@ -119,7 +136,7 @@ if (!logged())
 
             var checked = 0;
             var paire1 = 1;
-            if (admin)
+            if (havePermission(10)) // Permission 10: Inscrire d'autres personnes que soi 
             {
                 paire1 = 0;
             } 
@@ -141,7 +158,7 @@ if (!logged())
                         {
                             if (checked + 2 <= paire)
                             {
-                                if (admin)
+                                if (havePermission(10)) // Permission 10: Inscrire d'autres personnes que soi  
                                 {
                                     if (checked == 2 && paire2 == 2)
                                     {
@@ -314,17 +331,17 @@ if (!logged())
                     
                     let joueursID = [];
                     
-                    if (paireIsolee == 0 && !admin)
+                    if (paireIsolee == 0 && !havePermission(10)) // Permission 10: Inscrire d'autres personnes que soi 
                     {
                         // On se met dans l'array;
                         joueursID.push(aid);
                     } else {
 
-                        if (!admin)
+                        if (!havePermission(10))
                             joueursID.push([paireIsolee]);
 
                         // Permet l'inscription de l'administrateur sur les événements ou une seule personne est requise
-                        if (admin && paire == 1)
+                        if (havePermission(10) && paire == 1)
                             joueursID.push(aid);
                     }
 
@@ -538,7 +555,10 @@ if (!logged())
 
                 checked = 0;
                 paire1 = 1;
-                if (admin){ paire1--; } 
+                if (havePermission(10)) // Permission 10: Inscrire d'autres personnes que soi 
+                { 
+                    paire1--;
+                 } 
                 
                 paire2 = 0;
                 remplacant = 0;
@@ -680,29 +700,12 @@ if (!logged())
                         });
 
                     // Si n'est pas inscrit et SOS desactivé ou si c'est un évenement spécial
-                    if (!inscrit && !SOSenabled || ety == 10 || admin)
+                    if (!inscrit && !SOSenabled || ety == 5 || havePermission(11)) // Permission 11: Inscrire plusieurs fois
                     {
                             $( ".pourInscrire" ).show();
 
                             switch (ety)
                             {
-                                case 0: // Evenement 
-                                    $('.JO').hide();    // Cache table joueurs
-                                    $('.PA').hide();    // Cache table favoris
-                                    $('#textSOSButtonSOS').hide(); // Cache SOS
-                                    $('.paireIsolee').hide(); // Cache table paire isolée
-                                    $('#buttonInscrire').removeAttr("disabled");
-                                    $('#buttonInscrire').addClass("btn-primary");  
-                                    $('#buttonInscrire').prop('disabled', false);
-                                break;
-                                         
-                                case 10:
-                                
-                                    $('#inscriptArea').empty();
-                                    $('#bottomAction').hide();
-                                    populateSpecialEvent(event);
-
-                                break;
 
                                 case 1: // tournoi
                                     $('#textSOS').show();
@@ -727,13 +730,32 @@ if (!logged())
                                 case 3: // Compétition
                                     $('.paireIsolee').hide(); // Cache table paire isolée
                                 break;
+
+                                case 4: // Evenement 
+                                    $('.JO').hide();    // Cache table joueurs
+                                    $('.PA').hide();    // Cache table favoris
+                                    $('#textSOSButtonSOS').hide(); // Cache SOS
+                                    $('.paireIsolee').hide(); // Cache table paire isolée
+                                    $('#buttonInscrire').removeAttr("disabled");
+                                    $('#buttonInscrire').addClass("btn-primary");  
+                                    $('#buttonInscrire').prop('disabled', false);
+                                break;
+                                         
+                                case 5: // Spéciaux
+                                
+                                    $('#inscriptArea').empty();
+                                    $('#bottomAction').hide();
+                                    populateSpecialEvent(event);
+
+                                break;
                             }
+
                             
                             var ignore = [];
 
                             
 
-                            if (!admin) 
+                            if (!havePermission(10)) // Permission 10: Inscrire d'autres personnes que soi 
                             {
                                 // On se rajoute à l'array, car on ne veut pas être afficher dans la liste de joueurs
                                 ignore.push([aid]);
@@ -806,7 +828,7 @@ if (!logged())
                 
                 ety = parseInt(event['type']);
 
-                if (!admin)
+                if (!havePermission(10))// Permission 10: Inscrire d'autres personnes que soi 
                 {
                     // On fait partie de la paire
                     paire = event['paires']-1; 
@@ -815,7 +837,7 @@ if (!logged())
                     paire = event['paires'];
                 }
                
-                if (event['type'] == 3)
+                if (event['type'] == 3) // compétition, on ajoute la possibilité de remplaçants
                 {
                     paire = 6;
                 }
@@ -934,25 +956,34 @@ if (!logged())
                             situationText += `${joueur['nom']} ${joueur['prenom']} </br>`;
                             pid = joueur['NumPaire'];
                         });
-                        switch (parseInt(event['type']))
+
+                        if (havePermission(9)) //Permission 9: Se désinscrire d'un événement
                         {
-                            case 0: // Evenement 
-                                option = `<button id='${pid}' type='button' class='btn btn-danger desinscription evenement'>Se desincrire</button>`;
-                            break;
-                                                    
-                            case 1: // tournoi
-                                option = `<button id='${pid}' type='button' class='btn btn-danger desinscription tournoi'>Se desincrire</button>`;
-                            break;
+                            switch (parseInt(event['type']))
+                            {
+                                                        
+                                case 1: // tournoi
+                                    option = `<button id='${pid}' type='button' class='btn btn-danger desinscription tournoi'>Se desincrire</button>`;
+                                break;
 
-                            case 2: // Partie Libre 
-                                option = `<button id='${pid}' type='button' class='btn btn-danger desinscription partieLibre'>Se desincrire</button>`;
-                            break;
+                                case 2: // Partie Libre 
+                                    option = `<button id='${pid}' type='button' class='btn btn-danger desinscription partieLibre'>Se desincrire</button>`;
+                                break;
 
-                            case 3: // Compétition
-                                option = `<button id='${iid}' type='button' class='btn btn-danger desinscription competition'>Se desincrire</button>`;
-                            break;
+                                case 3: // Compétition
+                                    option = `<button id='${iid}' type='button' class='btn btn-danger desinscription competition'>Se desincrire</button>`;
+                                break;
+
+                                case 4: // Evenement 
+                                    option = `<button id='${pid}' type='button' class='btn btn-danger desinscription evenement'>Se desincrire</button>`;
+                                break;
+                                
+                                case 5: // Spéciaux 
+                                    
+                                break;
+                            }
                         }
-                        
+
                     } else {           
                         situationText = "Non inscrit";  
                         option = `<a href="inscription.php?eid=${event['evenementId']}" class='btn btn-dark'>Voir l'évenement</a>`;
@@ -1083,7 +1114,8 @@ if (!logged())
                         {
 
                             // Si l'un des membres de la paire est nous même:
-                            if (data[i]['id'] == aid || data[i+1]['id'] == aid)
+                            // Permission 15: Se retirer des paires disponibles
+                            if ((data[i]['id'] == aid || data[i+1]['id'] == aid) && havePermission(15))
                             {
                                 paire1 = 2;
                                 paire2 = 0;
@@ -1092,7 +1124,14 @@ if (!logged())
 
                                 option = `<button id='${pid}' class='btn btn-danger desinscription paireIsolee'>Se retirer des paires isolées</button>`;
                             } else {
-                                option = `<input type='checkbox' class='inscrireAvec paire' id='${data[i]['pid']}'>`;
+                                // Permission 16: Inscrire avec une paire disponible
+                                if (havePermission(16))
+                                {
+                                    option = `<input type='checkbox' class='inscrireAvec paire' id='${data[i]['pid']}'>`;
+                                } else {
+                                    option = "/";
+                                }
+                                
                             }
 
                             while (i < data.length && data[i]['pid'] == pid)
@@ -1216,26 +1255,31 @@ if (!logged())
                         /*
                             Change le mode de désinscription
                         */
-                        switch (ety)
-                            {
-                                case 0: // Evenement 
-                                    option = `<button id='${pid}' type='button' class='btn btn-danger desinscription evenement'>Se desincrire</button>`;
-                                break;
-                                                         
-                                case 1: // tournoi
-                                    option = `<button id='${pid}' type='button' class='btn btn-danger desinscription tournoi'>Se desincrire</button>`;
-                                break;
+                        if (havePermission(9)) //Permission 9: Se désinscrire d'un événement
+                        {
+                            switch (ety)
+                                {
+                                                            
+                                    case 1: // tournoi
+                                        option = `<button id='${pid}' type='button' class='btn btn-danger desinscription tournoi'>Se desincrire</button>`;
+                                    break;
 
-                                case 2: // Partie Libre 
-                                    option = `<button id='${pid}' type='button' class='btn btn-danger desinscription partieLibre'>Se desincrire</button>`;
-                                break;
+                                    case 2: // Partie Libre 
+                                        option = `<button id='${pid}' type='button' class='btn btn-danger desinscription partieLibre'>Se desincrire</button>`;
+                                    break;
 
-                                case 3: // Compétition
-                                    option = `<button id='${iid}' type='button' class='btn btn-danger desinscription competition'>Se desincrire</button>`;
-                                break;
-                            }
+                                    case 3: // Compétition
+                                        option = `<button id='${iid}' type='button' class='btn btn-danger desinscription competition'>Se desincrire</button>`;
+                                    break;
+
+                                    case 4: // Evenement 
+                                        option = `<button id='${pid}' type='button' class='btn btn-danger desinscription evenement'>Se desincrire</button>`;
+                                    break;
+                                }
                         
-
+                        } else {
+                            option = "/";
+                        }
                         if (data.length > 3 && data[i]['remplacant'] != "NULL")
                         {
                             
@@ -1250,7 +1294,8 @@ if (!logged())
                                 }
                             }
 
-                            if (remplacant.includes(aid))
+                            // Permission 14: Se retirer des remplaçants
+                            if (remplacant.includes(aid) && havePermission(14))
                             {
                                 option = `<button id='${iid}' class='btn btn-danger desinscription competition remplacant'>Se retirer de la paire</button>`;
                             } 
@@ -1313,14 +1358,15 @@ if (!logged())
 
                         
                                 // Pour les compétitions, si la paire est une paire de remplaçant et vérifie si la paire est pleine 
-                                if (ety == 3 && added > 4 && added != 7 && !inscrit)
+                                // Permission 13: S'ajouter aux remplaçants
+                                if (ety == 3 && added > 4 && added != 7 && !inscrit && havePermission(13)) 
                                 {
                                     option = `<button id="${pid}" class='btn btn-danger inscription remplacant'>S'ajouter aux remplaçants</button>`;
                                     added = 0;
                                 } else {
 
                                     // Si il n'y a pas de paire de remplaçant
-                                    if (ety == 3 && added == 4 && !inscrit)
+                                    if (ety == 3 && added == 4 && !inscrit && havePermission(13))
                                     {
                                         option = `<button id="${iid}" class='btn btn-danger inscription remplacant new'>S'ajouter en remplaçant</button>`;;
                                         added = 0;
@@ -1331,7 +1377,7 @@ if (!logged())
                                     
                                 }
 
-                                if (admin)
+                                if (havePermission(11)) // Permission 11: Désinscrire un joueur
                                 {
                                     option += `<button id='${pid}' type='button' class='btn btn-danger desinscription evenement'>Desincrire</button>`;
                                 }

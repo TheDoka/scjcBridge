@@ -595,7 +595,7 @@ function deleteEvent(eid, ety)
         eid: eid,
         ety: ety,
     }, function(data) {
-
+        console.log(data);
     });
 }
 
@@ -740,7 +740,7 @@ function isRegisteredForEvent(eid, aid)
     }).responseText);
         
 }
-function getTypePermissionAndDroits(ety)
+function getPermissionEvenement(ety)
 {
 
     return JSON.parse($.ajax({
@@ -748,7 +748,7 @@ function getTypePermissionAndDroits(ety)
         method:"POST",
         async: false,
         data:{
-            function: 'getTypePermissionAndDroits',
+            function: 'getPermissionEvenement',
             ety: ety,
         },
     }).responseText);
@@ -769,7 +769,7 @@ function getDroits()
 
 }
 
-function permissionStatut(statut)
+function gePermissionStatut(statut)
 {
 
     return JSON.parse($.ajax({
@@ -777,7 +777,7 @@ function permissionStatut(statut)
         method:"POST",
         async: false,
         data:{
-            function: 'permissionStatut',
+            function: 'gePermissionStatut',
             statut: statut,
         },
     }).responseText);
@@ -828,6 +828,139 @@ function deleteStatut(sid)
     }).responseText);
         
 }
+
+function deletePermStatut(sid, did)
+{
+
+    return JSON.parse($.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'deletePermStatut',
+            sid: sid,
+            did: did,
+        },
+    }).responseText);
+        
+}
+
+function newPermStatut(permStatut)
+{
+
+    return JSON.parse($.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'newPermStatut',
+            permStatut: JSON.stringify(permStatut)
+        },
+    }).responseText);
+        
+}
+
+function newDroit(droit)
+{
+
+    return JSON.parse($.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'newDroit',
+            droit: JSON.stringify(droit)
+        },
+    }).responseText);
+        
+}
+
+function deleteDroit(did)
+{
+
+    return JSON.parse($.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'deleteDroit',
+            did: did
+        },
+    }).responseText);
+        
+}
+
+function deleteEty(ety)
+{
+
+    return JSON.parse($.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'deleteEty',
+            ety: ety
+        },
+    }).responseText);
+        
+}
+
+function newEty(ety)
+{
+    return JSON.parse($.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'newEty',
+            ety: JSON.stringify(ety)
+        },
+    }).responseText);
+    
+}
+
+function newPermEty(permEty)
+{
+    return JSON.parse($.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'newPermEty',
+            permEty: JSON.stringify(permEty)
+        },
+    }).responseText);
+    
+}
+
+function deletePermEty(ety, did)
+{
+    return JSON.parse($.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'deletePermEty',
+            ety: ety,
+            did: did
+        },
+    }).responseText);
+}
+
+function updateEtyColor(ety, color)
+{
+    return JSON.parse($.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'updateEtyColor',
+            ety: ety,
+            color: color
+        },
+    }).responseText);
+}
+
 /*
     Resize la fenêtre pour cacher la navbar.
 */
@@ -838,4 +971,44 @@ function fullHeight() {
         $('.js-fullheight').css('height', $(window).height());
     });
 
+}
+
+
+/*
+
+    Transforme: 
+        0: {0: "Tournoi", 1: "1", 2: "Inscrire tournoi", 3: "1", event: "Tournoi", ety: "1", droit: "Inscrire tournoi", did: "1"}
+        1: {0: "Tournoi", 1: "1", 2: "Inscrire tournoi", 3: "1", event: "Tournoi", ety: "1", droit: "Inscrire tournoi", did: "1"}
+        2: {0: "Compétition", 1: "2", 2: "Inscrire compétition", 3: "2", event: "Compétition", ety: "2", droit: "Inscrire compétition", did: "2"}
+
+    En:
+        ety: {0: "Tournoi", 1: "1", 2: "Inscrire tournoi", 3: "1", event: "Tournoi", ety: "1", droit: "Inscrire tournoi", did: "1"}
+           {1: "Tournoi", 1: "1", 2: "Inscrire tournoi", 3: "1", event: "Tournoi", ety: "1", droit: "Inscrire tournoi", did: "1"}
+        ety: {0: "Compétition", 1: "2", 2: "Inscrire compétition", 3: "2", event: "Compétition", ety: "2", droit: "Inscrire compétition", did: "2"}
+
+*/
+function getArrayOfPermissions()
+{
+    let permissions = getPermissionEvenement(-1);
+    let out = {};
+    let ety = 0;
+
+    for (let i = 0; i < permissions.length; i++) {
+
+        tmp = [];
+        ety = permissions[i]['ety'];
+
+        while (i < permissions.length && permissions[i]['ety'] == ety)
+        {
+            tmp.push(permissions[i]);
+            i++;
+        }
+        // Fin de boucle
+            i--;
+
+        out[ety] = tmp;
+    }
+
+
+    return out;
 }

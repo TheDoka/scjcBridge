@@ -87,54 +87,86 @@ if (!logged())
                     populateTableEty();
                     populateTablePermStatut();
                     populateTablePermEty();
+
+                    populateTableDroit();
+
+                }
+
+                function refresh()
+                {
+                    $('.table tbody').empty();
+                    init();
                 }
 
 
-                function populateTableEty()
-                {
-                    let data = getEty(-1);
 
-                    data.forEach(typeEvent => {
-                        
-                        $('#tableEty').append(
-                            `<tr class="${typeEvent['libelle']}">
-                                <td>${typeEvent[0]}</td>
-                                <td>${typeEvent['libelle']}</td>
-                                <td><button style="width: 100%;" id="${typeEvent[0]}" type="button" class="btn btn-danger deleteEty">-</button></td>
+                function populateTableDroit()
+                {
+                    let data = getDroits();
+
+                    data.forEach(droit => {
+
+                        $('#tableDroit').append(
+                            `<tr>
+                                <td>${droit['id']}</td>
+                                <td>${droit['libelle']}</td>
+                                <td><button style="width: 100%;" id="${droit[0]}" type="button" class="btn btn-danger deleteDroit">-</button></td>
                             </tr>`
                         );
 
                     });
 
+                    $('#tableDroit').append(
+                            `<tr>
+                                <td colspan=3><button style="width: 100%;" id="newDroit" type="button" class="btn btn-dark">+</button></td>
+                            </tr>`
+                    );
+                }
+
+                function populateTableEty()
+                {
+                    let data = getEty(-1);
+                    let last = "";
+
+                    data.forEach(typeEvent => {
+                        console.log(typeEvent);
+                        $('#tableEty').append(
+                            `<tr class="t${typeEvent[0]}">
+                                <td>${typeEvent[0]}</td>
+                                <td>${typeEvent['libelle']}</td>
+                                <td id="${typeEvent[0]}" class="color" style="background-color:#${typeEvent['color']}">#${typeEvent['color']}</td>
+                                <td><button style="width: 100%;" id="${typeEvent[0]}" type="button" class="btn btn-danger deleteEty">-</button></td>
+                            </tr>`
+                        );
+
+                        if (typeEvent['libelle'] != last)
+                        {
+                            $('#permEtyPicker').append(`<option class="t${typeEvent[0]}" selected>${typeEvent['libelle']}</option>`);
+                            last = typeEvent['libelle'];
+                        } 
+
+                    });
+
                     $('#tableEty').append(
                             `<tr>
-                                <td colspan=3><button style="width: 100%;" id="newEty" type="button" class="btn btn-dark">+</button></td>
+                                <td colspan=4><button style="width: 100%;" id="newEty" type="button" class="btn btn-dark">+</button></td>
                             </tr>`
                     );
                 } 
 
                 function populateTablePermEty()
                 {
-                    let data = getTypePermissionAndDroits(-1);
-                    console.log(data);
-                    let last = "";
+                    let data = getPermissionEvenement(-1);
 
                     data.forEach(permission => {
                         
                         $('#tablePermEty').append(
-                            `<tr class="${permission['libelle']}">
-                                <td>${permission[0]}</td>
-                                <td>${permission['libelle']}</td>
-                                <td>${permission['droit']}</td>
+                            `<tr class="t${permission['ety']}">
+                                <td class="etyPermEty" id="${permission['ety']}">${permission[0]}</td>
+                                <td class="didPermEty" id="${permission['did']}">${permission['droit']}</td>
                                 <td><button style="width: 100%;" id="${permission[0]}" type="button" class="btn btn-danger deletePermEty">-</button></td>
                             </tr>`
                         );
-
-                        if (permission['libelle'] != last)
-                        {
-                            $('#permEtyPicker').append(`<option class="${permission['libelle']}" selected>${permission['libelle']}</option>`);
-                            last = permission['libelle'];
-                        } 
 
                     });
 
@@ -155,17 +187,16 @@ if (!logged())
                     data.forEach(statut => {
                         
                         $('#tableStatut').append(
-                            `<tr class="${statut['libelle']}">
+                            `<tr class="s${statut[0]}">
                                 <td>${statut[0]}</td>
                                 <td>${statut['libelle']}</td>
-                                <td>${statut['droits']}</td>
                                 <td><button style="width: 100%;" id="${statut[0]}" type="button" class="btn btn-danger deleteStatut">-</button></td>
                             </tr>`
                         );
 
                         if (statut['libelle'] != last)
                         {
-                            $('#permStatutPicker').append(`<option class="${statut['libelle']}" selected>${statut['libelle']}</option>`);
+                            $('#permStatutPicker').append(`<option class="s${statut[0]}" selected>${statut['libelle']}</option>`);
                             last = statut['libelle'];
                         } 
 
@@ -180,15 +211,14 @@ if (!logged())
                             
                 function populateTablePermStatut()
                 {
-                    let data = permissionStatut(-1);
+                    let data = gePermissionStatut(-1);
 
                     data.forEach(typeEvent => {
-                        
+                        console.log(typeEvent);
                         $('#tablePermStatut').append(
-                            `<tr class="${typeEvent['libelle']}">
-                                <td>${typeEvent[0]}</td>
-                                <td>${typeEvent['libelle']}</td>
-                                <td>${typeEvent['droit']}</td>
+                            `<tr class="s${typeEvent['sid']}">
+                                <td class="statutId" id="${typeEvent['sid']}">${typeEvent['statut']}</td>
+                                <td class="droitId" id="${typeEvent['did']}">${typeEvent['droit']}</td>
                                 <td><button style="width: 100%;" id="${typeEvent[0]}" type="button" class="btn btn-danger deletePermStatut">-</button></td>
                             </tr>`
                         );
@@ -203,7 +233,7 @@ if (!logged())
                 } 
 
 
-                $('.selectFilter').on('change', function(e) {
+                $(document).on('change', '.selectFilter', function(e) {
 
                     $(this).find("option:not(:selected)").each(function(key,value){
                         $(".table ." + value.className).hide();
@@ -215,15 +245,15 @@ if (!logged())
 
                 });
 
-                var added = 0;
-                $('#newStatut').on('click', function(e){
-                    added++;
+                // ---------------------------------------------------------------
+
+                $(document).on('click', '#newStatut', function(e){
+   
                     $('#tableStatut').prepend(
                             `<tr>
                                 <td><input type="number" class="form-control" placeholder="id" aria-label="id" disabled></td>
-                                <td><input id="${added}" type="text" class="form-control statutLibelleEdit" placeholder="libelle" aria-label="libelle"></td>
-                                <td><input id="${added}" type="number" class="form-control statutPermEdit" placeholder="permission statut" aria-label="libelle"></td>
-                                <td><button id="${added}" style="width: 100%;" id="" type="button" class="btn btn-primary confirmNewStatut">+</button></td>
+                                <td><input  type="text" class="form-control statutLibelleEdit" placeholder="libelle" aria-label="libelle"></td>
+                                <td><button  style="width: 100%;" type="button" class="btn btn-primary confirmNewStatut">+</button></td>
                             </tr>`
                         );
 
@@ -231,19 +261,20 @@ if (!logged())
                 });
 
 
-
                 $(document).on('click', '.deleteStatut', function(e) {
 
                     let z = e.target.id;
-
-                    let res = deleteStatut(z);
-                    if (!res)
+                    if (confirm('Supprimer cette permission?'))
                     {
-                        // remove the row
-                        $(`#${z}.deleteStatut`).parent().parent().remove();
-                        alert('Supprimé avec succès.');
-                    } else {
-                        alert('Une erreur est survenue.\n' + res);
+                        let res = deleteStatut(z);
+                        if (!res)
+                        {
+                            // remove the row
+                            $(this).closest('tr').remove();
+                            alert('Supprimé avec succès.');
+                        } else {
+                            alert('Une erreur est survenue.\n' + res);
+                        }
                     }
                 });
 
@@ -251,21 +282,293 @@ if (!logged())
                 $(document).on('click', '.confirmNewStatut', function(e) {
                     let z = e.target.id;
                     
-                    let libelle = $(`#${z}.statutLibelleEdit`).val();
-                    let permStatut = $(`#${z}.statutPermEdit`).val();
+                    let libelle = $(this).closest('tr').find('.statutLibelleEdit').val();
                     
-                    var newStatut = [{
-                        
+                    var newStatut = [{              
                         libelle: libelle,
-                        droits: permStatut,
-                        
                     }];
 
                     let res = newStatuts(newStatut);
                     if (!res)
                     {
                         alert('Ajouté avec succès.');
-                        document.location.reload();
+                        refresh();
+                    } else {
+                        alert('Une erreur est survenue.\n' + res);
+                    }
+
+                });
+
+                // ---------------------------------------------------------------
+                $(document).on('click', '#newPermStatut', function(e) {
+
+                    let droits = getDroits();
+                    let optionDroits = "";
+                    droits.forEach(droit => {
+                        optionDroits += `<option id="${droit['id']}">${droit['libelle']}</option>`
+                    });
+                    
+                    let statuts = getAllStatut();
+                    let optionStatut = "";
+                    statuts.forEach(statut => {
+                        optionStatut += `<option id="${statut['idStatut']}">${statut['libelle']}</option>`
+                    });
+
+                    $('#tablePermStatut').prepend(
+                            `<tr>
+                                <td> 
+                                    <select class="form-control permStatutIdEdit"> 
+                                        ${optionStatut}
+                                    </select> 
+                                </td>
+                                <td> 
+                                    <select class="form-control permStatutDroitEdit"> 
+                                        ${optionDroits}
+                                    </select> 
+                                </td>
+                                <td><button style="width: 100%;" type="button" class="btn btn-primary confirmNewPermStatut">+</button></td>
+                            </tr>`
+                        );
+
+
+                });
+
+                $(document).on('click', '.deletePermStatut', function(e) {
+                    
+  
+                    if (confirm('Supprimer cette permission?'))
+                    {
+                        let sid = $(this).closest('tr').find('.statutId').attr('id');
+                        let did = $(this).closest('tr').find('.droitId').attr('id');
+                        let res = deletePermStatut(sid, did);
+
+                        if (!res)
+                        {
+                            // remove the row
+                            $(this).closest('tr').remove();
+                            alert('Supprimé avec succès.');
+                        } else {
+                            alert('Une erreur est survenue.\n' + res);
+                        }
+                    
+                    }
+                });
+
+
+                $(document).on('click', '.confirmNewPermStatut', function(e) {
+
+                    let sid = $(this).closest('tr').find('.permStatutIdEdit').children(":selected").attr("id");
+                    let did = $(this).closest('tr').find('.permStatutDroitEdit').children(":selected").attr("id");
+       
+                    var permStatut = [{
+                        sid: sid,
+                        did: did,
+                    }];
+
+                    let res = newPermStatut(permStatut);
+                    if (!res)
+                    {
+                        alert('Ajouté avec succès.');
+                        refresh();
+                    } else {
+                        alert('Une erreur est survenue.\n' + res);
+                    }
+
+                });
+                                 
+                // ---------------------------------------------------------------
+
+                $(document).on('click', '#newEty', function(e) {
+                    $('#tableEty').prepend(
+                            `<tr>
+                                <td><input type="number" class="form-control etyIdEdit" placeholder="Id" aria-label="id" disabled></td>
+                                <td><input type="text" class="form-control etyLibelleEdit" placeholder="Libelle" aria-label="libelle"></td>
+                                <td><input type="text" class="form-control etyCouleurEdit" placeholder="Couleur" aria-label="libelle"></td>
+                                <td><button style="width: 100%;" type="button" class="btn btn-primary confirmNewEty">+</button></td>
+                            </tr>`
+                        );
+
+
+                });                
+                
+
+                $(document).on('click', '.deleteEty', function(e) {
+                    
+
+                    if (confirm("Supprimer ce type d'évenement?"))
+                    {
+                        let ety = e.target.id;
+                        let res = deleteEty(ety);
+
+                        if (!res)
+                        {
+                            // remove the row
+                            $(this).closest('tr').remove();
+                            alert('Supprimé avec succès.');
+                        } else {
+                            alert('Une erreur est survenue.\n' + res);
+                        }
+                    
+                    }
+                });
+
+
+                $(document).on('click', '.confirmNewEty', function(e) {
+
+                    let libelle = $(this).closest('tr').find('.etyLibelleEdit').val();
+                    let couleur = $(this).closest('tr').find('.etyCouleurEdit').val();
+
+                    var ety = [{
+                        libelle: libelle,
+                        color: couleur
+                    }];
+
+                    let res = newEty(ety);
+                    if (!res)
+                    {
+                        alert('Ajouté avec succès.');
+                        refresh();
+                    } else {
+                        alert('Une erreur est survenue.\n' + res);
+                    }
+
+                });
+
+                // ---------------------------------------------------------------
+                $(document).on('click', '#newDroit', function(e) {
+                    $('#tableDroit').prepend(
+                            `<tr>
+                                <td><input type="number" class="form-control droitIdEdit" placeholder="id" aria-label="id" disabled></td>
+                                <td><input type="text" class="form-control droitLibelleEdit" placeholder="libelle" aria-label="libelle"></td>
+                                <td><button style="width: 100%;" type="button" class="btn btn-primary confirmNewDroit">+</button></td>
+                            </tr>`
+                        );
+
+
+                });
+
+                $(document).on('click', '.confirmNewDroit', function(e) {
+
+                    let libelle = $(this).closest('tr').find('.droitLibelleEdit').val();
+
+                    var droit = [{
+                        libelle: libelle,
+                    }];
+
+                    let res = newDroit(droit);
+                    if (!res)
+                    {
+                        alert('Ajouté avec succès.');
+                        refresh();
+                    } else {
+                        alert('Une erreur est survenue.\n' + res);
+                    }
+
+                });
+
+                $(document).on('click', '.deleteDroit', function(e) {
+                    
+                    if (confirm('Supprimer cette permission?'))
+                    {
+                        
+                        let did = e.target.id;
+                        let res = deleteDroit(did);
+
+                        if (!res)
+                        {
+                            // remove the row
+                            $(this).closest('tr').remove();
+                            alert('Supprimé avec succès.');
+                        } else {
+                            alert('Une erreur est survenue.\n' + res);
+                        }
+                    
+                    }
+                });
+
+                // ---------------------------------------------------------------
+                $(document).on('click', '#newPermEty', function(e) {
+
+                    $('#tablePermEty').prepend(
+                            `<tr>
+                                <td><input type="number" class="form-control permEtyIdEdit" placeholder="id" aria-label="id"></td>
+                                <td><input type="number" class="form-control permEtyDroitEdit" placeholder="droit" aria-label="droit"></td>
+                                <td><button style="width: 100%;" type="button" class="btn btn-primary confirmNewPermEty">+</button></td>
+                            </tr>`
+                        );
+
+
+                });
+                $(document).on('click', '.confirmNewPermEty', function(e) {
+
+                    
+                    let id = $(this).closest('tr').find('.permEtyIdEdit').val();
+                    let droit = $(this).closest('tr').find('.permEtyDroitEdit').val();
+                    
+                    var permEty = [{
+                        id: id,
+                        droit: droit,
+                    }];
+
+                    let res = newPermEty(permEty);
+                    if (!res)
+                    {
+                        alert('Ajouté avec succès.');
+                        refresh();
+                    } else {
+                        alert('Une erreur est survenue.\n' + res);
+                    }
+
+                });
+
+                $(document).on('click', '.deletePermEty', function(e) {
+                    
+                    if (confirm('Supprimer cette permission?'))
+                    {
+                        
+                        let ety = $(this).closest('tr').find('.etyPermEty').attr('id');
+                        let did = $(this).closest('tr').find('.didPermEty').attr('id');
+
+                        let res = deletePermEty(ety, did);
+
+                        if (!res)
+                        {
+                            // remove the row
+                            $(this).closest('tr').remove();
+                            alert('Supprimé avec succès.');
+                        } else {
+                            alert('Une erreur est survenue.\n' + res);
+                        }
+                    
+                    }
+                });
+
+
+                $(document).on('dblclick', '.color', function (e) {
+                    let ety = e.target.id;
+                    $(this).html(`
+                        <div class="input-group mb-3">
+                            <div class="input-group-prepend">
+                                <i class="input-group-text" aria-hidden="true">#</i>
+                            </div>
+                            <input type="text" class="form-control etyNewColor" value="${$(this).text().substr(1,6)}">
+                        </div>
+                    `);
+                    var v = $(this).closest('tr').find('.btn').parent();
+                    v.empty();
+                    v.html(`<button id="${ety}" style="width: 100%;" type="button" class="btn btn-primary confirmNewcolor">%</button>   `);
+
+                });
+
+                $(document).on('click', '.confirmNewcolor', function(e) {
+                    let ety = e.target.id;
+                    let newColor = $(this).closest('tr').find('.EtyNewColor').val();
+
+                    let res = updateEtyColor(ety, newColor);
+                    if (!res)
+                    {
+                        alert('Ajouté avec succès.');
+                        refresh();
                     } else {
                         alert('Une erreur est survenue.\n' + res);
                     }
@@ -574,7 +877,7 @@ if (!logged())
 
                         <div class="input-group mb-3"> 
                             <div class="input-group-prepend"> 
-                                <label class="input-group-text">Statut</label> 
+                                <label class="input-group-text">Groupe</label> 
                             </div> 
 
                             <select class="custom-select" id="statutJoueurEdit"> </select> 
@@ -720,81 +1023,119 @@ if (!logged())
 
                     <div class="tab-pane" id="statuts" role="tabpanel" aria-labelledby="statuts-tab">
 
-                    <div id="" class="flex-container p-3">
-                        <div class="flex-item">
-                            <div class="row">
-                                <h4>Statuts</h4>
-                                <select id="permStatutPicker" class="selectpicker selectFilter" multiple data-live-search="false"></select>
-                            </div>
-                            <table class='table table-striped table-bordered' id="tableStatut">
-                                    <thead>
-                                        <tr>
-                                            <th>id</th>
-                                            <th>libelle</th>
-                                            <th>permission</th>
-                                            <th style="width:20%;">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody></tbody>
-
-                                </table>    
-
-                        </div>
-
-                        <div class="flex-item col">
-
-                            <h4>Permissions statut</h4>
-                                <table class='table table-striped table-bordered' id="tablePermStatut">
+                        <div class="flex-container p-3">
+                            <div class="flex-item">
+                                <div class="row">
+                                    <h4>Groupes</h4>
+                                    <select id="permStatutPicker" class="selectpicker selectFilter" multiple data-live-search="false"></select>
+                                </div>
+                                <table class='table table-striped table-bordered' id="tableStatut">
                                         <thead>
                                             <tr>
-                                                <th>id</th>
-                                                <th>libelle</th>
+                                                <th>#</th>
+                                                <th>Libelle</th>
+                                                <th style="width:20%;">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+
+                                    </table>    
+                                </table>    
+                                    </table>    
+                                </table>    
+                                    </table>    
+                                </table>    
+                                    </table>    
+
+                            </div>
+
+                            <div class="flex-item col">
+
+                                <h4>Permissions de groupes</h4>
+                                    <table class='table table-striped table-bordered' id="tablePermStatut">
+                                            <thead>
+                                                <tr>
+                                                    <th>Groupe</th>
+                                                    <th>Droit</th>
+                                                    <th style="width:20%;">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody></tbody>
+
+                                        </table>   
+                                    </table>   
+                                        </table>   
+                                    </table>   
+                                        </table>   
+                                    </table>   
+                                        </table>   
+                            
+                            </div>
+
+                            <div class="flex-item">
+                                <div class="row">
+                                    <h4>Types d'évenements</h4>
+                                    <select id="permEtyPicker" class="selectpicker selectFilter" multiple data-live-search="false"></select>
+                                </div>
+                                
+                                <table class='table table-striped table-bordered' id="tableEty">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Nom du type</th>
+                                                <th>Couleur dans l'agenda</th>
+                                                <th style="width:20%;">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+
+                                    </table>    
+                                </table>    
+                                    </table>    
+                                </table>    
+                                    </table>    
+                                </table>    
+                                    </table>    
+                            </div>
+
+                            <div class="flex-item col">
+                                <h4>Permissions requises par types d'évenements</h4>
+                                <table class='table table-striped table-bordered' id="tablePermEty">
+                                        <thead>
+                                            <tr>
+                                                <th>Type d'évenement</th>
                                                 <th>droit</th>
                                                 <th style="width:20%;">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody></tbody>
 
-                                    </table>   
-                           
-                        </div>
-
-                        <div class="flex-item">
-                            <div class="row">
-                                <h4>Type d'évenement</h4>
-                                <select id="permEtyPicker" class="selectpicker selectFilter" multiple data-live-search="false"></select>
+                                    </table>     
                             </div>
+
                             
-                            <table class='table table-striped table-bordered' id="tableEty">
-                                    <thead>
-                                        <tr>
-                                            <th>id</th>
-                                            <th>libelle</th>
-                                            <th style="width:20%;">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody></tbody>
+                            <div style="width:100%">
+                                <h4>Liste des droits disponibles</h4>
+                                <table class='table table-striped table-bordered' id="tableDroit">
+                                        <thead>
+                                            <tr>
+                                                <th>id</th>
+                                                <th>droit</th>
+                                                <th style="width:20%;">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
 
-                                </table>    
-                        </div>
-
-                        <div class="flex-item col">
-                            <h4>Permissions de type d'évenement</h4>
-                            <table class='table table-striped table-bordered' id="tablePermEty">
-                                    <thead>
-                                        <tr>
-                                        <th>id</th>
-                                            <th>libelle</th>
-                                            <th>droit</th>
-                                            <th style="width:20%;">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody></tbody>
-
+                                    </table>     
                                 </table>     
-                        </div>
+                                    </table>     
+                                </table>     
+                                    </table>     
+                                </table>     
+                                    </table>     
+                            </div>
 
-                    </div>
+                        </div>
 
                      
   

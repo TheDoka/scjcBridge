@@ -63,6 +63,7 @@ if (!logged())
             <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.5.3/jspdf.min.js" integrity="sha256-gJWdmuCRBovJMD9D/TVdo4TIK8u5Sti11764sZT1DhI=" crossorigin="anonymous"></script>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.4/jspdf.plugin.autotable.min.js" integrity="sha256-4CNCFqz7EvqtM61GxKY25T/MFIWTh2Iqelbm+HrhYq8=" crossorigin="anonymous"></script>
 
+            <link rel="icon" type="image/png" href="./favicon.ico" />
         <!-- next --> 
 
         <script type="text/javascript">
@@ -76,18 +77,26 @@ if (!logged())
                 });
                 fullHeight();
 
-
-                var todayDate = new Date().toISOString().slice(0,10);
                 var aid = <?php echo intval($_COOKIE['logged']) ?>;
                 var user = getUser(aid);
+                var tmpPermissionsJoueur = gePermissionStatut(user['idStatut']);
+                var permissionsJoueur = []; 
+                tmpPermissionsJoueur.forEach(permission => {
+                    permissionsJoueur.push(parseInt(permission['did']));
+                });  
 
-                var statut = user['statut'];
-                var admin = user['statut'] == "Administrateur"; 
-                if (admin)
+                if (havePermission(6))    // Droit accès de base
                 {
                     $('#gestionBase').show();
                 }
        
+                /*
+                    Retourne si l'utilisateur à la permission
+                */
+                function havePermission(droit)
+                {
+                    return permissionsJoueur.includes(droit)
+                }
 
 
                 function callendarImport()
@@ -117,90 +126,23 @@ if (!logged())
                     }, function(data) {
 
                         registeredForEvents = JSON.parse(data);
-                        console.log(registeredForEvents);
                     });
 
+                    let permissionsEvents = getArrayOfPermissions();              
+                                     
                     events.forEach(event => {
-                        /*
-                        #type 
-                            0 : évenement
-                            1 : tournoi
-                            2 : partie libre
-                            3 : compétition
-                        */
-                       
-                        bcColor = "";
+
+                        bcColor = permissionsEvents[event['type']][0]['color'];
                         classNames = [];
 
-                        var todayDate = moment(new Date($.now())).format("YYYY-MM-DD HH:mm:ss");
-                        var passed = event['dteDebut'] < todayDate;
- 
-                        switch (parseInt(event['type']))
-                        {
-                            case 0:
-                                bcColor = "#8e6eb7";
-                                classNames.push("evenement");
-                                classNames.push("all");
-                                if (!passed)
-                                {
-                                    classNames.push("inscrire");
-                                }
-                            break;
-
-                            case 1:
-                                bcColor = "#e14658";
-                                classNames.push("tournoi");
-                                if (event['DC'])
-                                {
-
-                                    classNames.push("membre");
-                                    classNames.push("sympathisant");
-
-                                } 
-
-                                if (!passed)
-                                {
-                                    classNames.push("inscrire");
-                                }
-                            break;
-
-                            case 2:
-                                bcColor = "#aaaaaa";
-                                classNames.push("partieLibre");
-
-                                classNames.push("membre");
-                                classNames.push("sympathisant");
-                                if (!passed)
-                                {
-                                    classNames.push("inscrire");
-                                }
-                            break;
-                            
-                            case 3: 
-                                bcColor = "#c0b3a0";
-                                classNames.push("competition");
-                                // On vérifie que la compétition n'a pas commencé
-                                if (event.stade == 3 && !passed) // Stade d'inscription
-                                {
-
-                                    classNames.push("inscrire");
-
-                                }
-                            break; 
-                            
-                            case 10: 
-                                bcColor = "#aa11cc";
-                                classNames.push("special");
-                                // On vérifie que la compétition n'a pas commencé
-                                if (!passed) // Stade d'inscription
-                                {
-
-                                    classNames.push("inscrire");
-
-                                }
-                            break;
-
+                        i = 0;
+                        while (i < permissionsEvents[event['type']].length)
+                        {        
+                            classNames.push(parseInt(permissionsEvents[event['type']][i]['did']));            
+                            i++;  
                         }
+
+                        classNames.push('t' + event['type'])
 
                         let title = "";
 
@@ -243,8 +185,10 @@ if (!logged())
 
                         });
                 }
+                
                 var current_event = [];
                 var calendarEl = document.getElementById('calendar');
+                
                 var calendar = new FullCalendar.Calendar(calendarEl, {
                     locale: 'FR',
                     height: $(window).height()*0.85,
@@ -260,12 +204,12 @@ if (!logged())
                     },
                     minTime: '6:00',
                     maxTime: '24:00',
-                    defaultDate: todayDate,
+                    defaultDate: new Date().toISOString().slice(0,10),
                     firstDay: 1,
                     defaultView: 'timeGridWeek',
-                    navLinks: true, // can click day/week names to navigate views
-                    eventLimit: true, // allow "more" link when too many events
-                    editable: admin,
+                    navLinks: true, 
+                    eventLimit: true, 
+                    editable: havePermission(8), // Permission 8: Ajuster les événements dans l'agenda (déplacements/étirements)
                     allDaySlot: false,
 
                     eventResize:function(event)
@@ -302,31 +246,30 @@ if (!logged())
                     eventClick:function(event)
                     {
 
-      
                         event = event.event;
+                        var todayDate = moment(new Date($.now())).format("YYYY-MM-DD HH:mm:ss");
+                        var passed = moment(event['start']).format("YYYY-MM-DD HH:mm:ss") < todayDate;
 
-                        if (event['classNames'].includes('inscrire') || admin)
+                        i = 0;
+                        // inscrit
+                        if (event.classNames.includes('inscrit')) { i++; }
+
+                        // ++ 
+                        for (let j = 0; j < permissionsJoueur.length; j++) {
+                           
+                            if (event.classNames.includes(permissionsJoueur[j]))
+                                i++;
+                        }
+
+                        // Le type d'évenement fait partie des classes
+                        i++;
+                        console.log(i);
+                        console.log(event.classNames.length);
+                        // Si l'utilisateur à les droits et que l'évenement n'est pas passé ou que l'évenemnt n'est pas une finale
+                        if (i >= event.classNames.length && !passed)
                         {
 
-                            if (!event['classNames'].includes('all') && !admin)
-                            {
-
-                                if (event['classNames'].includes('membre', 'sympathisant'))
-                                {
-                                    
-                                    if (!['membre', 'sympathisant'].includes(statut))
-                                    {
-                                        alert('Cet évenement est reservé aux membres ou aux sympathisants.')
-                                        return;
-                                    }
-
-                                }
-
-                            }
-
-                          
-
-                            if (confirm("Description du tournoi?"))
+                            if (confirm("Description de l'évenement?"))
                             {
                                     window.location = 'inscription.php?eid=' + event.id;
                             }
@@ -347,13 +290,19 @@ if (!logged())
                                 showModal();
                             });
 
-                            $('.fc-today-button').after('<select class="selectpicker" multiple data-live-search="false">'+
-                                                            '<option id="dC" selected>Compétitions</option>'+
-                                                            '<option id="dT" selected>Tournois</option>'+
-                                                            '<option id="dPL" selected>Parties Libres</option>'+
-                                                            '<option id="dES" selected>Evénements spéciaux</option>'+
-                                                            '<option id="dIN" selected>Afficher événements inscrits</option>'+
-                                                        '</select>');
+                            $('.fc-today-button').after('<select id="trieEvenement" class="selectpicker" multiple data-live-search="false"></select>');
+                            let data = getEty(-1);
+                            let last = "";
+
+                            data.forEach(typeEvent => {
+                            
+                                if (typeEvent['libelle'] != last)
+                                {
+                                    $('#trieEvenement').append(`<option class="t${typeEvent[0]}" selected>${typeEvent['libelle']}</option>`);
+                                    last = typeEvent['libelle'];
+                                } 
+
+                            });
                             $('select').selectpicker();
  
                     },
@@ -367,61 +316,24 @@ if (!logged())
                 callendarImport();           
                 calendar.render();
 
-                $(document).on('change', '.selectpicker', function (e) {
+                $(document).on('change', '#trieEvenement', function (e) {
 
-                    /*
-                        à refaire wtf
-                        s'inspirer de admin.php
-                    */
-                    var selected = []; //array to store value
-                    $(this).find("option:selected").each(function(key,value){
-                        selected.push(value.id); //push the text to array
+                    $(this).find("option:not(:selected)").each(function(key,value){
+                        $(".fc-event." + value.className).hide();
+                        console.log( value.className);
                     });
-                    /*
 
-                        dC  = Compétitions
-                        dT  = Tournois
-                        dPL = Parties Libres
-                        dES = Evénements spéciaux
-                        dIN = Evenements inscrits
-
-                    */
-                    
-                    if (selected.includes('dC'))
-                    {
-                        $('.competition').show();
-                    } else {$('.competition').hide();}
-                    if (selected.includes('dT'))
-                    {
-                        $('.tournoi').show();
-                    } else {$('.tournoi').hide();}
-                    if (selected.includes('dPL'))
-                    {
-                        $('.partieLibre').show();
-                    } else {$('.partieLibre').hide();}
-                    if (selected.includes('dES'))
-                    {
-                        $('.evenement').show();
-                    } else {$('.evenement').hide();}
-                    if (selected.includes('dIN'))
-                    {
-                        $('.inscrit').show();
-                    } else {$('.inscrit').hide();}
-
+                    $(this).find("option:selected").each(function(key,value){
+                        $(".fc-event." + value.className).show();
+                    });
 
                         
-                });
-
-                $(window).resize(function() {
-                    var calHeight = $(window).height()*0.85;
-                    calendar.setOption('height', calHeight);
                 });
 
 
                 function showModal(e) {
                     
-
-                    if (admin)
+                    if (havePermission(7)) // Droit de gestion d'évenements
                     {
                         /* 
                             Get the additionnal event info
@@ -537,6 +449,7 @@ if (!logged())
                         document.location.reload();
                     }
                 });
+                
                 $('#saveEditEventButton').on('click', function () {
                 
                     if (confirm('Êtes vous sûr de vouloir sauvegarder les modifications? Cette action est irréversible!'))
@@ -567,6 +480,7 @@ if (!logged())
 
 
                 }); 
+                
                 $('#exportJoueursButton').on('click', function () {
                 
                     const doc = new jsPDF()
