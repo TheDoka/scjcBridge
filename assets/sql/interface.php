@@ -147,6 +147,20 @@ if (isset($_POST['function']))
             case 'getAllNiveaux':
                 echo json_encode(getAllNiveaux(createPDO()));
             break;
+
+            case 'getAllCategorie':
+                echo json_encode(getAllCategorie(createPDO()));
+            break;
+            case 'getAllPublic':
+                echo json_encode(getAllPublic(createPDO()));
+            break;
+            case 'getAllDivison':
+                echo json_encode(getAllDivison(createPDO()));
+            break;
+            case 'getAllStade':
+                echo json_encode(getAllStade(createPDO()));
+            break;
+
             case 'updateUserInfos':
                 echo updateUserInfos(createPDO(), $_POST['userInfos']);
             break;
@@ -203,6 +217,9 @@ if (isset($_POST['function']))
             break;
             case 'updateEtyColor':
                 echo json_encode(updateEtyColor(createPDO(), $_POST['ety'], $_POST['color']));
+            break;
+            case 'newEvenement':
+                echo json_encode(newEvenement(createPDO(), $_POST['evenement']));
             break;
         }
 
@@ -435,8 +452,8 @@ function importEvents($PDO, $evenements, $type)
                 case 1:
                     // tournoi
                     $secondStep .= "INSERT INTO `tournoi` 
-                                    (`id`, `evenementId`, `repas`, `apero`, `imp`, `niveauRequis`, `DC`) 
-                                    VALUES (NULL, '$eventId', '$curr[9]', '$curr[8]', '$curr[7]', '$curr[6]', '$curr[10]');";
+                                    (`id`, `evenementId`, `repas`, `apero`, `imp`, `niveauRequis`, `DC`) VALUES
+                                    (NULL, '$eventId', '$curr[9]', '$curr[8]', '$curr[7]', (SELECT `idNiveau` FROM `niveau` WHERE `numeroSerie` = '$curr[6]'), '$curr[10]');";
                 break; 
 
                 case 2:
@@ -466,6 +483,7 @@ function importEvents($PDO, $evenements, $type)
     $curseur->fetch();
     // In case, respond with error message, it should be empty
     return $curseur->errorInfo()[2];
+    
     $curseur = null;
 
 
@@ -1685,6 +1703,7 @@ function updateEvent($PDO, $event)
              [4] prix
              [5] lieu
              [6] paires
+             [7] ety
 
     */
     
@@ -1696,6 +1715,7 @@ function updateEvent($PDO, $event)
             `prix`= :prix,
             `lieu`= :lieu,
             `paires`= :paires 
+            `type`= :ety 
             WHERE `id` = :id";
 
     $curseur = $PDO->prepare($req);
@@ -1718,7 +1738,6 @@ function deleteEvent($PDO, $eid, $ety)
     $inscriptions = getFormatedIds($registered, 3);
     // récupère les numéros de paire
     $paires = getFormatedIds($registered, 4);
-
 
     /*
         Supprime les paires, paires isolées, joueurs sos et inscriptions associés à l'évenement
@@ -1759,6 +1778,14 @@ function deleteEvent($PDO, $eid, $ety)
         
         case 3: // Compétition
             $req .= "DELETE FROM `competition` WHERE `competition`.`evenementId` = $eid;";
+        break;
+
+        case 5: // Spécial
+            
+            // recupère les évenements raccordés:
+            $raccordes = getEvenementsRaccorde($PDO, $eid);
+
+            $req .= "DELETE FROM `raccorde`  WHERE `raccorde`.`Aeid` = $eid;";
         break;
     }    
 
@@ -1955,6 +1982,76 @@ function getDroits($PDO)
 }
 
 /*
+    Récupère le contenu de la table 'stade'
+    @return id, libelle
+*/
+function getAllStade($PDO)
+{
+
+    $req = "SELECT * 
+            FROM `stade`
+           ";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+    return $curseur->fetchAll();        
+
+}
+/*
+    Récupère le contenu de la table 'division'
+    @return id, libelle
+*/
+function getAllDivison($PDO)
+{
+
+    $req = "SELECT * 
+            FROM `division`
+           ";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+    return $curseur->fetchAll();        
+
+}
+
+/*
+    Récupère le contenu de la table 'public'
+    @return id, libelle
+*/
+function getAllPublic($PDO)
+{
+
+    $req = "SELECT * 
+            FROM `public`
+           ";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+    return $curseur->fetchAll();        
+
+}
+/*
+    Récupère le contenu de la table 'categorieCompetition'
+    @return id, libelle
+*/
+function getAllCategorie($PDO)
+{
+
+    $req = "SELECT * 
+            FROM `categorieCompetition`
+           ";
+
+    $curseur = $PDO->prepare($req);
+    $curseur ->execute();
+
+    return $curseur->fetchAll();        
+
+}
+
+/*
     Récupère la permission et les droits associès au statut
     ~ statut: id statut
     @return [id, libelle, did, droit]
@@ -2028,6 +2125,41 @@ function newStatuts($PDO, $statuts)
     $curseur = $PDO->prepare($req);
     $curseur->execute();
     
+    return $curseur->errorInfo()[2];;      
+
+}
+
+/*
+    Ajoute le tournoi tournoi à l'agenda
+    tournoi: []
+    @return PDO error
+*/
+function newEvenement($PDO, $evenement)
+{
+
+    $evenement = json_decode($evenement, true)[0];
+    
+    $req = "INSERT INTO `evenement` 
+            (`id`, `titre`, `prix`, `dteDebut`, `dteFin`, `lieu`, `type`, `paires`) VALUES 
+            (NULL, :titre, :prix, :dteDebut, :dteFin, :lieu, :ety, :paire);
+           ";
+
+    switch ($evenement['ety'])      
+    {
+        case 1:
+            
+        $req .= "INSERT INTO `tournoi` 
+                (`id`, `evenementId`, `repas`, `apero`, `imp`, `niveauRequis`, `DC`) VALUES
+                (NULL, last_insert_id(), :repas, :apero, :imp, :niveauRequis, :dc);";
+
+        break;
+    }
+
+
+
+    $curseur = $PDO->prepare($req);
+    $curseur->execute($evenement);
+
     return $curseur->errorInfo()[2];;      
 
 }

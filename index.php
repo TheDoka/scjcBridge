@@ -33,6 +33,7 @@ if (!logged())
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.1/css/bootstrap-select.css" />
             <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.1/js/bootstrap-select.min.js"></script>
 
+
          <!-- FontAwesome -->    
             <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
 
@@ -287,10 +288,15 @@ if (!logged())
                             */
                             $('.fc-event').bind('contextmenu', function(e){
                                 e.preventDefault();
-                                showModal();
+                                editEventModal();
                             });
 
                             $('.fc-today-button').after('<select id="trieEvenement" class="selectpicker" multiple data-live-search="false"></select>');
+                            if (havePermission(17)) // Permission 17: Créer des événements
+                            {
+                                $('.fc-today-button').after('<button id="newEvent" class="btn btn-primary">Ajouter un évenement</button>');
+
+                            }
                             let data = getEty(-1);
                             let last = "";
 
@@ -308,7 +314,6 @@ if (!logged())
                     },
                     eventMouseEnter: function( event, jsEvent, view )
                     {
-
                         current_event = event.event;
                     }
                 });
@@ -331,21 +336,242 @@ if (!logged())
                 });
 
 
-                function showModal(e) {
+                $(document).on('click', '#newEvent', function() {
+
+                    /* 
+                        Get the additionnal event info
+                    */
+                    let lieux = JSON.parse(getLieux());
+                    let niveaux = getAllNiveaux(); 
+                    /* 
+                        Empty form
+                    */
+                    $('#newEventLieuEdit').empty();
+                    $('#newEventNR').empty();
+
+                    /*
+                        Populate Lieux
+                    */
+                    lieux.forEach(lieu => {
+                        $('#newEventLieuEdit').append($('<option>', { 
+                            id: lieu['id'],
+                            text : lieu['commune'] + ' ' + lieu['adresse'], 
+                        }));
+                    });
+
+                    /*
+                        Populate Niveaux
+                    */
+                    niveaux.forEach(niveau => {
+                        $('#newEventNR').append($('<option>', { 
+                            id: niveau['idNiveau'],
+                            text : niveau['numeroSerie'], 
+                            }));
+                        });
                     
+
+                    $('#newEventLieuEdit').selectpicker("refresh");
+                    $('#newEventTypeEdit').selectpicker("refresh");
+                    $('#newEventNR').selectpicker("refresh");
+                    
+                    $('#newDteDebutEdit').val(moment(new Date($.now())).format("YYYY-MM-DDTHH:mm:ss"));
+                
+                    $("#newEventModal").modal('show');
+                }); 
+
+                $('#newEventTypeEdit').on('change', function(e){
+
+                    $('#newTournoi').hide(); 
+                    $('#newPartieLibre').hide(); 
+                    $('#newCompetition').hide(); 
+                    let niveaux = [];
+
+                    switch (parseInt($(this).children(":selected").attr("id")))
+                    {
+                        case 1: $('#newTournoi').show();      
+                            $('#newEventNR').empty();
+                            niveaux = getAllNiveaux(); 
+
+                            niveaux.forEach(niveau => {
+                                $('#newEventNR').append($('<option>', { 
+                                    id: niveau['idNiveau'],
+                                    text : niveau['numeroSerie'], 
+                                    }));
+                                });
+                            $('#newEventNR').selectpicker("refresh");
+
+                            $('#newTournoi').show();  
+                        
+                        break;
+                        case 2:    
+                        
+                            $('#newEventNRPT').empty();
+                            niveaux = getAllNiveaux();
+
+                            niveaux.forEach(niveau => {
+                                $('#newEventNRPT').append($('<option>', { 
+                                    id: niveau['idNiveau'],
+                                    text : niveau['numeroSerie'], 
+                                    }));
+                                });
+                            $('#newEventNRPT').selectpicker("refresh");
+
+                            $('#newPartieLibre').show();  
+                            
+                        break;
+
+                        case 3: $('#newCompetition').show();     
+                        
+                            $('#newEventStade').empty();
+                            $('#newEventCatComp').empty();
+                            $('#newEventDivison').empty();
+                            $('#newEventPublic').empty();
+
+                            let stades = getAllStade();
+                            let categories = getAllCategorie();
+                            let divisions = getAllDivison();
+                            let publics = getAllPublic();
+
+                            stades.forEach(stade => {
+                                $('#newEventStade').append($('<option>', { 
+                                    id: stade['id'],
+                                    text : stade['libelle'], 
+                                    }));
+                                });
+                            $('#newEventStade').selectpicker("refresh");
+                            
+                            categories.forEach(categorie => {
+                                $('#newEventCatComp').append($('<option>', { 
+                                    id: categorie['id'],
+                                    text : categorie['libelle'], 
+                                    }));
+                                });
+                            $('#newEventCatComp').selectpicker("refresh");
+                            
+                            divisions.forEach(division => {
+                                $('#newEventDivison').append($('<option>', { 
+                                    id: division['id'],
+                                    text : division['libelle'], 
+                                    }));
+                                });
+                            $('#newEventDivison').selectpicker("refresh"); 
+                            
+                            publics.forEach(public => {
+                                $('#newEventPublic').append($('<option>', { 
+                                    id: public['id'],
+                                    text : public['libelle'], 
+                                    }));
+                                });
+                            $('#newEventPublic').selectpicker("refresh");
+
+                        break;
+
+                        case 4: $('#newEvenement').show();       break;
+                        case 5: $('#newSpecial').show();         break;
+                    }
+                });
+
+                $('#confirmNewEvent').on('click', function(){
+
+                    // Get all form property:
+                    let ety = $('#newEventTypeEdit').children(":selected").attr("id");
+
+                    switch (parseInt(ety))
+                    {
+                        case 1:  
+                            
+                                            
+                            var tournoi = [{
+                                
+                                titre: $('#newEventNameEdit').val(),
+                                dteDebut: $('#newDteDebutEdit').val(),
+                                dteFin: $('#newDteFinEdit').val(),
+                                prix: $('#newEventPrixEdit').val(),
+                                lieu: $('#newEventLieuEdit').children(":selected").attr("id"),
+                                paire: $('#newEventPaireEdit').val(),
+
+                                niveauRequis: $('#newEventNR').children(":selected").attr("id"),
+                                repas: $('#newEventRepas').val()=='Non'?0:1,
+                                apero: $('#newEventApero').val()=='Non'?0:1,
+                                imp: $('#newEventIMP').val()=='Non'?0:1,
+                                dc: $('#newEventDC').val()=='Non'?0:1,
+
+                                ety: 1,
+
+                            }];
+
+ 
+                            if (confirm("Confirmer l'ajout?"))
+                            {
+                                newEvenement(tournoi);
+                            }
+
+                        break;
+                        case 2:    
+                        
+                            var tournoi = [{
+                                
+                                titre: $('#newEventNameEdit').val(),
+                                dteDebut: $('#newDteDebutEdit').val(),
+                                dteFin: $('#newDteFinEdit').val(),
+                                prix: $('#newEventPrixEdit').val(),
+                                lieu: $('#newEventLieuEdit').children(":selected").attr("id"),
+                                paire: $('#newEventPaireEdit').val(),
+
+                                niveauRequis: $('#newEventNR').children(":selected").attr("id"),
+                                repas: $('#newEventRepas').val()=='Non'?0:1,
+                                apero: $('#newEventApero').val()=='Non'?0:1,
+                                imp: $('#newEventIMP').val()=='Non'?0:1,
+                                dc: $('#newEventDC').val()=='Non'?0:1,
+
+                                ety: 1,
+
+                            }];
+
+ 
+                            if (confirm("Confirmer l'ajout?"))
+                            {
+                                newEvenement(tournoi);
+                            }
+
+                            $('#newEventNRPT').selectpicker("refresh");
+
+                            
+                        break;
+
+                        case 3: $('#newCompetition').show();     
+                        
+                            $('#newEventStade').empty();
+                            $('#newEventCatComp').empty();
+                            $('#newEventDivison').empty();
+                            $('#newEventPublic').empty();
+
+
+                        break;
+
+                        case 4: $('#newEvenement').show();       break;
+                        case 5: $('#newSpecial').show();         break;
+                    }
+                });
+
+                function editEventModal(e) {
+
                     if (havePermission(7)) // Droit de gestion d'évenements
                     {
+                        
                         /* 
                             Get the additionnal event info
                         */
                         let additionnal = JSON.parse(getEvent(current_event['id']));
                         let lieux = JSON.parse(getLieux());
                         let registered = JSON.parse(getPlayersRegisteredForEvent(current_event['id']));
+                        let eventTypes = getEty(-1);
 
                         /*
                             Empty form
                         */
                         $('#eventParticipants tbody').empty();
+                        $('#eventTypeEdit').empty();
                         $('#eventLieuEdit').empty();
 
                         /*
@@ -357,7 +583,15 @@ if (!logged())
                                 text : lieu['commune'] + ' ' + lieu['adresse'], 
                             }));
                         });
-
+                        /*
+                            Populate Ety
+                        */
+                        eventTypes.forEach(ety => {
+                            $('#eventTypeEdit').append($('<option>', { 
+                                id: ety['id'],
+                                text : ety['libelle'], 
+                            }));
+                        });
                         /*
                             Populate table Participants
                         */
@@ -408,15 +642,16 @@ if (!logged())
 
                             }
                         }
-                        
+                        console.log();
                         $('#' + additionnal['lieu']).prop('selected', true);
+                        $('#' + additionnal['type'][0]).prop('selected', true);
                         $('#eventLieuEdit').selectpicker("refresh");
+                        $('#eventTypeEdit').selectpicker("refresh");
                         
 
                         $('#eventPaireEdit').val(additionnal['paires']).change();
 
                         
-
                         $('#eventNameEdit').val(additionnal['titre']);
                         $('#eventPrixEdit').val(additionnal['prix']);
 
@@ -424,27 +659,16 @@ if (!logged())
                         $('#dteFinEdit').val(moment(current_event['end']).format("YYYY-MM-DDTHH:mm:ss"));
                     
                         $("#eventEditModal").modal('show');
+                        $(".deleteEventButton").attr('id', additionnal['type']);
                     }
                 }
 
 
-                $('#deleteEventButton').on('click', function () {
+                $('.deleteEventButton').on('click', function (e) {
                 
                     if (confirm("Êtes vous sûr de vouloir supprimer l'évenement? Cette action est irréversible!"))
                     {
-
-                        let ety = 3;
-
-                        if (current_event.classNames.includes('tournoi'))
-                        {
-                            ety = 1;
-                        } else {
-                            if (current_event.classNames.includes('partieLibre'))
-                            {
-                                ety = 2;
-                            }
-                        }
-
+                        let ety = e.target.id;
                         deleteEvent(current_event['id'], ety);
                         document.location.reload();
                     }
@@ -471,9 +695,9 @@ if (!logged())
                             prix:    $('#eventPrixEdit').val(),
                             lieu:    $('#eventLieuEdit').find('option:selected').attr('id'),
                             paires:  $('#eventPaireEdit').val(),
+                            ety:    $('#eventTypeEdit').find('option:selected').attr('id'),
                         };
                         
-                        console.log(event);
                         updateEvent(event);
                         document.location.reload();
                     }
@@ -490,6 +714,8 @@ if (!logged())
                     doc.save($('#eventNameEdit').val() + "-" + moment(new Date()).format('DD/MM/YYYY') + ".pdf");
  
                 });
+
+
 
     });
 
@@ -509,6 +735,9 @@ if (!logged())
         font-size: 1.25em;
     }
 
+    .bootstrap-select .dropdown-toggle .filter-option {
+        position: relative;
+    }
 </style>
 
     <body>
@@ -522,6 +751,8 @@ if (!logged())
 
                     <div class="modal-header">
                         <input id="eventNameEdit" class="form-control border-primary" type="text" placeholder="Nom de l'évenement">
+                        <select id="eventTypeEdit"  class="select w-25"></select>                          
+                       
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
@@ -538,7 +769,8 @@ if (!logged())
                             <div class="input-group-prepend">
                                 <i class="input-group-text fa fa-trophy" aria-hidden="true"></i>
                             </div>
-                            <input id="eventPrixEdit" type="text" class="form-control date" placeholder="Prix" aria-label="Prix" aria-describedby="basic-addon1">                            
+                            <input id="eventPrixEdit" type="text" class="form-control date" placeholder="Prix" aria-label="Prix" >                            
+                       
                         </div>
 
                         <div class="input-group mb-3">
@@ -546,17 +778,17 @@ if (!logged())
                             <div class="input-group-prepend">
                                 <label class="input-group-text" for="eventLieuEdit">Lieu</label>
                             </div>
-                            <select id="eventLieuEdit" style="margin-left:1;" class="select"></select>                            
+                            <select id="eventLieuEdit"  class="select"></select>                            
 
                             <div class="input-group-prepend">
                                 <label class="input-group-text" for="eventPaireEdit">Paire</label>
                             </div>
-                            
-                            <select id="eventPaireEdit" style="margin-left:1;" class="select w-25">
+                            <select id="eventPaireEdit"  class="select w-25">
                                 <option>1</option>
                                 <option>2</option>
                                 <option>4</option>
                             </select>
+
                         </div>
 
                         <div class="mb-2">
@@ -578,13 +810,201 @@ if (!logged())
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
-                        <button id="deleteEventButton" type="button" class="btn btn-danger">Supprimer</button>
+                        <button id="" type="button" class="btn btn-danger deleteEventButton">Supprimer</button>
                         <button id="saveEditEventButton" type="button" class="btn btn-primary">Sauvegarder les modifications</button>
                     </div>
                 </div>
             </div>
         </div>
+
+
+        <!-- Modal for new event -->
+        <div class="modal fade" id="newEventModal" tabindex="-1" role="dialog" aria-labelledby="basicModal" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+
+                    <div class="modal-header">
+                        <input id="newEventNameEdit" class="form-control border-primary" type="text" placeholder="Nom de l'évenement">
+                        <select id="newEventTypeEdit"  class="select w-25">
+                            <option id="1">Tournoi</option>
+                            <option id="2">Partie Libre</option>
+                            <option id="3">Compétition</option>
+                            <option id="4">Evenement</option>
+                            <option id="4">Spécial</option>
+
+                        </select>                          
+                    
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+
+                    <div class="modal-body">
+
+                        <div class="input-group mb-3">
+                            <input class="form-control" type="datetime-local" id="newDteDebutEdit">
+                            <input class="form-control" type="datetime-local" id="newDteFinEdit">
+                        </div>
+
+                        <div class="input-group mb-3">
+                            <div class="input-group-prepend">
+                                <i class="input-group-text fa fa-trophy" aria-hidden="true"></i>
+                            </div>
+                            <input id="newEventPrixEdit" type="text" class="form-control date" placeholder="Prix" aria-label="Prix" >                            
+                    
+                        </div>
+
+                        <div class="input-group mb-3">
+
+                            <div class="input-group-prepend">
+                                <label class="input-group-text" for="newEventLieuEdit">Lieu</label>
+                            </div>
+                            <select id="newEventLieuEdit" class="select"></select>                            
+
+                            <div class="input-group-prepend">
+                                <label class="input-group-text" for="newEventPaireEdit">Paire</label>
+                            </div>
+                            
+                            <select id="newEventPaireEdit" class="select w-25">
+                                <option>1</option>
+                                <option>2</option>
+                                <option>4</option>
+                            </select>
+                        </div>
+    
+                        <!-- Tournoi -->
+                        <div id="newTournoi">
+                                
+                            <div class="input-group mb-3">
+
+                                <div class="input-group-prepend">
+                                    <label class="input-group-text">Repas</label>
+                                </div>
+                                <select id="newEventRepas" class="select w-25">
+                                    <option>Non</option>
+                                    <option>Oui</option>
+                                </select>
+
+                                <div class="input-group-prepend">
+                                    <label class="input-group-text">Apéro</label>
+                                </div>
+                                <select id="newEventApero"  class="select w-25">
+                                    <option>Non</option>
+                                    <option>Oui</option>
+                                </select>
+
+                            </div>     
+                            <div class="input-group mb-3">
+
+                                <div class="input-group-prepend">
+                                    <label class="input-group-text">IMP</label>
+                                </div>
+                                <select id="newEventIMP" class="w-25">
+                                    <option>Non</option>
+                                    <option>Oui</option>
+                                </select>
+
+                                <div class="input-group-prepend">
+                                    <label class="input-group-text">Niveau Requis</label>
+                                </div>
+                                <select id="newEventNR" class="w-25">
+                                    <option>Non</option>
+                                    <option>Oui</option>
+                                </select>
         
+                            </div>     
+                            
+                            <div class="input-group mb-3">
+                                <div class="input-group-prepend">
+                                        <label class="input-group-text">DC</label>
+                                    </div>
+                                    <select id="newEventDC" class="w-25">
+                                        <option>Non</option>
+                                        <option>Oui</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                        
+                        <!-- Partie Libre -->
+                        <div style="display: none" id="newPartieLibre">
+
+                            <div class="input-group mb-3">
+
+                                <div class="input-group-prepend">
+                                    <label class="input-group-text">Niveau Requis</label>
+                                </div>
+                                <select id="newEventNRPT">
+                                    <option>Non</option>
+                                    <option>Oui</option>
+                                </select>
+
+                            </div>
+
+
+                        </div>
+
+                        <!-- Compétition -->
+                        <div style="display: none" id="newCompetition">
+
+                            <div class="input-group mb-3">
+
+                                <div class="input-group-prepend">
+                                    <label class="input-group-text">Catégorie</label>
+                                </div>
+                                <select id="newEventCatComp" class="w-25"></select>
+
+                                <div class="input-group-prepend">
+                                    <label class="input-group-text">Divison</label>
+                                </div>
+                                <select id="newEventDivison" class="w-25"></select>
+
+                            </div>
+                            
+                            <div class="input-group mb-3">
+
+                                
+                                <div class="input-group-prepend">
+                                    <label class="input-group-text">Stade</label>
+                                </div>
+                                <select id="newEventStade" class="w-25"></select>
+                                
+                                <div class="input-group-prepend">
+                                    <label class="input-group-text">Public</label>
+                                </div>
+                                <select id="newEventPublic" class="w-25"></select>
+
+                            </div>
+
+
+                        </div>
+
+                        <!-- Spécial -->
+                        <div style="display: none" id="newSpecial">
+
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <td>#</td>
+                                        <td>Nom</td>
+                                    </tr>
+                                </thead>
+                            </table>
+
+
+                        </div>
+
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
+                            <button id="confirmNewEvent" type="button" class="btn btn-primary">Importer l'évenement</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
         <!-- Content -->
         <div class="wrapper d-flex align-items-stretch">
             

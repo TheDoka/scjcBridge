@@ -829,6 +829,59 @@ function deleteStatut(sid)
         
 }
 
+function getAllStade()
+{
+
+    return JSON.parse($.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'getAllStade',
+        },
+    }).responseText);
+        
+}
+function getAllDivison()
+{
+
+    return JSON.parse($.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'getAllDivison',
+        },
+    }).responseText);
+        
+}
+function getAllPublic()
+{
+
+    return JSON.parse($.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'getAllPublic',
+        },
+    }).responseText);
+        
+}
+function getAllCategorie()
+{
+
+    return JSON.parse($.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'getAllCategorie',
+        },
+    }).responseText);
+        
+}
+
 function deletePermStatut(sid, did)
 {
 
@@ -855,6 +908,21 @@ function newPermStatut(permStatut)
         data:{
             function: 'newPermStatut',
             permStatut: JSON.stringify(permStatut)
+        },
+    }).responseText);
+        
+}
+
+function newEvenement(evenement)
+{
+
+    return JSON.parse($.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'newEvenement',
+            evenement: JSON.stringify(evenement)
         },
     }).responseText);
         

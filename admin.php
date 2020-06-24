@@ -1,7 +1,6 @@
 <?php 
 
 include('assets/php/utils.php');
-$_POST['statut'] = "admin";
 if (!logged())
 {
     echo "<script>alert(\"Vous n'êtes pas connecté, vous allez être redirigé vers la page de connexion.\"); window.location = 'login.php'; </script>";
@@ -50,9 +49,31 @@ if (!logged())
         <script type="text/javascript">
 
 
-            let imported_ = [];
-
             $(document).ready(function(){
+
+                var aid = <?php echo intval($_COOKIE['logged']) ?>;
+                var user = getUser(aid);
+                var permissionsJoueur = []; 
+                var tmpPermissionsJoueur = gePermissionStatut(user['idStatut']);
+                tmpPermissionsJoueur.forEach(permission => {
+                    permissionsJoueur.push(parseInt(permission['did']));
+                });  
+                console.log(permissionsJoueur);
+                if (havePermission(6))    // Permission 6: Droit accès de base
+                {
+                    $('#gestionBase').show();
+                } else {
+                    document.location = 'index.php';
+                }
+                /*
+                    Retourne si l'utilisateur à la permission
+                */
+                function havePermission(droit)
+                {
+                    return permissionsJoueur.includes(droit);
+                }
+
+                let imported_ = [];
 
 
                 var tableJoueurs = $('#tableJoueurs').DataTable({
@@ -815,6 +836,10 @@ if (!logged())
             min-width: 50%;
             min-height: 50%;
         }
+
+        .bootstrap-select .dropdown-toggle .filter-option {
+            position: relative;
+        }
     </style>
 
     <body>
@@ -927,13 +952,9 @@ if (!logged())
                         <a href="profil.php"><span class="fa fa-gift mr-3"></span> Profil / Partenaires </a>
                     </li>
 
-                    <?php if ($_POST['statut'] == "admin")
-                    {
-                        echo '<li class="active">
-                                <a href="admin.php"><span class="fa fa-table mr-3"></span>Gestion administrateur</a>
-                              </li>';
-                    }
-                    ?>
+                    <li class="active">
+                        <a style="display: none" id="gestionBase" href="admin.php"><span class="fa fa-table mr-3active"></span>Gestion administrateur</a>
+                    </li>
 
                     <li>
                         <a href="login.php?logoff"><span class="fa fa-sign-out mr-3"></span> Se déconnecter</a>

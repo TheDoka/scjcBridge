@@ -442,7 +442,7 @@ if (!logged())
                             deletePaireIsolee(id);
                         } else {
                             // Desinscription de paire
-                            if (confirm("Êtes-vous sûr de vouloir vous desinscrire de l'évenement?"))
+                            if (!$(this).hasClass('competition') && !$(this).hasClass('paireIsolee') && confirm("Êtes-vous sûr de vouloir vous desinscrire de l'évenement?"))
                             {
 
                                 let error = unregisterPaire(id, eid, aid);
