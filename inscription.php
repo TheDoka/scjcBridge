@@ -106,7 +106,7 @@ if (!logged())
             var statut = user['statut'];
             var anom = user['nom'];
             var permissionsJoueur = []; 
-            var tmpPermissionsJoueur = gePermissionStatut(user['idStatut']);
+            var tmpPermissionsJoueur = getPermissionStatut(user['idStatut']);
             tmpPermissionsJoueur.forEach(permission => {
                 permissionsJoueur.push(parseInt(permission['did']));
             });  
@@ -1224,6 +1224,7 @@ if (!logged())
             function maSituationInscrits(data)
             {
 
+                
                 // I.Id, P.pid as NumPaire, A.id, A.nom, A.prenom
 
                 var inscrit = false;
@@ -1377,7 +1378,7 @@ if (!logged())
                                     
                                 }
 
-                                if (havePermission(11)) // Permission 11: Désinscrire un joueur
+                                if (havePermission(12)) // Permission 12: Désinscrire un joueur
                                 {
                                     option += `<button id='${pid}' type='button' class='btn btn-danger desinscription evenement'>Desincrire</button>`;
                                 }

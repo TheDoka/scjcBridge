@@ -80,7 +80,7 @@ if (!logged())
 
                 var aid = <?php echo intval($_COOKIE['logged']) ?>;
                 var user = getUser(aid);
-                var tmpPermissionsJoueur = gePermissionStatut(user['idStatut']);
+                var tmpPermissionsJoueur = getPermissionStatut(user['idStatut']);
                 var permissionsJoueur = []; 
                 tmpPermissionsJoueur.forEach(permission => {
                     permissionsJoueur.push(parseInt(permission['did']));
@@ -113,7 +113,7 @@ if (!logged())
                         function: 'getEvents',
                     }, function(data) {
                         events = JSON.parse(data);
-
+                        console.log(data);
                     });
                     
                     /*
@@ -130,7 +130,7 @@ if (!logged())
                     });
 
                     let permissionsEvents = getArrayOfPermissions();              
-                                     
+
                     events.forEach(event => {
 
                         bcColor = permissionsEvents[event['type']][0]['color'];
@@ -267,7 +267,7 @@ if (!logged())
                         console.log(i);
                         console.log(event.classNames.length);
                         // Si l'utilisateur à les droits et que l'évenement n'est pas passé ou que l'évenemnt n'est pas une finale
-                        if (i >= event.classNames.length && !passed)
+                        if (i >= event.classNames.length && !passed || havePermission(18)) // Permission 18: Accéder à n'importe quel événement 
                         {
 
                             if (confirm("Description de l'évenement?"))
@@ -384,6 +384,7 @@ if (!logged())
                     $('#newTournoi').hide(); 
                     $('#newPartieLibre').hide(); 
                     $('#newCompetition').hide(); 
+                    $('#newSpecial').hide();  
                     let niveaux = [];
 
                     switch (parseInt($(this).children(":selected").attr("id")))
@@ -466,8 +467,26 @@ if (!logged())
 
                         break;
 
-                        case 4: $('#newEvenement').show();       break;
-                        case 5: $('#newSpecial').show();         break;
+                        case 4: 
+                            $('#newEvenement').show();       
+                        break;
+                        case 5: 
+                            let events = getEvents();
+                            $('#tableEventRaccorde').empty(); 
+                            events.forEach(event => {
+
+                                $('#tableEventRaccorde').append(
+                                    `<tr>
+                                        <td><a href="inscription.php?eid=${event[0]}">${event['titre']}</a></td>
+                                        <td>${event['dteDebut']}</td>
+                                        <td><input id="${event[0]}" type="checkbox" class="raccorderAvec"></input></td>
+                                    </tr>`
+                                );
+
+                            });
+
+                            $('#newSpecial').show();      
+                        break;
                     }
                 });
 
@@ -475,21 +494,22 @@ if (!logged())
 
                     // Get all form property:
                     let ety = $('#newEventTypeEdit').children(":selected").attr("id");
+                    let res = "";
 
                     switch (parseInt(ety))
                     {
-                        case 1:  
+                        case 1: // Tournoi
                             
                                             
                             var tournoi = [{
-                                
+                                                    
                                 titre: $('#newEventNameEdit').val(),
                                 dteDebut: $('#newDteDebutEdit').val(),
                                 dteFin: $('#newDteFinEdit').val(),
                                 prix: $('#newEventPrixEdit').val(),
                                 lieu: $('#newEventLieuEdit').children(":selected").attr("id"),
                                 paire: $('#newEventPaireEdit').val(),
-
+                                
                                 niveauRequis: $('#newEventNR').children(":selected").attr("id"),
                                 repas: $('#newEventRepas').val()=='Non'?0:1,
                                 apero: $('#newEventApero').val()=='Non'?0:1,
@@ -499,17 +519,18 @@ if (!logged())
                                 ety: 1,
 
                             }];
-
- 
+                            
+                            console.log(tournoi);
                             if (confirm("Confirmer l'ajout?"))
                             {
-                                newEvenement(tournoi);
+                                res = newEvenement(tournoi);
                             }
 
                         break;
-                        case 2:    
+
+                        case 2: // Partie libre   
                         
-                            var tournoi = [{
+                            var partieLibre = [{
                                 
                                 titre: $('#newEventNameEdit').val(),
                                 dteDebut: $('#newDteDebutEdit').val(),
@@ -519,39 +540,102 @@ if (!logged())
                                 paire: $('#newEventPaireEdit').val(),
 
                                 niveauRequis: $('#newEventNR').children(":selected").attr("id"),
-                                repas: $('#newEventRepas').val()=='Non'?0:1,
-                                apero: $('#newEventApero').val()=='Non'?0:1,
-                                imp: $('#newEventIMP').val()=='Non'?0:1,
-                                dc: $('#newEventDC').val()=='Non'?0:1,
 
-                                ety: 1,
+                                ety: 2,
 
                             }];
 
  
                             if (confirm("Confirmer l'ajout?"))
                             {
-                                newEvenement(tournoi);
+                                newEvenement(partieLibre);
                             }
-
-                            $('#newEventNRPT').selectpicker("refresh");
-
                             
                         break;
 
-                        case 3: $('#newCompetition').show();     
-                        
-                            $('#newEventStade').empty();
-                            $('#newEventCatComp').empty();
-                            $('#newEventDivison').empty();
-                            $('#newEventPublic').empty();
+                        case 3: // Compétition
 
+                            var competition = [{
+                                
+                                titre: $('#newEventNameEdit').val(),
+                                dteDebut: $('#newDteDebutEdit').val(),
+                                dteFin: $('#newDteFinEdit').val(),
+                                prix: $('#newEventPrixEdit').val(),
+                                lieu: $('#newEventLieuEdit').children(":selected").attr("id"),
+                                paire: $('#newEventPaireEdit').val(),
+
+                                catComp: $('#newEventCatComp').children(":selected").attr("id"),
+                                division: $('#newEventDivison').children(":selected").attr("id"),
+                                stade: $('#newEventStade').children(":selected").attr("id"),
+                                public: $('#newEventPublic').children(":selected").attr("id"),
+
+                                ety: 3,
+
+                            }];
+
+ 
+                            if (confirm("Confirmer l'ajout?"))
+                            {
+                                newEvenement(competition);
+                            }
 
                         break;
 
-                        case 4: $('#newEvenement').show();       break;
-                        case 5: $('#newSpecial').show();         break;
+                        case 4: // Evenement
+  
+                            var evenement = [{
+                                            
+                                titre: $('#newEventNameEdit').val(),
+                                dteDebut: $('#newDteDebutEdit').val(),
+                                dteFin: $('#newDteFinEdit').val(),
+                                prix: $('#newEventPrixEdit').val(),
+                                lieu: $('#newEventLieuEdit').children(":selected").attr("id"),
+                                paire: $('#newEventPaireEdit').val(),
+
+                                ety: 4,
+                            }];
+
+                            if (confirm("Confirmer l'ajout?"))
+                            {
+                                res = newEvenement(evenement);
+                            }
+
+                        break;
+
+
+                        case 5: // Spécial
+                        
+                            let raccordes = [];
+                            $('.raccorderAvec:checkbox:checked').each(function () {
+                                raccordes.push($(this).attr('id'));
+                            }); 
+
+                            var special = [{
+                                                    
+                                titre: $('#newEventNameEdit').val(),
+                                dteDebut: $('#newDteDebutEdit').val(),
+                                dteFin: $('#newDteFinEdit').val(),
+                                prix: $('#newEventPrixEdit').val(),
+                                lieu: $('#newEventLieuEdit').children(":selected").attr("id"),
+                                paire: $('#newEventPaireEdit').val(),
+                                
+                                raccordes: raccordes,
+                                ety: 5,
+                            }];
+
+                            
+                            if (confirm("Confirmer l'ajout?"))
+                            {
+                                res = newEvenement(special);
+                            }
+                            
+
+                        break;
                     }
+
+
+                    check(res);
+
                 });
 
                 function editEventModal(e) {
@@ -669,8 +753,8 @@ if (!logged())
                     if (confirm("Êtes vous sûr de vouloir supprimer l'évenement? Cette action est irréversible!"))
                     {
                         let ety = e.target.id;
-                        deleteEvent(current_event['id'], ety);
-                        document.location.reload();
+                        check(deleteEvent(current_event['id'], ety));
+                
                     }
                 });
                 
@@ -697,9 +781,9 @@ if (!logged())
                             paires:  $('#eventPaireEdit').val(),
                             ety:    $('#eventTypeEdit').find('option:selected').attr('id'),
                         };
-                        
-                        updateEvent(event);
-                        document.location.reload();
+
+                        check(updateEvent(event));
+
                     }
 
 
@@ -715,6 +799,17 @@ if (!logged())
  
                 });
 
+
+                function check(data)
+                {
+                    if (!data)
+                    {
+                        alert('Succès');
+                        document.location.reload();
+                    } else {
+                        alert('Une erreur est survenue.\n' + data);
+                    }
+                }
 
 
     });
@@ -830,7 +925,7 @@ if (!logged())
                             <option id="2">Partie Libre</option>
                             <option id="3">Compétition</option>
                             <option id="4">Evenement</option>
-                            <option id="4">Spécial</option>
+                            <option id="5">Spécial</option>
 
                         </select>                          
                     
@@ -982,13 +1077,15 @@ if (!logged())
                         <!-- Spécial -->
                         <div style="display: none" id="newSpecial">
 
-                            <table class="table">
+                            <table id="tableEventRaccorde" style="max-height:300px" class="table table-sm table-responsive">
                                 <thead>
                                     <tr>
-                                        <td>#</td>
                                         <td>Nom</td>
+                                        <td>Date début</td>
+                                        <td>Raccorder</td>
                                     </tr>
                                 </thead>
+
                             </table>
 
 

@@ -101,7 +101,9 @@ if (sizeof($_GET) > 0)
                             $.cookie('logged', data['id']);
                             $.cookie('nom', data['nom']);
                             $.cookie('prenom', data['prenom']);
-                            setUserLoggedState(data['id'], true);
+                            
+                            // Protection anti-double login, pas très éfficace alors desactivée
+                            //setUserLoggedState(data['id'], true);
 
                             window.location = 'index.php';
                         } else {

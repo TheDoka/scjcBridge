@@ -21,7 +21,7 @@ if (isset($_POST['function']))
 				echo getUser(createPDO(), $_POST['aid']);
             break;
             case 'importEvents': 
-				echo importEvents(createPDO(), $_POST['events'], $_POST['type']);
+				echo importEvents(createPDO(), $_POST['events']);
             break;
             case 'getEvents': 
 				echo json_encode(getEvents(createPDO()));
@@ -70,7 +70,7 @@ if (isset($_POST['function']))
             break;
             case 'sendMail':
                 require_once('../php/mail.php');
-                return sendMail($_POST['mailContent']);
+                //return sendMail($_POST['mailContent']);
             break;
             case 'createRegistrationNotificationMailForEvent':
                 echo json_encode(createRegistrationNotificationMailForEvent(createPDO(), $_POST['eid'], $_POST['ids']));
@@ -160,7 +160,6 @@ if (isset($_POST['function']))
             case 'getAllStade':
                 echo json_encode(getAllStade(createPDO()));
             break;
-
             case 'updateUserInfos':
                 echo updateUserInfos(createPDO(), $_POST['userInfos']);
             break;
@@ -179,8 +178,8 @@ if (isset($_POST['function']))
             case 'getDroits':
                 echo json_encode(getDroits(createPDO()));
             break;
-            case 'gePermissionStatut':
-                echo json_encode(gePermissionStatut(createPDO(), $_POST['statut']));
+            case 'getPermissionStatut':
+                echo json_encode(getPermissionStatut(createPDO(), $_POST['statut']));
             break;
             case 'getEty':
                 echo json_encode(getEty(createPDO(), $_POST['ety']));
@@ -373,111 +372,132 @@ function getUser($PDO, $aid)
     return json_encode($unClient);
 }
 
-function importEvents($PDO, $evenements, $type)
+function importEvents($PDO, $evenements)
 {
     $req = "";
     $curr= "";
     $secondStep = "";
+    // Raccordés
+    $raccorde = [];
 
     // We skip one cause it's the header
-    for ($i=1; $i < sizeof($evenements['data']) -1 ; $i++) { 
+    for ($i=1; $i < sizeof($evenements['data']) ; $i++) { 
         
         // Pour chaque ligne on coupe à chaque virgule
             $curr = explode(',', $evenements['data'][$i][0]);
- 
+            print_r($curr);
         /* 
-
             Common:  
-                Dte début    [0] => 1/6/2020
-                Her début    [1] => 9:00
-                Dte fin      [2] => 1/6/2020
-                Her fin      [3] => 21:00
-                Lieu         [4] => Poitiers
-                Paires       [5] => 2
+                Type         [0] => 1
+                Groupe       [1] => 1
+                Prix         [2] => 'prix'
+                Dte début    [3] => 1/6/2020
+                Her début    [4] => 9:00
+                Dte fin      [5] => 1/6/2020
+                Her fin      [6] => 21:00
+                Lieu         [7] => Poitiers
+                Paires       [8] => 2
 
             Tournoi / Compétition: 
-                Niveau       [6] => B27
-                IMP          [7] => FALSE
+                Niveau       [9] => B27
+                IMP          [10] => FALSE
 
             Tournoi:
-                Apero        [8] => FALSE
-                Repas        [9] => FALSE
-                DC           [10] => FALSE
+                Apero        [11] => FALSE
+                Repas        [12] => FALSE
+                DC           [13] => FALSE
 
             Compétition: 
-                Catégorie    [8] =>  Open
-                Division     [9] =>  Couipe du Comite
-                Stade        [10] => Finale
-                Public       [11] =>  Seniors
+                Catégorie    [14] =>  Open
+                Division     [15] =>  Couipe du Comite
+                Stade        [16] =>  Finale
+                Public       [17] =>  Seniors
 
             #type 
-                0 : évenement
                 1 : tournoi
                 2 : partie libre
                 3 : compétition
+                4 : évenement
+                5 : spécial
         */
         
         // 1. Ajoute l'évenement 
 
-
             // Checking whether or not the time format, format should be: HH:MM:SS
-                $curr[1] = correctTimeFormat($curr[1]);
-                $curr[3] = correctTimeFormat($curr[3]);
+                $curr[4] = correctTimeFormat($curr[4]);
+                $curr[6] = correctTimeFormat($curr[6]);
 
             // Parse the date to MySQL format switching dd/mm/yyyy to yyyy/mm/dd
-                $startDate = correctDateTimeFormat($curr[0], $curr[1]);
-                $endDate = correctDateTimeFormat($curr[2], $curr[3]);
-
+                $startDate = correctDateTimeFormat($curr[3], $curr[4]);
+                $endDate = correctDateTimeFormat($curr[5], $curr[6]);
+                
             // Build the title
-                $title = makeEventTile($curr, $type);
+                $title = makeEventTile($curr, $curr[0]);
 
             // Parse each items and add to the request
 
-                $req = "INSERT INTO `evenement` 
+                $req .= "INSERT INTO `evenement` 
                         (`id`, `titre`, `prix`, `dteDebut`, `dteFin`, `lieu`, `type`, `paires`) VALUES 
-                        (NULL, '$title', NULL, '$startDate', '$endDate', '1', $type, $curr[5]);";
-
-            // Getting the evenement id
-
+                        (NULL, '$title', '$curr[2]', '$startDate', '$endDate', $curr[7], $curr[0], $curr[8]);";
+                
+                /* Si l'événement appartient à un groupe
+                if ($curr[1] != 0)
+                {
+                    // Getting the evenement id
                     $curseur = $PDO->prepare($req);
                     $curseur ->execute();
 
                     $eventId = $PDO->lastInsertId();
-            
-        // 2. Décide de si l'évenement est un tournoi, une compétition ou bien une partie libre et agis en fonction
 
-            switch ($type)
+                } else {
+                    $req .= $secondStep;
+                }
+                */
+            // 2. Décide de si l'évenement est un tournoi, une compétition ou bien une partie libre et agis en fonction
+
+            switch ($curr[0])
             {
 
                 case 1:
                     // tournoi
                     $secondStep .= "INSERT INTO `tournoi` 
-                                    (`id`, `evenementId`, `repas`, `apero`, `imp`, `niveauRequis`, `DC`) VALUES
-                                    (NULL, '$eventId', '$curr[9]', '$curr[8]', '$curr[7]', (SELECT `idNiveau` FROM `niveau` WHERE `numeroSerie` = '$curr[6]'), '$curr[10]');";
+                            (`id`, `evenementId`, `repas`, `apero`, `imp`, `niveauRequis`, `DC`) VALUES
+                            (NULL, LAST_INSERT_ID(), '$curr[11]', '$curr[12]', '$curr[10]', (SELECT `idNiveau` FROM `niveau` WHERE `numeroSerie` = '$curr[9]'), '$curr[13]');";
                 break; 
 
                 case 2:
                     // partie libre
                     $secondStep .= "INSERT INTO `partieLibre` 
-                                    (`id`, `evenementId`, `niveauRequis`)
-                                    VALUES (NULL, '$eventId', '$curr[6]');";
+                            (`id`, `evenementId`, `niveauRequis`) VALUES 
+                            (NULL, LAST_INSERT_ID(), (SELECT `idNiveau` FROM `niveau` WHERE `numeroSerie` = '$curr[9]'));
+                            ";
                 break; 
                 
                 case 3:
                     // compétition
 
                     $secondStep .= "INSERT INTO `competition` 
-                                    (`id`, `evenementId`, `catComp`, `division`, `stade`, `public`) 
-                                    VALUES (NULL, '$eventId', 1, 1, 1, 1);";
+                            (`id`, `evenementId`, `catComp`, `division`, `stade`, `public`) VALUES 
+                            (NULL, LAST_INSERT_ID(), $curr[14], $curr[15], $curr[16], $curr[17]);";
                 break;
 
+                case 5: 
+                    // Spécial
+                    
+                break;
+
+            }
+
+            // Si l'événement appartient à un groupe
+            if ($curr[1] == 0)
+            {
+                $req .= $secondStep;
             }
 
         }
 
 
-
-    $curseur = $PDO->prepare($secondStep);
+    $curseur = $PDO->prepare($req);
     $curseur ->execute();
 
     $curseur->fetch();
@@ -493,6 +513,7 @@ function makeEventTile($data, $type)
 {
 
     /*
+
         Syntaxe pour les compétitions:
             [DIVISION][PUBLIC][CATEGORIE] par [PAIRES][STADE]
     
@@ -510,8 +531,6 @@ function makeEventTile($data, $type)
     */
 
 
-    $title = "Partie Libre";
-
     switch ($type)
     {
 
@@ -519,18 +538,30 @@ function makeEventTile($data, $type)
             // tournoi
 
             $title = "Tournoi Débutant";
-            if ($data[6] != "4T")
+            if ($data[7] != "4T")
             {
-                if ($data[5] == 4) $title = "Patton par 4"; else $title = "Tournoi de régularité";
-                if ($data[7]) $title .= " (IMP)"; else $title .= "(%)";
+                if ($data[8] == 4) $title = "Patton par 4"; else $title = "Tournoi de régularité";
+                if ($data[10]) $title .= " (IMP)"; else $title .= "(%)";
             }
 
         break; 
 
+        case 2:
+            // compétition
+            $title = "Partie Libre";
+        break;
+
         case 3:
             // compétition
-            $title = "$data[9] $data[11] $data[8] par $data[5] $data[10]";
-            
+            $title = "$data[15] $data[17] $data[14] par $data[8] $data[16]";
+        break;
+                
+        case 5:
+            $title = "Spécial";
+        break;
+
+        default:
+            $title = "Événement";
         break;
 
     }
@@ -584,8 +615,13 @@ function getEvents($PDO)
     */
 
     $query = "SELECT * 
-            FROM `evenement` 
-            WHERE `id` NOT IN ($except);";
+              FROM `evenement` ";
+    
+    if ($except)
+    {
+        $query .= "WHERE `id` NOT IN ($except);";
+    }
+    
 
     $statement = $PDO->prepare($query);
     $statement->execute();
@@ -1714,13 +1750,13 @@ function updateEvent($PDO, $event)
             `dteFin`= :dteFin,
             `prix`= :prix,
             `lieu`= :lieu,
-            `paires`= :paires 
-            `type`= :ety 
+            `paires`= :paires,
+            `type`= :ety
             WHERE `id` = :id";
 
     $curseur = $PDO->prepare($req);
     $curseur->execute($event);
-
+    
     return $curseur->errorInfo()[2];
 
 }
@@ -1766,6 +1802,11 @@ function deleteEvent($PDO, $eid, $ety)
              WHERE `isolees`.`evenementId` = $eid; 
             ";
 
+    // Si l'évenement est raccordé
+    $req .= "DELETE FROM `raccorde`  
+            WHERE `raccorde`.`Beid` = $eid;";
+
+
     switch ($ety)
     {
         case 1: // Tournois
@@ -1787,6 +1828,7 @@ function deleteEvent($PDO, $eid, $ety)
 
             $req .= "DELETE FROM `raccorde`  WHERE `raccorde`.`Aeid` = $eid;";
         break;
+
     }    
 
     $req .= "DELETE 
@@ -2056,7 +2098,7 @@ function getAllCategorie($PDO)
     ~ statut: id statut
     @return [id, libelle, did, droit]
 */
-function gePermissionStatut($PDO, $statut)
+function getPermissionStatut($PDO, $statut)
 {
 
     $req = "SELECT S.libelle as statut, S.idStatut as sid, D.libelle as droit, D.id as did
@@ -2138,7 +2180,7 @@ function newEvenement($PDO, $evenement)
 {
 
     $evenement = json_decode($evenement, true)[0];
-    
+
     $req = "INSERT INTO `evenement` 
             (`id`, `titre`, `prix`, `dteDebut`, `dteFin`, `lieu`, `type`, `paires`) VALUES 
             (NULL, :titre, :prix, :dteDebut, :dteFin, :lieu, :ety, :paire);
@@ -2148,13 +2190,34 @@ function newEvenement($PDO, $evenement)
     {
         case 1:
             
-        $req .= "INSERT INTO `tournoi` 
-                (`id`, `evenementId`, `repas`, `apero`, `imp`, `niveauRequis`, `DC`) VALUES
-                (NULL, last_insert_id(), :repas, :apero, :imp, :niveauRequis, :dc);";
+            $req .= "INSERT INTO `tournoi` 
+                    (`id`, `evenementId`, `repas`, `apero`, `imp`, `niveauRequis`, `DC`) VALUES
+                    (NULL, last_insert_id(), :repas, :apero, :imp, :niveauRequis, :dc);
+                    ";
+
+        break;
+
+        case 3:
+                $req .= "INSERT INTO `competition` 
+                        (`id`, `evenementId`, `catComp`, `division`, `stade`, `public`) VALUES 
+                        (NULL, last_insert_id(), :catComp, :division, :stade, :public);
+                        ";
+        break;
+
+        case 5:
+
+            foreach ($evenement['raccordes'] as $key => $raccorde) {
+                $req .= "INSERT INTO `raccorde` 
+                        (`Aeid`, `Beid`) VALUES 
+                        (last_insert_id(), $raccorde);
+                        ";
+            }
+
+            // MySQL qui pense que si elements entrés > élements utilsés = erreur
+            unset($evenement['raccordes']);
 
         break;
     }
-
 
 
     $curseur = $PDO->prepare($req);
@@ -2364,7 +2427,7 @@ function deletePermStatut($PDO, $sid, $did)
 
 /*
     Ajoute une nouvelle permission d'évenement
-    sid: id statut
+    permEty: [permETy]
     @return PDO error
 */
 function newPermEty($PDO, $permEty)

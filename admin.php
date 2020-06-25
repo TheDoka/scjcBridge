@@ -54,11 +54,11 @@ if (!logged())
                 var aid = <?php echo intval($_COOKIE['logged']) ?>;
                 var user = getUser(aid);
                 var permissionsJoueur = []; 
-                var tmpPermissionsJoueur = gePermissionStatut(user['idStatut']);
+                var tmpPermissionsJoueur = getPermissionStatut(user['idStatut']);
                 tmpPermissionsJoueur.forEach(permission => {
                     permissionsJoueur.push(parseInt(permission['did']));
                 });  
-                console.log(permissionsJoueur);
+
                 if (havePermission(6))    // Permission 6: Droit accès de base
                 {
                     $('#gestionBase').show();
@@ -150,7 +150,6 @@ if (!logged())
                     let last = "";
 
                     data.forEach(typeEvent => {
-                        console.log(typeEvent);
                         $('#tableEty').append(
                             `<tr class="t${typeEvent[0]}">
                                 <td>${typeEvent[0]}</td>
@@ -232,10 +231,9 @@ if (!logged())
                             
                 function populateTablePermStatut()
                 {
-                    let data = gePermissionStatut(-1);
+                    let data = getPermissionStatut(-1);
 
                     data.forEach(typeEvent => {
-                        console.log(typeEvent);
                         $('#tablePermStatut').append(
                             `<tr class="s${typeEvent['sid']}">
                                 <td class="statutId" id="${typeEvent['sid']}">${typeEvent['statut']}</td>
@@ -651,7 +649,6 @@ if (!logged())
                         }));
                     });
 
-                    console.log(userInfo);
                     $('#statutJoueurEdit').val(userInfo['statut']);
                     $('#niveauJoueurEdit').val(userInfo['Niveau']);
                     
@@ -703,22 +700,21 @@ if (!logged())
 
                 });
 
-                var type = 0;
 
                 $('#confirmImport').on('click',function(e){
-                    console.log(imported_);
+
                     if (imported_.toString().length > 0) 
                     {
-                        $.post('assets/sql/interface.php',
+
+                      $.post('assets/sql/interface.php',
                             {
                                 function: 'importEvents',
                                 events: imported_,
-                                type: type
                             }, function(data) {
-                                if (data.length > 0)
+                                console.log(data);
+                                if (false && data.length > 0)
                                 {
                                     alert("Une erreur est survenue: \n" + data);
-                                    console.log(data);
                                 } else {
                                     alert("Import éffectué avec succès!")
                                 }
@@ -764,7 +760,7 @@ if (!logged())
                         imported_ = results;
 
                     // On importe les header (doit toujours être la première ligne)
-                        tdata+= "<thead><tr>";
+                        tdata += "<thead><tr>";
                         var row = data[0];
                         var cells = row.join(",").split(",");
                             
@@ -778,36 +774,21 @@ if (!logged())
                     // On importe les données du CSV
                     for(i=1;i<data.length-1;i++){
                         
-                        if (data[i][0] != ",,,,,")
-                        {
-                            tdata+= "<tr>";
-                            var row = data[i];
-                            
-                            var cells = row.join(",").split(",");
+                        tdata+= "<tr>";
+                        var row = data[i];
+                        
+                        var cells = row.join(",").split(",");
 
-                            for(j=0;j<cells.length;j++){
-                                tdata+= "<td>";
-                                tdata+= cells[j];
-                                tdata+= "</th>";
-                            }
-                            tdata+= "</tr>";
+                        for(j=0;j<cells.length;j++){
+                            tdata+= "<td>";
+                            tdata+= cells[j];
+                            tdata+= "</th>";
                         }
+                        tdata+= "</tr>";
                     }
                     // La table prends les données
                     $("#parsed_csv_list").html(tdata);
-
-                    switch(data[0][0].split(',').length)
-                    {
-                        case 12: // compétition
-                            type = 3;
-                        break;
-                        case 7: // partie libre
-                            type = 2;
-                        break;
-                        case 11: // tournoi
-                            type = 1;
-                        break;
-                    }
+                    
                 }
 
 

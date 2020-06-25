@@ -1,3 +1,7 @@
+24/05/2020:
+index.php: ajouter un nouvel évenement 
+admin.php: fix import niveau
+
 23/05/2020
 index.php: slider des évenements charge depuis la base
 		   gestion des permissions dynamique

@@ -13,6 +13,8 @@ function correctTimeFormat($data)
         if (sizeof(explode(':', $data)) < 3) // If string does not match any ss:ss:ss
         {
             return $data . ":00";
+        } else {
+            return $data;
         }
 
 }

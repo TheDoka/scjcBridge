@@ -548,17 +548,16 @@ function getEvent(eid)
 
 function updateEvent(event)
 {
-    $.post('assets/sql/interface.php',
-    {
-        function: 'updateEvent',
-        event: event,
-    }, function(data) {
-        if (data)
-        {
-            alert('Une erreur est surveneue: \n' + data);
-        }
 
-    });
+    return $.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'updateEvent',
+            event: event,
+        },
+    }).responseText;
 
 }
 
@@ -568,6 +567,7 @@ function getLieux()
     return $.ajax({
         url: 'assets/sql/interface.php',
         method:"POST",
+        async: false,
         data:{
             function: 'getLieux',
         },
@@ -769,7 +769,7 @@ function getDroits()
 
 }
 
-function gePermissionStatut(statut)
+function getPermissionStatut(statut)
 {
 
     return JSON.parse($.ajax({
@@ -777,7 +777,7 @@ function gePermissionStatut(statut)
         method:"POST",
         async: false,
         data:{
-            function: 'gePermissionStatut',
+            function: 'getPermissionStatut',
             statut: statut,
         },
     }).responseText);
@@ -1011,6 +1011,18 @@ function deletePermEty(ety, did)
             function: 'deletePermEty',
             ety: ety,
             did: did
+        },
+    }).responseText);
+}
+
+function getEvents()
+{
+    return JSON.parse($.ajax({
+        url: 'assets/sql/interface.php',
+        method:"POST",
+        async: false,
+        data:{
+            function: 'getEvents',
         },
     }).responseText);
 }
