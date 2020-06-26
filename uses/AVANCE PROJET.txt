@@ -1,3 +1,19 @@
+26/05/2020
+index.php: ajout aide/retour au club/span tuto, modal d'aide, fix de bugs
+inscription.php: fix de bugs / permissions
+admin.php: fix de bug, refonte système import
+			* fichier singulier
+			* import regroupement d'évenements
+			* fix de bugs
+tout: nettoyage code / commentage
+essais de migration... 
+
+25/05/2020
+essais de migration...
+admin.php: fix de bugs
+ 
+
+
 24/05/2020:
 index.php: ajouter un nouvel évenement 
 admin.php: fix import niveau

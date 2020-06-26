@@ -54,523 +54,1231 @@ if (!logged())
         <script type="text/javascript">
 
         $(document).ready(function(){
-
+            /*
+                Gestion de la sidebar
+            */
             $('#sidebarCollapse').on('click', function () {
                 $('#sidebar').toggleClass('active');
             });
             fullHeight();
 
-            function getCheckedIds()
-            {
-                let joueursID = [];
-
-                $('.inscrireAvec:checkbox:checked').each(function () {
-                        if ($(this).parent().hasClass('paire1'))
-                        {
-                            if ($(this).hasClass('paire'))
-                            {
-                                joueursID.push([parseInt(this.id)]);
-                            } else {
-                                joueursID.push(parseInt(this.id));
-                            }
-                        }
-                });
-                
-                $('.inscrireAvec:checkbox:checked').each(function () {
-                        if ($(this).parent().hasClass('paire2'))
-                        {
-                            if ($(this).hasClass('paire'))
-                            {
-                                joueursID.push([parseInt(this.id)]);
-                            } else {
-                                joueursID.push(parseInt(this.id));
-                            }
-                        }
-                });
-
-                $('.inscrireAvec:checkbox:checked').each(function () {
-                        if ($(this).parent().hasClass('paireRemplacant'))
-                        {
-                            joueursID.push(parseInt(this.id));
-                        }
-                        
-                });
-                return joueursID;
-            }
-
-   
-            // IMPORTANT ! 
-
-            var aid = <?php echo intval($_COOKIE['logged']) ?>;
-            var user = getUser(aid);
-            var statut = user['statut'];
-            var anom = user['nom'];
-            var permissionsJoueur = []; 
-            var tmpPermissionsJoueur = getPermissionStatut(user['idStatut']);
-            tmpPermissionsJoueur.forEach(permission => {
-                permissionsJoueur.push(parseInt(permission['did']));
-            });  
-            
-            if (havePermission(6))    // Permission 6: Droit accès de base
-            {
-                $('#gestionBase').show();
-            }
-
-            /*
-                Retourne si l'utilisateur à la permission
+            /* 
+                Variables globales
             */
-            function havePermission(droit)
-            {
-                return permissionsJoueur.includes(droit)
-            }
-
             var eid = <?php echo $_GET['eid'] ?>;
-            var ety = null;
+            var aid = <?php echo intval($_COOKIE['logged']) ?>;
+            var user;
+            var anom;
+            var permissionsJoueur = [];
+            
+            // Bool
             var inscrit = false;
-            var paire = 0;
-            var typeEvenement = 0;
-            var SOSenabled = false;
-            var asBeenShown = false;
-            var paireIsolee = 0;
+            var SOSenabled;
+            var paireIsolee;
+            var descriptionAffiche;
+        
+            // Int
+            var paire, paire1, paire2, remplacant;
+            var checked;
 
+        
 
-            var checked = 0;
-            var paire1 = 1;
-            if (havePermission(10)) // Permission 10: Inscrire d'autres personnes que soi 
-            {
-                paire1 = 0;
-            } 
-            var paire2 = 0;
-            var remplacant = 0;
-
-            $(document).on('change', '.inscrireAvec', function (e) {
-  
-                if(this.checked) 
+            // ----------------------------- Vérification post-inscription ----------------------
+                
+                /*
+                    Récupère les ID des éléments .inscrireAvec coché.
+                    @return joueursID -> []
+                */
+                function getCheckedIds()
                 {
+                    let joueursID = [];
 
-                    if (checked < paire)
-                    {
-                        
-                        /*
-                            Inscription avec une paire
-                        */
-                        if ($(this).hasClass('paire'))
-                        {
-                            if (checked + 2 <= paire)
+                    /*
+                        Remarques: les requêtes sont faites dans cet ordre car la fonction qui traite
+                                les inscriptions est faite pour recevoir la paire 1 au début de l'array
+                                etc...
+                    */
+                    $('.inscrireAvec:checkbox:checked').each(function () {
+                            if ($(this).parent().hasClass('paire1'))
                             {
-                                if (havePermission(10)) // Permission 10: Inscrire d'autres personnes que soi  
+                                if ($(this).hasClass('paire'))
                                 {
-                                    if (checked == 2 && paire2 == 2)
+                                    joueursID.push([parseInt(this.id)]);
+                                } else {
+                                    joueursID.push(parseInt(this.id));
+                                }
+                            }
+                    });
+                    
+                    $('.inscrireAvec:checkbox:checked').each(function () {
+                            if ($(this).parent().hasClass('paire2'))
+                            {
+                                if ($(this).hasClass('paire'))
+                                {
+                                    joueursID.push([parseInt(this.id)]);
+                                } else {
+                                    joueursID.push(parseInt(this.id));
+                                }
+                            }
+                    });
+
+                    $('.inscrireAvec:checkbox:checked').each(function () {
+                            if ($(this).parent().hasClass('paireRemplacant'))
+                            {
+                                joueursID.push(parseInt(this.id));
+                            }
+                            
+                    });
+                    return joueursID;
+                }
+
+                /*
+                    Vérifie si la case est cochable et lui attribut sa couleur de paire.
+                    e: this <-> inputbox.id
+                    @return /
+                */
+                $(document).on('change', '.inscrireAvec', function (e) {
+    
+                    if(this.checked) 
+                    {
+
+                        if (checked < paire)
+                        {
+                            
+                            /*
+                                Inscription avec une paire
+                            */
+                            if ($(this).hasClass('paire'))
+                            {
+                                if (checked + 2 <= paire)
+                                {
+                                    if (havePermission(permissionsJoueur,10)) // Permission 10: Inscrire d'autres personnes que soi  
                                     {
-                                        $(this).parent().addClass("paire1");
-                                        checked = checked + 2;
-                                        paire1 = 2;
+                                        if (checked == 2 && paire2 == 2)
+                                        {
+                                            $(this).parent().addClass("paire1");
+                                            checked = checked + 2;
+                                            paire1 = 2;
+                                        } else {
+                                            $(this).parent().addClass("paire2"); 
+                                            checked = checked + 2;
+                                            paire2 = 2;
+                                        }
                                     } else {
+                                    
                                         $(this).parent().addClass("paire2"); 
                                         checked = checked + 2;
                                         paire2 = 2;
+
+                                    }
+
+
+                                    
+                                } else {
+                                    alert("Impossible d'inscrire un autre joueur, veuillez vérifier le nombre de joueurs ajoutés.");
+                                    this.checked = false;
+                                }
+
+                            /*
+                                Forme une paire
+                            */
+                            } else {
+
+                                if (paire2 == 2) { 
+                                    if (paire1 < 2)
+                                    {
+                                        $(this).parent().addClass("paire1");
+                                        paire1++;
+                                    } else {
+                                        $(this).parent().addClass("paireRemplacant");
+                                        remplacant++;
                                     }
                                 } else {
-                                
-                                    $(this).parent().addClass("paire2"); 
-                                    checked = checked + 2;
-                                    paire2 = 2;
-
+                                    if (paire1 < 2 ){
+                                        $(this).parent().addClass("paire1"); 
+                                        paire1++;
+                                    } else {
+                                        $(this).parent().addClass("paire2"); 
+                                        paire2++;
+                                    }
                                 }
-
-
-                                
-                            } else {
-                                alert("Impossible d'inscrire un autre joueur, veuillez vérifier le nombre de joueurs ajoutés.");
-                                this.checked = false;
+                                checked++;
                             }
 
-                        /*
-                            Forme une paire
-                        */
                         } else {
+                            alert("Impossible d'inscrire un autre joueur, veuillez vérifier le nombre de joueurs ajoutés.");
+                            this.checked = false;
+                        }
 
-                            if (paire2 == 2) { 
-                                if (paire1 < 2)
+                    } else {
+                        if ($(this).hasClass('paire'))
+                        {
+
+                                if ($(this).parent().hasClass("paire2"))
                                 {
-                                    $(this).parent().addClass("paire1");
-                                    paire1++;
+                                    checked = checked-2;
+                                    paire2 = paire2 - 2;
+                                    $(this).parent().removeClass("paire2"); 
                                 } else {
-                                    $(this).parent().addClass("paireRemplacant");
-                                    remplacant++;
+                                    checked = checked-2;
+                                    paire1 = paire1 - 2;
+                                    $(this).parent().removeClass("paire1"); 
+                                    
                                 }
-                            } else {
-                                if (paire1 < 2 ){
-                                    $(this).parent().addClass("paire1"); 
-                                    paire1++;
-                                } else {
-                                    $(this).parent().addClass("paire2"); 
-                                    paire2++;
-                                }
-                            }
-                            checked++;
-                        }
 
-                    } else {
-                        alert("Impossible d'inscrire un autre joueur, veuillez vérifier le nombre de joueurs ajoutés.");
-                        this.checked = false;
-                    }
-
-                } else {
-                    if ($(this).hasClass('paire'))
-                    {
-
-                            if ($(this).parent().hasClass("paire2"))
-                            {
-                                checked = checked-2;
-                                paire2 = paire2 - 2;
-                                $(this).parent().removeClass("paire2"); 
-                            } else {
-                                checked = checked-2;
-                                paire1 = paire1 - 2;
+                        } else {
+                            checked--;
+                            
+                            if ($(this).parent().hasClass('paire1'))
+                            {                   
                                 $(this).parent().removeClass("paire1"); 
-                                
+                                paire1--;
                             }
+                            if ($(this).parent().hasClass('paire2'))
+                            { 
+                                $(this).parent().removeClass("paire2"); 
+                                paire2--;
+                            }
+                            if ($(this).parent().hasClass('paireRemplacant'))
+                            {
+                                $(this).parent().removeClass("paireRemplacant"); 
+                                remplacant--;
+                            }
+                        }
 
-                    } else {
-                        checked--;
                         
-                        if ($(this).parent().hasClass('paire1'))
-                        {                   
-                            $(this).parent().removeClass("paire1"); 
-                            paire1--;
-                        }
-                        if ($(this).parent().hasClass('paire2'))
-                        { 
-                            $(this).parent().removeClass("paire2"); 
-                            paire2--;
-                        }
-                        if ($(this).parent().hasClass('paireRemplacant'))
-                        {
-                            $(this).parent().removeClass("paireRemplacant"); 
-                            remplacant--;
-                        }
+                        
                     }
+                
+                    /*
+                    console.log("Paire 1: " + paire1 + "\n");
+                    console.log("Paire 2: " + paire2 + "\n");
+                    console.log("Paire r: " + remplacant + "\n");
+                    console.log("chk: " + checked + "\n");
+                    console.log("------------------------------------\n");
+                    */
 
-                    
-                    
-                }
-            
-                console.log("Paire 1: " + paire1 + "\n");
-                console.log("Paire 2: " + paire2 + "\n");
-                console.log("Paire r: " + remplacant + "\n");
-                console.log("chk: " + checked + "\n");
-                console.log("------------------------------------\n");
-
-                /*
-                    Vérifie paire cohérente
-                */
-                if (ety == 3)
-                {
-                    if (checked >= paire-3)
+                    /*
+                        Vérifie paire cohérente
+                    */
+                    if (ety == 3)
                     {
-                        buttonInscrire(true);
-                    } else {
-                        buttonInscrire(false);
-                    }
-                } else {
-                    if (checked == 1 && ety == 1)
-                    {
-                        buttonInscrire(true);
-                    } else {
-                        if (checked == paire)
+                        if (checked >= paire-3)
                         {
-                            buttonInscrire(true); 
+                            buttonInscrire(true);
                         } else {
                             buttonInscrire(false);
                         }
-                        
-                    }
-                }
-
-            });
-
-
-            function buttonInscrire(state)
-            {
-                if (state)
-                {
-                    $('#buttonInscrire').addClass("btn-primary");  
-                    $('#buttonInscrire').prop('disabled', false);
-                } else {
-                    $('#buttonInscrire').removeClass("btn-primary");  
-                    $('#buttonInscrire').prop('disabled', true);
-                }
-            }
-
-            $(document).on('click', '.inscription', function (e)
-            {
-            
-                // Varie selon l'action, peut être pid/iid
-
-                let id = e.target.id;
-                // Créer la paire remplacante ou bien ajoute à la paire des remplacant
-                if (confirm('Êtes vous sûr de vouloir rejoindre cette équipe en tant que remplaçant?'))
-                {
-                    if ($(this).hasClass('new'))
-                    {
-                        let pid = createNewPaireRemplacement(id);
-                        registerRemplacantToPid(aid, pid);
                     } else {
-                        
-                        registerRemplacantToPid(aid, id);
-                        
-                    }
-                }
-            });
-
-            $(document).on('click', '#buttonInscrire', function (e) {
-
-                if (confirm("Confirmez-vous votre inscription ?"))
-                {
-                    
-                    let joueursID = [];
-                    
-                    if (paireIsolee == 0 && !havePermission(10)) // Permission 10: Inscrire d'autres personnes que soi 
-                    {
-                        // On se met dans l'array;
-                        joueursID.push(aid);
-                    } else {
-
-                        if (!havePermission(10))
-                            joueursID.push([paireIsolee]);
-
-                        // Permet l'inscription de l'administrateur sur les événements ou une seule personne est requise
-                        if (havePermission(10) && paire == 1)
-                            joueursID.push(aid);
-                    }
-
-                    // On ajoute les autres membres
-                    joueursID = joueursID.concat(getCheckedIds());
-
-                    /*
-                        Inscription avec une paire isolée
-                        Si tournoi et
-                        seulement moi et un adherent et une paire
-                        et cette paire doit être la paire 2
-                        [0] aid
-                        [1] joueur 
-                    */
-
-                    if (ety == 1 && joueursID.length == 2 && paire == 3 && !Array.isArray(joueursID[1]))
-                    {
-                        registerIsolees(eid, joueursID);
-                    } else {
-                        /*
-                            Inscription normale
-                        */
-                        for (let i = joueursID.length; 6 >= joueursID.length; i++) {
-
-                            joueursID.push("NULL");  
-                        }
-
-                        if (SOSenabled)
+                        if (checked == 1 && ety == 1)
                         {
-                            // On desinscrit les joueurs SOS
-                            unregisterSOSpartenaire(aid, eid, joueursID);
+                            buttonInscrire(true);
+                        } else {
+                            if (checked == paire)
+                            {
+                                buttonInscrire(true); 
+                            } else {
+                                buttonInscrire(false);
+                            }
+                            
                         }
-
-                        notifyRegisterByMail(aid, eid, joueursID);
-                        registerToEventWith(eid, joueursID);    
-
-                
                     }
 
-                }
-                
+                });
 
-        
-            });
-
-
-            $('#buttonSOS').on('click', function() {
-
-                if ($('#tableSOS').is(':hidden'))
-                {
-                    if (confirm('Êtes-vous sûr de vouloir rejoindre SOS partenaire?'))
-                    {
-                        registerSOSpartenaire(aid, eid);
-                        $('#tableSOS').show();          
-
-                    }
-                } else {
-                    if (confirm('Êtes-vous sûr de vouloir vous desinscrire de SOS partenaire?'))
-                    {
-                        unregisterSOSpartenaire(aid, eid, []);
-                        $('#tableSOS').hide();
-                    }
-                }
-            });
-
-            
-            $(document).on('click', '.desinscription', function (e) {
-
-                // Id d'identification
-                // iid pour compétition et partie libres
-                // pid pour tournoi
-                let id = e.target.id;
 
                 /*
-                    Désinscription de remplaçant
-                    Désinscription intégrale
-                    Desinscription de paire
-                    Desinscription de paire isolée
+                    Interrupteur pour le boutton inscrire
+                    state: true/false
+                    @return /
                 */
-                if ($(this).hasClass('remplacant'))
-                {   // Compétition mais inscrit en remplaçant
-                    if (confirm("Êtes-vous sûr de vouloir vous retirer des remplaçants?"))
+                function buttonInscrire(state)
+                {
+                    if (state)
                     {
-                        unregisterFromRemplacant(aid, id);
+                        $('#buttonInscrire').addClass("btn-primary");  
+                        $('#buttonInscrire').prop('disabled', false);
+                    } else {
+                        $('#buttonInscrire').removeClass("btn-primary");  
+                        $('#buttonInscrire').prop('disabled', true);
                     }
-                } else {
-                    
-                    if ($(this).hasClass('competition') && confirm("Êtes-vous sûr de vouloir vous desinscrire de l'évenement?"))
-                    {
-                        // Désinscription intégrale
-                        unregisterPaires(eid, id, aid);
-                        
-                    } else {    
-                        // Tournoi
-                        if ($(this).hasClass('paireIsolee') && confirm("Êtes-vous sûr de vouloir vous desinscrire de l'évenement?"))
-                        {
-                            // Desinscription de paire isolée
-                            deletePaireIsolee(id);
-                        } else {
-                            // Desinscription de paire
-                            if (!$(this).hasClass('competition') && !$(this).hasClass('paireIsolee') && confirm("Êtes-vous sûr de vouloir vous desinscrire de l'évenement?"))
-                            {
+                }
 
-                                let error = unregisterPaire(id, eid, aid);
-                                if (error.length > 0)
+            // ----------------------------- Inscriptions/Desinscription ------------------------
+   
+                /*
+                    Inscrit le joueur
+                    @return /
+                */
+                $(document).on('click', '#buttonInscrire', function () {
+
+                    if (confirm("Confirmez-vous votre inscription ?"))
+                    {
+                        
+                        let joueursID = [];
+                        
+                        if (paireIsolee == 0 && !havePermission(permissionsJoueur,10)) // Permission 10: Inscrire d'autres personnes que soi 
+                        {
+                            // On se met dans l'array;
+                            joueursID.push(aid);
+                        } else {
+
+                            if (!havePermission(permissionsJoueur,10))
+                                joueursID.push([paireIsolee]);
+
+                            // Permet l'inscription de l'administrateur sur les événements ou une seule personne est requise
+                            if (havePermission(permissionsJoueur,10) && paire == 1)
+                                joueursID.push(aid);
+                        }
+
+                        // On ajoute les autres membres
+                        joueursID = joueursID.concat(getCheckedIds());
+
+                        /*
+                            Inscription avec une paire isolée
+                            Si tournoi et
+                            seulement moi et un adherent et une paire
+                            et cette paire doit être la paire 2
+                            [0] aid
+                            [1] joueur 
+                        */
+
+                        if (ety == 1 && joueursID.length == 2 && paire == 3 && !Array.isArray(joueursID[1]))
+                        {
+                            registerIsolees(eid, joueursID);
+                        } else {
+                            /*
+                                Inscription normale
+                            */
+                            for (let i = joueursID.length; 6 >= joueursID.length; i++) {
+
+                                joueursID.push("NULL");  
+                            }
+
+                            if (SOSenabled)
+                            {
+                                // On desinscrit les joueurs SOS
+                                unregisterSOSpartenaire(aid, eid, joueursID);
+                            }
+
+                            notifyRegisterByMail(aid, eid, joueursID);
+                            registerToEventWith(eid, joueursID);    
+
+                    
+                        }
+
+                    }
+                    
+
+            
+                });
+
+                /*
+                    Inscrit le joueur à une paire de remplaçant
+                    e: pid -> paire éxistante
+                    iid -> paire inéxistante
+                    @return /
+                */
+                $(document).on('click', '.inscription', function (e)
+                {
+                
+                    // Varie selon l'action, peut être pid/iid
+
+                    let id = e.target.id;
+                    // Créer la paire remplacante ou bien ajoute à la paire des remplacant
+                    if (confirm('Êtes vous sûr de vouloir rejoindre cette équipe en tant que remplaçant?'))
+                    {
+                        if ($(this).hasClass('new'))
+                        {
+                            let pid = createNewPaireRemplacement(id);
+                            registerRemplacantToPid(aid, pid);
+                        } else {
+                            
+                            registerRemplacantToPid(aid, id);
+                            
+                        }
+                    }
+                });
+
+                /*
+                    Interrupteur pour SOS partenaire
+                    @return /
+                */
+                $('#buttonSOS').on('click', function() {
+
+                    if ($('#tableSOS').is(':hidden'))
+                    {
+                        if (confirm('Êtes-vous sûr de vouloir rejoindre SOS partenaire?'))
+                        {
+                            registerSOSpartenaire(aid, eid);
+                            $('#tableSOS').show();          
+
+                        }
+                    } else {
+                        if (confirm('Êtes-vous sûr de vouloir vous desinscrire de SOS partenaire?'))
+                        {
+                            unregisterSOSpartenaire(aid, eid, []);
+                            $('#tableSOS').hide();
+                        }
+                    }
+                });
+
+                /*
+                    Desinscrit le joueur
+                    e: iid pour compétition et partie libres
+                    pid pour tournoi
+                    @return /
+                */
+                $(document).on('click', '.desinscription', function (e) {
+
+                    let id = e.target.id;
+
+                    /*
+                        Désinscription de remplaçant
+                        Désinscription intégrale
+                        Desinscription de paire
+                        Desinscription de paire isolée
+                    */
+                    if ($(this).hasClass('remplacant'))
+                    {   // Compétition mais inscrit en remplaçant
+                        if (confirm("Êtes-vous sûr de vouloir vous retirer des remplaçants?"))
+                        {
+                            unregisterFromRemplacant(aid, id);
+                        }
+                    } else {
+                        
+                        if ($(this).hasClass('competition') && confirm("Êtes-vous sûr de vouloir vous desinscrire de l'évenement?"))
+                        {
+                            // Désinscription intégrale
+                            unregisterPaires(eid, id, aid);
+                            
+                        } else {    
+                            // Tournoi
+                            if ($(this).hasClass('paireIsolee') && confirm("Êtes-vous sûr de vouloir vous desinscrire de l'évenement?"))
+                            {
+                                // Desinscription de paire isolée
+                                deletePaireIsolee(id);
+                            } else {
+                                // Desinscription de paire
+                                if (!$(this).hasClass('competition') && !$(this).hasClass('paireIsolee') && confirm("Êtes-vous sûr de vouloir vous desinscrire de l'évenement?"))
                                 {
-                                    alert('Une erreur est survenue: \n' + error);
+
+                                    let error = unregisterPaire(id, eid, aid);
+                                    if (error.length > 0)
+                                    {
+                                        alert('Une erreur est survenue: \n' + error);
+                                    }
+                                    document.location.reload(true);
                                 }
-                                document.location.reload(true);
+
                             }
 
                         }
+                    }
+
+
+                });
+
+            // ----------------------------- Affichage entête description/agenda ----------------
+
+                /*
+                    Remplit l'entête de l'évenement
+                    @return /
+                */
+                function setEventDescription(event)
+                {
+
+                    // Common
+                    if (!descriptionAffiche)
+                    {
+                        descriptionAffiche = true;
+                        createCallendarForOneEvent(event);
+                    }
+                    
+                    $('#titre').text(event['titre']);
+                    moment.locale('fr');
+
+                    $('#debut').text("Commence à " + moment(event['dteDebut']).format("HH:mm ") + '(' + moment(event['dteDebut']).add(15, 'minutes').format('HH:mm') + ' cartes en main.)');
+                    
+                    $('#fin').text("Fini à " + moment(event['dteFin']).format("HH:mm "));
+                    $('#lieu').text("Lieu de l'évènement : " + event['commune'] + ", " + event['adresse']);
+                    
+                    ety = parseInt(event['type']);
+
+                    if (!havePermission(permissionsJoueur,10))// Permission 10: Inscrire d'autres personnes que soi 
+                    {
+                        // On fait partie de la paire
+                        paire = event['paires']-1; 
+                    } else {
+                        //Permet de former des inscriptions sans nous même
+                        paire = event['paires'];
+                    }
+                
+                    if (event['type'] == 3) // compétition, on ajoute la possibilité de remplaçants
+                    {
+                        paire = 6;
+                    }
+
+                    // Utile pour detecter les inscriptions de compétitions
+                    let typeEvenement = event['type'];
+
+                    let tmp = "";
+
+                    switch (parseInt(event['type']))
+                    {
+                        case 1:
+                            // Tournoi
+                            if (event['paires'] == 2)
+                            {
+                                $('#paire').text("Inscription par paire de " + event['paires']);
+                            } else {
+                                $('#paire').text("Patton par " + event['paires']);
+                                
+                            }
+                            if (event['apero'] == 1 || event['repas'] == 1)
+                            {
+                                tmp = "En plus:<br>";
+
+                                if (event['apero'] == 1)
+                                    tmp += "* Apéro amélioré <br>";
+                                
+                                if (event['repas'] == 1)
+                                    tmp += "* P’tite bouffe partagée\n";
+                                
+                                
+                                $('#more').html(tmp);
+                            }
+
+                            
+                        break;
+                        
+                        case 2:
+                            // Partie libre
+                        break;
+                        
+                        case 3:
+
+                            // Compétition
+                            if (event['paires'] == 2)
+                            {
+                                $('#paire').text("Inscription par paire de " + event['paires']);
+                            } else {
+                                $('#paire').text("Inscription par équipe");
+                            }
+                            tmp = "Catégorie: " + event['catComp'] +
+                                " / Division: " + event['division'] +
+                                " / Public: " + event['public'] +
+                                " / Stade: " + event['stade'] +
+                                " / Prix: " + event['prix'];
+
+                            $('#more').text(tmp);
+                        break;
+                    }
+
+                }
+
+                /*
+                    Créer un calendrier pour l'évenement
+                    @return /
+                */
+                function createCallendarForOneEvent(event)
+                {
+                    var calendarEl = document.getElementById('calendar');
+                    var calendar = new FullCalendar.Calendar(calendarEl, {
+                        locale: 'fr',
+                        height: 150,
+                        
+                        plugins: [ 'dayGrid', 'interaction'],
+                        header: {
+                            left: '',
+                            center: 'title',
+                            right: ''
+                        },
+                        defaultDate: event['dteDebut'],
+                        firstDay: 1,
+                        defaultView: 'dayGridWeek',
+                        eventLimit: true, // allow "more" link when too many events
+                        events: [
+                            {
+                                title  : event['titre'],
+                                start  : event['dteDebut'],
+                                end    : event['dteFin'],
+                            },
+                        ],
+                        eventColor: '#ff0000',
+                    });
+
+                    calendar.render();
+                }
+
+
+
+
+            // ------------- Créer affichage unique pour les évenements spéciaux ----------------
+                /*
+                    Créer l'affichage pour les évenements spéciaux
+                    data: event
+                    @return /
+                */
+                function populateSpecialEvent(event)
+                {
+                    let raccordes = getEvenementsRaccorde(eid);   
+                    let content = "";
+                    let situation = [];
+                    let situationText;
+                    let option;
+                    let pid = 0;
+                    let currEventSituation;
+                    let i = 0;
+
+                    raccordes.forEach(event => {
+                        situation = isRegisteredForEvent(event['id'], aid);
+                        if (situation.length > 0)
+                        {
+                            situationText = "Inscrit avec: </br>";
+                            i++;
+                            situation.forEach(joueur => {
+                                situationText += `${joueur['nom']} ${joueur['prenom']} </br>`;
+                                pid = joueur['NumPaire'];
+                            });
+
+                            if (havePermission(permissionsJoueur,9)) //Permission 9: Se désinscrire d'un événement
+                            {
+                                switch (parseInt(event['type']))
+                                {
+                                                            
+                                    case 1: // tournoi
+                                        option = `<button id='${pid}' type='button' class='btn btn-danger desinscription tournoi'>Se desincrire</button>`;
+                                    break;
+
+                                    case 2: // Partie Libre 
+                                        option = `<button id='${pid}' type='button' class='btn btn-danger desinscription partieLibre'>Se desincrire</button>`;
+                                    break;
+
+                                    case 3: // Compétition
+                                        option = `<button id='${iid}' type='button' class='btn btn-danger desinscription competition'>Se desincrire</button>`;
+                                    break;
+
+                                    case 4: // Evenement 
+                                        option = `<button id='${pid}' type='button' class='btn btn-danger desinscription evenement'>Se desincrire</button>`;
+                                    break;
+                                    
+                                    case 5: // Spéciaux 
+                                        
+                                    break;
+                                }
+                            }
+
+                        } else {           
+                            situationText = "Non inscrit";  
+                            option = `<a href="inscription.php?eid=${event['evenementId']}" class='btn btn-dark'>Voir l'évenement</a>`;
+                        }
+
+                        content += `<tr>
+                                        <td><a href="inscription.php?eid=${event['evenementId']}">${event['titre']}</a></td>
+                                        <td>${situationText}</td>
+                                        <td>${option}</td>
+                                    </tr>
+                                `;
+                    });
+
+                    if (i == raccordes.length)
+                    {
+                        currEventSituation = "Inscrit à tout.";
+
+                    } else {
+                        if (i == 0)
+                        {
+                            currEventSituation = "Inscrit à rien.";
+                            situation = isRegisteredForEvent(eid, aid);
+                            if (situation.length > 0)
+                            {
+                                let joueursID = [];
+                                joueursID.push(aid);
+                                for (let i = joueursID.length; 6 >= joueursID.length; i++) {
+                                    joueursID.push("NULL");  
+                                }
+
+                                unregisterPaires(eid, situation[0]['iid'], aid);
+                            }
+                        } else {
+                            if (i != raccordes.length)
+                            {
+                                // vérifie si l'on est déjà inscrit
+                                if (isRegisteredForEvent(eid, aid).length == 0)
+                                {
+                                    let joueursID = [];
+                                    joueursID.push(aid);
+                                    for (let i = joueursID.length; 6 >= joueursID.length; i++) {
+                                        joueursID.push("NULL");  
+                                    }
+                                    registerToEventWith(eid, joueursID);
+                                }
+
+                                currEventSituation = "Partiellement inscrit.";
+                            }
+                        }
+                    }
+
+                    content += `<tr>
+                                    <td><a href="#">Evenement actuel</a></td>
+                                    <td>${currEventSituation}</td>
+                                    <td>/</td>
+                                    </tr>
+                                `;
+
+                    var html = `<table class="table display" cellspacing="0" width="100%" id="tablePaireIsolee">
+                                    <thead>
+                                        <tr>
+                                            <th>Nom de l'évenement</th><th>Situation</th><th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    ${content}
+                                    </tbody>
+                                </table>`
+                    
+
+
+                    $("#inscriptArea").append(html);
+                }
+
+            // ----------------------------- Initialise les tables ------------------------------
+
+                 var tableJoueurs = $('#tableJoueurs').DataTable({
+                    paging: true,
+                    ordering: false,
+                    info: false,
+                    pageLength: 10,
+                    language: {
+                            "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/French.json"
+                            
+                    },
+                    columns: [
+                            { "width": "5%"},
+                            { "width": "40%"},
+                            { "width": "40%"},
+                            { "width": "15%", "orderable": false }
+                        ]
+                });
+
+                var tableMesFavoris = $('#tableMesFavoris').DataTable({
+                    paging: false,
+                    ordering: false,
+                    
+                    info: false,
+                    pageLength: 10,
+                    searching: false,
+                    language: {
+                            "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/French.json"
+                            
+                    },
+                    columns: [
+                            { "width": "5%"},
+                            { "width": "40%"},
+                            { "width": "40%"},
+                            { "width": "15%", "orderable": false }
+                        ]
+                });
+
+                var tableSOSpartenaire = $('#tableSOS').DataTable({
+                    paging: false,
+                    ordering: false,
+                    info: false,
+                    pageLength: 10,
+                    searching: false,
+
+                    language: {
+                            "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/French.json"
+                            
+                    },
+                    columns: [
+                            { "width": "5%"},
+                            { "width": "40%"},
+                            { "width": "40%"},
+                            { "width": "15%", "orderable": false }
+                        ]
+                });
+
+            // ----------------------------- Remplit les tables ---------------------------------
+
+                /*
+                    Remplit la table SOS partenaire
+                    data: event
+                    @return /
+                */
+                function populateSOSpartenaire(data)
+                {
+
+                    for (let i = 0; i < data.length; i++) {
+                    
+                    tableSOSpartenaire.row.add([
+                                        i+2,
+                                        data[i]['nom'],
+                                        data[i]['prenom'],
+                                        `<td><input type="checkbox" class="inscrireAvec SOS" id="${data[i]['id']}"></input></td>`
+                                    ]).node().id = i;
+                        
+                    }
+                    tableSOSpartenaire.draw();
+
+                }
+                
+                /*
+                    Remplit la table des joueurs disponibles
+                    data: event
+                    @return /
+                */
+                function populatejoueurDisponible(data)
+                {
+                    for (let i = 0; i < data.length; i++) {
+                    
+                        tableJoueurs.row.add([
+                                            i+1,
+                                            data[i]['nom'],
+                                            data[i]['prenom'],
+                                            `<td><input type="checkbox" class="inscrireAvec" id="${data[i]['id']}"></input></td>`
+                                        ]).node().id = i;
+                            
+                    }
+
+                    tableJoueurs.draw();
+                }
+
+                /*
+                    Remplit la table des paires isolées
+                    data: event
+                    @return /
+                */
+                function populatePaireIsolee(data)
+                {
+                        
+                            noms = "";
+                            prenoms = "";
+                            pid = data[0]['pid'];
+                            let option = "";
+                            i = 0;
+                        
+                            while (i < data.length)
+                            {
+
+                                // Si l'un des membres de la paire est nous même:
+                                // Permission 15: Se retirer des paires disponibles
+                                if ((data[i]['id'] == aid || data[i+1]['id'] == aid) && havePermission(permissionsJoueur,15))
+                                {
+                                    paire1 = 2;
+                                    paire2 = 0;
+                                    checked = 1;
+                                    paireIsolee = parseInt(data[i]['pid']);
+
+                                    option = `<button id='${pid}' class='btn btn-danger desinscription paireIsolee'>Se retirer des paires isolées</button>`;
+                                } else {
+                                    // Permission 16: Inscrire avec une paire disponible
+                                    if (havePermission(permissionsJoueur,16))
+                                    {
+                                        option = `<input type='checkbox' class='inscrireAvec paire' id='${data[i]['pid']}'>`;
+                                    } else {
+                                        option = "/";
+                                    }
+                                    
+                                }
+
+                                while (i < data.length && data[i]['pid'] == pid)
+                                {
+                                    noms    += data[i]['nom'] + "</br>";
+                                    prenoms += data[i]['prenom'] + "</br>";
+
+                                    pid = data[i]['pid'];
+                                    i++;
+                                }
+
+                                
+
+
+                                $('#tablePaireIsolee > tbody').append(
+                                    `<tr>` +
+                                    `<td>${pid}</td>` +
+                                    `<td>${noms}</td>` +
+                                    `<td>${prenoms}</td>`+
+                                    `<td>${option}</td>`+
+                                '</tr>'
+                                );
+
+                                if (i < data.length && data[i]['pid'] != pid)
+                                {
+                                    added = 0;
+                                    noms    = "";
+                                    prenoms = "";
+                                    pid = data[i]['pid'];
+                                }
+
+    
+
+                            }
+
+    
+                        
+                
+                    
+                        
+                    
+
+                }
+
+                /*
+                    Remplit les tables 'Ma situation' et 'Inscrits'
+                    @return inscrit 
+                */
+                function maSituationInscrits(data)
+                {
+
+                    
+                    // I.Id, P.pid as NumPaire, A.id, A.nom, A.prenom
+
+                    var inscrit = false;
+                    if (data.length > 0)
+                    {
+                        // 1. Vérifie si l'adherent est inscrit
+                        i = 0;
+                        while (i < data.length && data[i]['id'] != aid)
+                        {
+                            i++;
+                        }
+
+                        inscrit = i < data.length;
+
+                        var noms = "";
+                        var prenoms = "";
+                        var option = "";
+
+                        // 2. Vérifie si l'adherent est inscrit
+                        if (inscrit)
+                        {
+
+                            // ID de l'inscription               
+                            var iid = data[i]['iid'];
+                        
+                            // ID de de la paire du joueur
+                            var pid = data[i]['NumPaire'];
+
+                            /*
+                                Change le mode de désinscription
+                            */
+                            if (havePermission(permissionsJoueur,9)) //Permission 9: Se désinscrire d'un événement
+                            {
+                                switch (ety)
+                                    {
+                                                                
+                                        case 1: // tournoi
+                                            option = `<button id='${pid}' type='button' class='btn btn-danger desinscription tournoi'>Se desincrire</button>`;
+                                        break;
+
+                                        case 2: // Partie Libre 
+                                            option = `<button id='${pid}' type='button' class='btn btn-danger desinscription partieLibre'>Se desincrire</button>`;
+                                        break;
+
+                                        case 3: // Compétition
+                                            option = `<button id='${iid}' type='button' class='btn btn-danger desinscription competition'>Se desincrire</button>`;
+                                        break;
+
+                                        case 4: // Evenement 
+                                            option = `<button id='${pid}' type='button' class='btn btn-danger desinscription evenement'>Se desincrire</button>`;
+                                        break;
+                                    }
+                            
+                            } else {
+                                option = "/";
+                            }
+                            if (data.length > 3 && data[i]['remplacant'] != "NULL")
+                            {
+                                
+                                paireRemplacant = data[i]['remplacant'];
+
+                                // Récupère tout les membres remplaçant de la paire
+                                remplacant = [];
+                                for (let j = i; j < data.length; j++) {
+                                    if (data[j]['NumPaire'] == paireRemplacant)
+                                    {    
+                                        remplacant.push(parseInt(data[j]['id']));    
+                                    }
+                                }
+
+                                // Permission 14: Se retirer des remplaçants
+                                if (remplacant.includes(aid) && havePermission(permissionsJoueur,14))
+                                {
+                                    option = `<button id='${iid}' class='btn btn-danger desinscription competition remplacant'>Se retirer de la paire</button>`;
+                                } 
+                            }
+
+                            // Lit jusqu'a changement d'inscription et construit l'affichage
+                            // pour la table.
+                            i=0;
+                            while (i < data.length && data[i]['iid'] != iid)
+                            {
+                                i++;
+                            }
+                            iid = data[i]['iid'];
+                            while (i < data.length && data[i]['iid'] == iid)
+                            {
+                                noms     += data[i]['nom'] + "</br>";
+                                prenoms  += data[i]['prenom'] + "</br>";
+                                i++;
+                            }
+                            
+                            $('#tableSituation > tbody').append(
+                                '<tr>' +
+                                    `<td> ${iid}</td>` +
+                                    `<td>${noms}</td>` +
+                                    `<td>${prenoms}</td>` +
+                                    `<td>${option}</td>` +
+                                '</tr>'
+                            );
+
+                            own_iid = iid;
+                        } else {
+                            own_iid = -1;
+                        }
+                            
+                            noms = "";
+                            prenoms = "";
+                            pid = data[0]['NumPaire'];
+                            iid = data[0]['iid'];
+                            var elementInPaire = 0;
+                            let added = 0;
+
+
+                            i = 0;
+                            while (i < data.length)
+                            {
+
+                                if (i < data.length && data[i]['iid'] == iid)
+                                {
+
+                                    while (i < data.length && data[i]['iid'] == iid)
+                                    {
+                                        noms    += data[i]['nom'] + "</br>";
+                                        prenoms += data[i]['prenom'] + "</br>";
+
+                                        pid = data[i]['NumPaire'];
+                                        i++;
+                                        added++;
+
+                                    }
+
+                            
+                                    // Pour les compétitions, si la paire est une paire de remplaçant et vérifie si la paire est pleine 
+                                    // Permission 13: S'ajouter aux remplaçants
+                                    if (ety == 3 && added > 4 && added != 7 && !inscrit && havePermission(permissionsJoueur,13)) 
+                                    {
+                                        option = `<button id="${pid}" class='btn btn-danger inscription remplacant'>S'ajouter aux remplaçants</button>`;
+                                        added = 0;
+                                    } else {
+
+                                        // Si il n'y a pas de paire de remplaçant
+                                        if (ety == 3 && added == 4 && !inscrit && havePermission(permissionsJoueur,13))
+                                        {
+                                            option = `<button id="${iid}" class='btn btn-danger inscription remplacant new'>S'ajouter en remplaçant</button>`;;
+                                            added = 0;
+                                        } else {
+                                            option = "";
+                                        }
+                                        
+                                        
+                                    }
+
+                                    if (havePermission(permissionsJoueur,12)) // Permission 12: Désinscrire un joueur
+                                    {
+                                        option += `<button id='${pid}' type='button' class='btn btn-danger desinscription evenement'>Desincrire</button>`;
+                                    }
+
+                                    $('#tableInscrit > tbody').append(
+                                        `<tr>` +
+                                            `<td>${iid}</td>` +
+                                            `<td>${noms}</td>` +
+                                            `<td>${prenoms}</td>`+
+                                            `<td>${option}</td>`+
+                                    '</tr>'
+                                    );
+                                        
+
+
+                                    if (i < data.length && data[i]['NumPaire'] != pid)
+                                    {
+                                        noms    = "";
+                                        prenoms = "";
+                                        pid = data[i]['NumPaire'];
+                                        iid = data[i]['iid'];
+                                    }
+    
+
+                                }
+                                
+
+
+
+
+                            }
+                            
+                
+                        return inscrit;
+                    }
+
+
+
+                }
+
+                /*
+                    Remplit la table table avec des checkbox de classe inscrireAvec en option
+                    [i] [nom] [prenom] [options]
+                */
+                function mesFavorisCheck(data, table)
+                {
+
+                    for (let i = 0; i < data.length; i++) {
+
+                        table.row.add([
+                                i+1,
+                                data[i]['nom'],
+                                data[i]['prenom'],
+                                `<td><input type="checkbox" class="inscrireAvec favoris" id="${data[i][0]}"></input></td>`,
+                            ]).node().id = i;
+                        
+                    }
+                    table.draw();
+
+                }
+
+                /*
+                    Remplit la table table avec des buttons de classe retirerFavori en option.
+                    data : [i] [nom] [prenom] [options]
+                    table: object table 
+                    @return /
+                */
+                function mesFavorisButton(data, table)
+                {
+
+                    for (let i = 0; i < data.length; i++) {
+
+                        table.row.add([
+                                i+1,
+                                data[i]['nom'],
+                                data[i]['prenom'],
+                                `<td><button id="${data[i][0]}" type="button" class="btn btn-danger retirerFavori favoris">Retirer favori</button></td>`,
+                            ]).node().id = i;
+                        
 
                     }
                 }
 
 
-            });
+            // ----------------------------- Utils ----------------
 
-            var tableJoueurs = $('#tableJoueurs').DataTable({
-               paging: true,
-               ordering: false,
-               info: false,
-               pageLength: 10,
-               language: {
-                    "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/French.json"
+                /*
+                    Remet les valeurs par default de l'affichage
+                */
+                function reload()
+                {
+                    // Clear already existing elements
+                    run_waitMe($('#content'), 'Mise à jour...', 2500);
+                    tableJoueurs.clear();
+                    tableMesFavoris.clear();
+                    tableSOSpartenaire.clear();
+                    $('#tableInscrit tbody > tr').remove();
+                    $('#tableSituation tbody > tr').remove();
+                    $('#tablePaireIsolee tbody > tr').remove();
+
+                    checked = 0;
+                    paire1 = 1;
+                    if (havePermission(permissionsJoueur,10)) // Permission 10: Inscrire d'autres personnes que soi 
+                    { 
+                        paire1--;
+                    } 
                     
-               },
-               columns: [
-                    { "width": "5%"},
-                    { "width": "40%"},
-                    { "width": "40%"},
-                    { "width": "15%", "orderable": false }
-                ]
-            });
+                    paire2 = 0;
+                    remplacant = 0;
 
-            var tableMesFavoris = $('#tableMesFavoris').DataTable({
-               paging: false,
-               ordering: false,
-               
-               info: false,
-               pageLength: 10,
-               searching: false,
-               language: {
-                    "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/French.json"
+                    buttonInscrire(false);
                     
-               },
-               columns: [
-                    { "width": "5%"},
-                    { "width": "40%"},
-                    { "width": "40%"},
-                    { "width": "15%", "orderable": false }
-                ]
-            });
+                    initWithEvent();
+                }
 
-            var tableSOSpartenaire = $('#tableSOS').DataTable({
-               paging: false,
-               ordering: false,
-               info: false,
-               pageLength: 10,
-               searching: false,
+                /*
+                    Affiche un logo de chargement
+                    object: object jquery de l'élélement ciblé
+                    txt   : texte à afficher
+                    ms    : durée en ms
+                    @return /
+                */
+                function run_waitMe(object, txt, ms)
+                {
+                    object.waitMe({
+                            effect: 'win8',
+                            text: txt,
+                            bg: 'rgba(255,255,255,0.7)',
+                            color: '#000',
+                            maxSize: 100,
+                            waitTime: ms,
+                            textPos: 'vertical',
+                            fontSize: '18px',
+                    });
+                }
 
-               language: {
-                    "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/French.json"
-                    
-               },
-               columns: [
-                    { "width": "5%"},
-                    { "width": "40%"},
-                    { "width": "40%"},
-                    { "width": "15%", "orderable": false }
-                ]
-            });
             
-            function run_waitMe(object, txt, ms)
-            {
-                object.waitMe({
-                        effect: 'win8',
-                        text: txt,
-                        bg: 'rgba(255,255,255,0.7)',
-                        color: '#000',
-                        maxSize: 100,
-                        waitTime: ms,
-                        textPos: 'vertical',
-                        fontSize: '18px',
-                });
-            }
 
-            function main()
+            
+            // ----------------------------- Main ----------------
+            
+            function init()
             {
+                /*
+                    Gestion des permissions
+                */
+                user = getUser(aid);
+
+                getPermissionStatut(user['idStatut']).forEach(permission => {
+                    permissionsJoueur.push(parseInt(permission['did']));
+                });  
+
+                /*
+                    Init
+                */
+                    anom = user['nom'];
+
+                    SOSenabled = false;
+                    paireIsolee = 0;
+                    descriptionAffiche = false;
+
+                    paire = 0;
+                    paire1 = 1;
+                    paire2 = 0;
+                    remplacant = 0;
+                    checked = 0;
+
+                /*
+                    Permissions 
+                */
+                if (havePermission(permissionsJoueur,6))     // Permission 6: Droit accès de base
+                {
+                    $('#gestionBase').show();
+                }
+                if (havePermission(permissionsJoueur,10)) // Permission 10: Inscrire d'autres personnes que soi 
+                {
+                    paire1 = 0;
+                } 
+                
 
                 initWithEvent();
                 
                 window.setInterval(function(){
                     reload();
                 }, 30000);
-                
+
             }
-            main();
-
-            function reload()
-            {
-                // Clear already existing elements
-                run_waitMe($('#content'), 'Mise à jour...', 2500);
-                tableJoueurs.clear();
-                tableMesFavoris.clear();
-                tableSOSpartenaire.clear();
-                $('#tableInscrit tbody > tr').remove();
-                $('#tableSituation tbody > tr').remove();
-                $('#tablePaireIsolee tbody > tr').remove();
-
-                checked = 0;
-                paire1 = 1;
-                if (havePermission(10)) // Permission 10: Inscrire d'autres personnes que soi 
-                { 
-                    paire1--;
-                 } 
-                
-                paire2 = 0;
-                remplacant = 0;
-
-                buttonInscrire(false);
-                
-                initWithEvent();
-            }
-
+ 
             /*
-                Main: met en place l'affichage.
+                Met en place l'affichage des tables.
                 à clean
+                @return /
             */
             function initWithEvent()
             {
@@ -700,7 +1408,7 @@ if (!logged())
                         });
 
                     // Si n'est pas inscrit et SOS desactivé ou si c'est un évenement spécial
-                    if (!inscrit && !SOSenabled || ety == 5 || havePermission(11)) // Permission 11: Inscrire plusieurs fois
+                    if (!inscrit && !SOSenabled || ety == 5 || havePermission(permissionsJoueur,11)) // Permission 11: Inscrire plusieurs fois
                     {
                             $( ".pourInscrire" ).show();
 
@@ -755,7 +1463,7 @@ if (!logged())
 
                             
 
-                            if (!havePermission(10)) // Permission 10: Inscrire d'autres personnes que soi 
+                            if (!havePermission(permissionsJoueur,10)) // Permission 10: Inscrire d'autres personnes que soi 
                             {
                                 // On se rajoute à l'array, car on ne veut pas être afficher dans la liste de joueurs
                                 ignore.push([aid]);
@@ -803,623 +1511,9 @@ if (!logged())
                     }  
  
             }
-
-
-            /*
-                Rempli l'entête de l'évenement
-            */
-            function setEventDescription(event)
-            {
-
-                // Common
-                if (!asBeenShown)
-                {
-                    asBeenShown = true;
-                    createCallendarForOneEvent(event);
-                }
-                
-                $('#titre').text(event['titre']);
-                moment.locale('fr');
-
-                $('#debut').text("Commence à " + moment(event['dteDebut']).format("HH:mm ") + '(' + moment(event['dteDebut']).add(15, 'minutes').format('HH:mm') + ' cartes en main.)');
-                
-                $('#fin').text("Fini à " + moment(event['dteFin']).format("HH:mm "));
-                $('#lieu').text("Lieu de l'évènement : " + event['commune'] + ", " + event['adresse']);
-                
-                ety = parseInt(event['type']);
-
-                if (!havePermission(10))// Permission 10: Inscrire d'autres personnes que soi 
-                {
-                    // On fait partie de la paire
-                    paire = event['paires']-1; 
-                } else {
-                    //Permet de former des inscriptions sans nous même
-                    paire = event['paires'];
-                }
-               
-                if (event['type'] == 3) // compétition, on ajoute la possibilité de remplaçants
-                {
-                    paire = 6;
-                }
-
-                // Utile pour detecter les inscriptions de compétitions
-                typeEvenement = event['type'];
-
-                let tmp = "";
-
-                switch (parseInt(event['type']))
-                {
-                    case 1:
-                        // Tournoi
-                        if (event['paires'] == 2)
-                        {
-                            $('#paire').text("Inscription par paire de " + event['paires']);
-                        } else {
-                            $('#paire').text("Patton par " + event['paires']);
-                            
-                        }
-                        if (event['apero'] == 1 || event['repas'] == 1)
-                        {
-                            tmp = "En plus:<br>";
-
-                            if (event['apero'] == 1)
-                                tmp += "* Apéro amélioré <br>";
-                            
-                            if (event['repas'] == 1)
-                                tmp += "* P’tite bouffe partagée\n";
-                            
-                            
-                            $('#more').html(tmp);
-                        }
-
-                        
-                    break;
-                    
-                    case 2:
-                        // Partie libre
-                    break;
-                    
-                    case 3:
-
-                        // Compétition
-                        if (event['paires'] == 2)
-                        {
-                            $('#paire').text("Inscription par paire de " + event['paires']);
-                        } else {
-                            $('#paire').text("Inscription par équipe");
-                        }
-                        tmp = "Catégorie: " + event['catComp'] +
-                              " / Division: " + event['division'] +
-                              " / Public: " + event['public'] +
-                              " / Stade: " + event['stade'] +
-                              " / Prix: " + event['prix'];
-
-                        $('#more').text(tmp);
-                    break;
-                }
-
-            }
-
-            /*
-                Créer un calendrier pour l'évenement
-            */
-            function createCallendarForOneEvent(event)
-            {
-                var calendarEl = document.getElementById('calendar');
-                var calendar = new FullCalendar.Calendar(calendarEl, {
-                    locale: 'fr',
-                    height: 150,
-                    
-                    plugins: [ 'dayGrid', 'interaction'],
-                    header: {
-                        left: '',
-                        center: 'title',
-                        right: ''
-                    },
-                    defaultDate: event['dteDebut'],
-                    firstDay: 1,
-                    defaultView: 'dayGridWeek',
-                    eventLimit: true, // allow "more" link when too many events
-                    events: [
-                        {
-                            title  : event['titre'],
-                            start  : event['dteDebut'],
-                            end    : event['dteFin'],
-                        },
-                    ],
-                    eventColor: '#ff0000',
-                });
-
-                calendar.render();
-            }
-
-                
-            function populateSpecialEvent(event)
-            {
-                let raccordes = getEvenementsRaccorde(eid);                
-                let content = "";
-                let situation = [];
-                let situationText;
-                let option;
-                let pid = 0;
-                let currEventSituation;
-                let i = 0;
-                raccordes.forEach(event => {
-
-                    situation = isRegisteredForEvent(event['evenementId'], aid);
-                    if (situation.length > 0)
-                    {
-                        console.log(situation);
-                        situationText = "Inscrit avec: </br>";
-                        i++;
-                        situation.forEach(joueur => {
-                            situationText += `${joueur['nom']} ${joueur['prenom']} </br>`;
-                            pid = joueur['NumPaire'];
-                        });
-
-                        if (havePermission(9)) //Permission 9: Se désinscrire d'un événement
-                        {
-                            switch (parseInt(event['type']))
-                            {
-                                                        
-                                case 1: // tournoi
-                                    option = `<button id='${pid}' type='button' class='btn btn-danger desinscription tournoi'>Se desincrire</button>`;
-                                break;
-
-                                case 2: // Partie Libre 
-                                    option = `<button id='${pid}' type='button' class='btn btn-danger desinscription partieLibre'>Se desincrire</button>`;
-                                break;
-
-                                case 3: // Compétition
-                                    option = `<button id='${iid}' type='button' class='btn btn-danger desinscription competition'>Se desincrire</button>`;
-                                break;
-
-                                case 4: // Evenement 
-                                    option = `<button id='${pid}' type='button' class='btn btn-danger desinscription evenement'>Se desincrire</button>`;
-                                break;
-                                
-                                case 5: // Spéciaux 
-                                    
-                                break;
-                            }
-                        }
-
-                    } else {           
-                        situationText = "Non inscrit";  
-                        option = `<a href="inscription.php?eid=${event['evenementId']}" class='btn btn-dark'>Voir l'évenement</a>`;
-                    }
-
-                    content += `<tr>
-                                    <td><a href="inscription.php?eid=${event['evenementId']}">${event['titre']}</a></td>
-                                    <td>${situationText}</td>
-                                    <td>${option}</td>
-                                </tr>
-                            `;
-                });
-
-                if (i == raccordes.length)
-                {
-                    currEventSituation = "Inscrit à tout.";
-
-                } else {
-                    if (i == 0)
-                    {
-                        currEventSituation = "Inscrit à rien.";
-                        situation = isRegisteredForEvent(eid, aid);
-                        if (situation.length > 0)
-                        {
-                            let joueursID = [];
-                            joueursID.push(aid);
-                            for (let i = joueursID.length; 6 >= joueursID.length; i++) {
-                                joueursID.push("NULL");  
-                            }
-
-                            unregisterPaires(eid, situation[0]['iid'], aid);
-                        }
-                    } else {
-                        if (i != raccordes.length)
-                        {
-                            // vérifie si l'on est déjà inscrit
-                            if (isRegisteredForEvent(eid, aid).length == 0)
-                            {
-                                let joueursID = [];
-                                joueursID.push(aid);
-                                for (let i = joueursID.length; 6 >= joueursID.length; i++) {
-                                    joueursID.push("NULL");  
-                                }
-                                registerToEventWith(eid, joueursID);
-                            }
-
-                            currEventSituation = "Partiellement inscrit.";
-                        }
-                    }
-                }
-
-                content += `<tr>
-                                <td><a href="#">Evenement actuel</a></td>
-                                <td>${currEventSituation}</td>
-                                <td>/</td>
-                                </tr>
-                            `;
-
-                var html = `<table class="table display" cellspacing="0" width="100%" id="tablePaireIsolee">
-                                <thead>
-                                    <tr>
-                                        <th>Nom de l'évenement</th><th>Situation</th><th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                ${content}
-                                </tbody>
-                            </table>`
-                
-
-
-                $("#inscriptArea").append(html);
-            }
-
-
-            /*
-                Rempli la table SOS partenaire
-            */
-            function populateSOSpartenaire(data)
-            {
-
-                for (let i = 0; i < data.length; i++) {
-                
-                tableSOSpartenaire.row.add([
-                                    i+2,
-                                    data[i]['nom'],
-                                    data[i]['prenom'],
-                                    `<td><input type="checkbox" class="inscrireAvec SOS" id="${data[i]['id']}"></input></td>`
-                                ]).node().id = i;
-                    
-                }
-                tableSOSpartenaire.draw();
-
-            }
             
-            /*
-                Rempli la table des joueurs disponibles
-            */
-            function populatejoueurDisponible(data)
-            {
-                for (let i = 0; i < data.length; i++) {
-                
-                    tableJoueurs.row.add([
-                                        i+1,
-                                        data[i]['nom'],
-                                        data[i]['prenom'],
-                                        `<td><input type="checkbox" class="inscrireAvec" id="${data[i]['id']}"></input></td>`
-                                    ]).node().id = i;
-                        
-                }
-
-                tableJoueurs.draw();
-            }
-
-            /*
-                Rempli la table des paires isolées
-            */
-            function populatePaireIsolee(data)
-            {
-                    
-                        noms = "";
-                        prenoms = "";
-                        pid = data[0]['pid'];
-                        let option = "";
-                        i = 0;
-                    
-                        while (i < data.length)
-                        {
-
-                            // Si l'un des membres de la paire est nous même:
-                            // Permission 15: Se retirer des paires disponibles
-                            if ((data[i]['id'] == aid || data[i+1]['id'] == aid) && havePermission(15))
-                            {
-                                paire1 = 2;
-                                paire2 = 0;
-                                checked = 1;
-                                paireIsolee = parseInt(data[i]['pid']);
-
-                                option = `<button id='${pid}' class='btn btn-danger desinscription paireIsolee'>Se retirer des paires isolées</button>`;
-                            } else {
-                                // Permission 16: Inscrire avec une paire disponible
-                                if (havePermission(16))
-                                {
-                                    option = `<input type='checkbox' class='inscrireAvec paire' id='${data[i]['pid']}'>`;
-                                } else {
-                                    option = "/";
-                                }
-                                
-                            }
-
-                            while (i < data.length && data[i]['pid'] == pid)
-                            {
-                                noms    += data[i]['nom'] + "</br>";
-                                prenoms += data[i]['prenom'] + "</br>";
-
-                                pid = data[i]['pid'];
-                                i++;
-                            }
-
-                            
-
-
-                            $('#tablePaireIsolee > tbody').append(
-                                `<tr>` +
-                                `<td>${pid}</td>` +
-                                `<td>${noms}</td>` +
-                                `<td>${prenoms}</td>`+
-                                `<td>${option}</td>`+
-                            '</tr>'
-                            );
-
-                            if (i < data.length && data[i]['pid'] != pid)
-                            {
-                                added = 0;
-                                noms    = "";
-                                prenoms = "";
-                                pid = data[i]['pid'];
-                            }
-
- 
-
-                        }
-
- 
-                    
-               
-                
-                    
-                
-
-            }
-
-            /*
-                Rempli la table table avec des checkbox de classe inscrireAvec en option
-                [i] [nom] [prenom] [options]
-            */
-            function mesFavorisCheck(data, table)
-            {
-
-                for (let i = 0; i < data.length; i++) {
-
-                    table.row.add([
-                            i+1,
-                            data[i]['nom'],
-                            data[i]['prenom'],
-                            `<td><input type="checkbox" class="inscrireAvec favoris" id="${data[i][0]}"></input></td>`,
-                        ]).node().id = i;
-                    
-                }
-                table.draw();
-
-            }
-
-            /*
-                Rempli la table table avec des buttons de classe retirerFavori en option.
-                [i] [nom] [prenom] [options]
-            */
-            function mesFavorisButton(data, table)
-            {
-
-                for (let i = 0; i < data.length; i++) {
-
-                    table.row.add([
-                            i+1,
-                            data[i]['nom'],
-                            data[i]['prenom'],
-                            `<td><button id="${data[i][0]}" type="button" class="btn btn-danger retirerFavori favoris">Retirer favori</button></td>`,
-                        ]).node().id = i;
-                    
-
-                }
-            }
-
-            /*
-                Rempli les tables 'Ma situation' et 'Inscrits'
-                @return inscrit 
-            */
-            function maSituationInscrits(data)
-            {
-
-                
-                // I.Id, P.pid as NumPaire, A.id, A.nom, A.prenom
-
-                var inscrit = false;
-                if (data.length > 0)
-                {
-                    // 1. Vérifie si l'adherent est inscrit
-                    i = 0;
-                    while (i < data.length && data[i]['id'] != aid)
-                    {
-                        i++;
-                    }
-
-                    inscrit = i < data.length;
-
-                    var noms = "";
-                    var prenoms = "";
-                    var option = "";
-
-                    // 2. Vérifie si l'adherent est inscrit
-                    if (inscrit)
-                    {
-
-                        // ID de l'inscription               
-                        var iid = data[i]['iid'];
-                       
-                        // ID de de la paire du joueur
-                        var pid = data[i]['NumPaire'];
-
-                        /*
-                            Change le mode de désinscription
-                        */
-                        if (havePermission(9)) //Permission 9: Se désinscrire d'un événement
-                        {
-                            switch (ety)
-                                {
-                                                            
-                                    case 1: // tournoi
-                                        option = `<button id='${pid}' type='button' class='btn btn-danger desinscription tournoi'>Se desincrire</button>`;
-                                    break;
-
-                                    case 2: // Partie Libre 
-                                        option = `<button id='${pid}' type='button' class='btn btn-danger desinscription partieLibre'>Se desincrire</button>`;
-                                    break;
-
-                                    case 3: // Compétition
-                                        option = `<button id='${iid}' type='button' class='btn btn-danger desinscription competition'>Se desincrire</button>`;
-                                    break;
-
-                                    case 4: // Evenement 
-                                        option = `<button id='${pid}' type='button' class='btn btn-danger desinscription evenement'>Se desincrire</button>`;
-                                    break;
-                                }
-                        
-                        } else {
-                            option = "/";
-                        }
-                        if (data.length > 3 && data[i]['remplacant'] != "NULL")
-                        {
-                            
-                            paireRemplacant = data[i]['remplacant'];
-
-                            // Récupère tout les membres remplaçant de la paire
-                            remplacant = [];
-                            for (let j = i; j < data.length; j++) {
-                                if (data[j]['NumPaire'] == paireRemplacant)
-                                {    
-                                    remplacant.push(parseInt(data[j]['id']));    
-                                }
-                            }
-
-                            // Permission 14: Se retirer des remplaçants
-                            if (remplacant.includes(aid) && havePermission(14))
-                            {
-                                option = `<button id='${iid}' class='btn btn-danger desinscription competition remplacant'>Se retirer de la paire</button>`;
-                            } 
-                        }
-
-                        // Lit jusqu'a changement d'inscription et construit l'affichage
-                        // pour la table.
-                        i=0;
-                        while (i < data.length && data[i]['iid'] != iid)
-                        {
-                            i++;
-                        }
-                        iid = data[i]['iid'];
-                        while (i < data.length && data[i]['iid'] == iid)
-                        {
-                            noms     += data[i]['nom'] + "</br>";
-                            prenoms  += data[i]['prenom'] + "</br>";
-                            i++;
-                        }
-                        
-                        $('#tableSituation > tbody').append(
-                            '<tr>' +
-                                `<td> ${iid}</td>` +
-                                `<td>${noms}</td>` +
-                                `<td>${prenoms}</td>` +
-                                `<td>${option}</td>` +
-                            '</tr>'
-                        );
-
-                        own_iid = iid;
-                    } else {
-                        own_iid = -1;
-                    }
-                        
-                        noms = "";
-                        prenoms = "";
-                        pid = data[0]['NumPaire'];
-                        iid = data[0]['iid'];
-                        var elementInPaire = 0;
-                        let added = 0;
-
-
-                        i = 0;
-                        while (i < data.length)
-                        {
-
-                            if (i < data.length && data[i]['iid'] == iid)
-                            {
-
-                                while (i < data.length && data[i]['iid'] == iid)
-                                {
-                                    noms    += data[i]['nom'] + "</br>";
-                                    prenoms += data[i]['prenom'] + "</br>";
-
-                                    pid = data[i]['NumPaire'];
-                                    i++;
-                                    added++;
-
-                                }
-
-                        
-                                // Pour les compétitions, si la paire est une paire de remplaçant et vérifie si la paire est pleine 
-                                // Permission 13: S'ajouter aux remplaçants
-                                if (ety == 3 && added > 4 && added != 7 && !inscrit && havePermission(13)) 
-                                {
-                                    option = `<button id="${pid}" class='btn btn-danger inscription remplacant'>S'ajouter aux remplaçants</button>`;
-                                    added = 0;
-                                } else {
-
-                                    // Si il n'y a pas de paire de remplaçant
-                                    if (ety == 3 && added == 4 && !inscrit && havePermission(13))
-                                    {
-                                        option = `<button id="${iid}" class='btn btn-danger inscription remplacant new'>S'ajouter en remplaçant</button>`;;
-                                        added = 0;
-                                    } else {
-                                        option = "";
-                                    }
-                                    
-                                    
-                                }
-
-                                if (havePermission(12)) // Permission 12: Désinscrire un joueur
-                                {
-                                    option += `<button id='${pid}' type='button' class='btn btn-danger desinscription evenement'>Desincrire</button>`;
-                                }
-
-                                $('#tableInscrit > tbody').append(
-                                    `<tr>` +
-                                        `<td>${iid}</td>` +
-                                        `<td>${noms}</td>` +
-                                        `<td>${prenoms}</td>`+
-                                        `<td>${option}</td>`+
-                                '</tr>'
-                                );
-                                    
-
-
-                                if (i < data.length && data[i]['NumPaire'] != pid)
-                                {
-                                    noms    = "";
-                                    prenoms = "";
-                                    pid = data[i]['NumPaire'];
-                                    iid = data[i]['iid'];
-                                }
-   
-
-                            }
-                            
-
-
-
-
-                        }
-                        
-            
-                    return inscrit;
-                }
-
-
-
-            }
- 
-
+            init();
+       
         });
             
 
@@ -1539,6 +1633,8 @@ if (!logged())
 
     <body>
         
+
+
         <div class="wrapper d-flex align-items-stretch">
             
             <nav id="sidebar">
@@ -1572,6 +1668,10 @@ if (!logged())
                         <a style="display: none" id="gestionBase" href="admin.php"><span class="fa fa-table mr-3"></span>Gestion administrateur</a>
                     </li>
 
+                    <li>
+                        <a href="https://scjc-bridge.fr"><span class="fa fa-link mr-3"></span>Retour au club</a>
+                    </li>
+                    
                     <li>
                         <a href="login.php?logoff"><span class="fa fa-sign-out mr-3"></span> Se déconnecter</a>
                     </li>
@@ -1678,7 +1778,7 @@ if (!logged())
                     <div class="eqR">
 
 
-                        <h3>Inscrits: </h3>
+                        <h3>Tous les inscrits: </h3>
                             <table class="table display" cellspacing="0" width="100%" id="tableInscrit">
                                 <thead>
                                     <tr>

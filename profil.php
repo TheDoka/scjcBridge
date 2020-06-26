@@ -1,7 +1,6 @@
 <?php 
 
 include('assets/php/utils.php');
-$_POST['statut'] = "admin";
 if (!logged())
 {
     echo "<script>alert(\"Vous n'êtes pas connecté, vous allez être redirigé vers la page de connexion.\"); window.location = 'login.php'; </script>";
@@ -46,305 +45,307 @@ if (!logged())
         <script type="text/javascript">
 
         $(document).ready(function(){
-
-            var fullHeight = function() {
-
-                $('.js-fullheight').css('height', $(window).height());
-                $(window).resize(function(){
-                    $('.js-fullheight').css('height', $(window).height());
-                });
-
-            };
-            fullHeight();
-
+            /*
+                Gestion de la sidebar
+            */
             $('#sidebarCollapse').on('click', function () {
                 $('#sidebar').toggleClass('active');
             });
         
-            $(document).on('click', '.retirerFavori', function (e) {
+            fullHeight();
 
-                favorisID = e.target.id;
-                rowID = $(this).closest('tr').attr('id');
-
-                fnom = $(this).closest("tr").find('td:eq(1)').text();
-                fprenom = $(this).closest("tr").find('td:eq(2)').text();
-
-                retirerFavori(favorisID, fnom, fprenom, rowID);
-            });
-
-            $(document).on('click', '.ajouterFavori', function (e) {
-                favorisID = e.target.id;
-                rowID = $(this).closest('tr').attr('id');
-
-                fnom = $(this).closest("tr").find('td:eq(1)').text();
-                fprenom = $(this).closest("tr").find('td:eq(2)').text();
-
-                ajouterFavori(favorisID, fnom, fprenom, rowID);
-            });
-
-            var tableMesFavoris = $('#tableMesFavoris').DataTable({
-               search: false,
-               paging: false,
-               ordering: false,
-               info: false,
-               pageLength: 10,
-               initComplete: function (oSettings) {
-                    $('.dataTables_filter').each(function () {
-                        $(this).append('<button id="addExterne" class="btn btn-primary" style="margin-right: 1em; margin-left: 1em;" type="button">Ajouter externe</button>');
-                    });
-                },
-               language: {
-                    "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/French.json"
-                    
-               },
-               columns: [
-                    { "width": "10%"},
-                    { "width": "40%"},
-                    { "width": "40%"},
-                    { "width": "10%", "orderable": false }
-                ]
-            });
-
-
-            var tableJoueurs = $('#tableJoueurs').DataTable({
-                ordering: false,
-                info: false,
-                pageLength: 50,
-                
-               language: {
-                    "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/French.json"
-                    
-               },
-               columns: [
-                    { "width": "10%"},
-                    { "width": "40%"},
-                    { "width": "40%"},
-                    { "width": "10%", "orderable": false }
-                ]
-            });
-
-            // IMPORTANT ! 
-
+            /*
+                Variables globales
+            */
             var aid = <?php echo $_COOKIE['logged'] ?>;
-            var user = getUser(aid);
-            var statut = user['statut'];
-            var anom = user['nom'];
-            var admin = user['statut'] == "Administrateur"; 
-        
-            if (admin)
-            {
-                $('#gestionBase').show();
-            }
-
-
-            initTables();
+            var user;
+            var permissionsJoueur = [];
+            var tableMesFavoris, tableJoueurs;
+            var modalAjoutUtilisateur;
+            init();
             
-            function initTables()
+            function init()
             {
 
-                // 1.
-                // Populate tables
+                /*
+                    Gestion des permissions
+                */
 
-                var favoris = [];
-                // I. Get favoris
-                $.ajax({
-                    type: "POST",
-                    async: false,
-                    url: "assets/sql/interface.php",
-                    data: {
-                        function: 'getPlayerFavorite',
-                        aid: aid, 
-                        except: JSON.stringify(favoris),
+                user = getUser(aid);
+                let tmpPermissionsJoueur = getPermissionStatut(user['idStatut']);
+                tmpPermissionsJoueur.forEach(permission => {
+                    permissionsJoueur.push(parseInt(permission['did']));
+                });  
+
+                if (havePermission(permissionsJoueur, 6))    // Permission 6: Droit accès de base
+                {
+                    $('#gestionBase').show();
+                }     
+
+                
+
+                /* 
+                    Créer les tables
+                */
+                tableMesFavoris = $('#tableMesFavoris').DataTable({
+                    search: false,
+                    paging: false,
+                    ordering: false,
+                    info: false,
+                    pageLength: 10,
+                    initComplete: function (oSettings) {
+                            $('.dataTables_filter').each(function () {
+                                $(this).append('<button id="addExterne" class="btn btn-primary" style="margin-right: 1em; margin-left: 1em;" type="button">Ajouter externe</button>');
+                            });
+                        },
+                    language: {
+                            "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/French.json"
+                            
                     },
-                    success: function(data)
-                    {
-                        console.log(data);
-                        favoris = JSON.parse(data);
+                    columns: [
+                            { "width": "10%"},
+                            { "width": "40%"},
+                            { "width": "40%"},
+                            { "width": "10%", "orderable": false }
+                        ]
+                    });
 
-                        if (favoris)
-                        {
-                            mesFavoris(favoris);
+                tableJoueurs = $('#tableJoueurs').DataTable({
+                        ordering: false,
+                        info: false,
+                        pageLength: 50,
+                        
+                    language: {
+                            "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/French.json"
+                            
+                    },
+                    columns: [
+                            { "width": "10%"},
+                            { "width": "40%"},
+                            { "width": "40%"},
+                            { "width": "10%", "orderable": false }
+                        ]
+                    });
+            
+                initTables();
+
+                /* 
+                    Modal
+                */
+                modalAjoutUtilisateur = $( "#dialog-form" ).dialog({
+                    autoOpen: false,
+                    height: 350,
+                    width: 280,
+                    modal: true,
+                    resize: false,
+                    buttons: {
+                        "Ajouter l'utilisateur": addUser,
+                        Cancel: function() {
+                            modalAjoutUtilisateur.dialog( "close" );
                         }
                     },
+                    close: function() {
+                        
+                        form = modalAjoutUtilisateur.find( "form" );
+                        form[ 0 ].reset();
+
+                    }
                 });
-                
-                // On se rajoute à l'array, car on ne veut pas être afficher dans la liste de joueurs
-                favoris.push([aid]);
-
-
-                // II. Get Joueurs
-                let joueurs = getEveryMembers(favoris);
-                listeJoueurs(joueurs);
-                
-
 
             }
 
-
-
-            function retirerFavori(fid, fnom, fprenom, rid)
-            {
-
-                if (confirm("Êtes-vous sûr de vouloir retirer ce joueur de vos favoris?"))
+            // ---------------------------- Gestion des tables ----------------
+                function initTables()
                 {
-                    $.post('assets/sql/interface.php',
+
+                    // 1.
+                    // Populate tables
+
+                    var favoris = [];
+                    // I. Get favoris
+                    $.ajax({
+                        type: "POST",
+                        async: false,
+                        url: "assets/sql/interface.php",
+                        data: {
+                            function: 'getPlayerFavorite',
+                            aid: aid, 
+                            except: JSON.stringify(favoris),
+                        },
+                        success: function(data)
+                        {
+                            console.log(data);
+                            favoris = JSON.parse(data);
+
+                            if (favoris)
+                            {
+                                populateTableMesFavoris(favoris);
+                            }
+                        },
+                    });
+                    
+                    // On se rajoute à l'array, car on ne veut pas être afficher dans la liste de joueurs
+                    favoris.push([aid]);
+
+
+                    // II. Get Joueurs
+                    let joueurs = getEveryMembers(favoris);
+                    populateTableJoueurs(joueurs);
+                    
+
+
+                }
+            
+                function populateTableMesFavoris(data)
+                {
+
+                    for (let i = 0; i < data.length; i++) {
+
+                        tableMesFavoris.row.add([
+                                i+1,
+                                data[i]['nom'],
+                                data[i]['prenom'],
+                                `<td><button id="${data[i][0]}" type="button" class="btn btn-danger retirerFavori">Retirer favori</button></td>`,
+                            ]).node().id = i;
+                        
+
+                    }
+                    tableMesFavoris.draw();
+
+                }
+
+                function populateTableJoueurs(data)
+                {
+                    for (let i = 0; i < data.length; i++) {
+                        tableJoueurs.row.add([
+                                                i+1,
+                                                data[i]['nom'],
+                                                data[i]['prenom'],
+                                                `<td><button id="${data[i][0]}" type="button" class="btn btn-danger ajouterFavori">Ajouter favori</button></td>`
+                                            ]).node().id = i;
+                    }
+                    tableJoueurs.draw();
+                }
+            // ---------------------------- Ajout/Suppression favoris ----------------
+            
+                $(document).on('click', '.retirerFavori', function (e) {
+
+                    fid = e.target.id;
+                    rid = $(this).closest('tr').attr('id');
+
+                    fnom = $(this).closest("tr").find('td:eq(1)').text();
+                    fprenom = $(this).closest("tr").find('td:eq(2)').text();
+
+                    if (confirm("Êtes-vous sûr de vouloir retirer ce joueur de vos favoris?"))
+                    {
+                        $.post('assets/sql/interface.php',
                         {
                             function: 'unsetFromFavorite',
                             aid: aid,
                             fid: fid,
                         }, function(data) {
-                                console.log(data);
-                                if (data)
-                                {
-                                    alert('Une erreur est survenue!\n' + data);
-                                } else {
-                                    
 
-                                    tableMesFavoris.row('#' + rid).remove().draw();
-                                    tableJoueurs.row.add([
-                                            tableJoueurs.rows().count(),
-                                            fnom,
-                                            fprenom,
-                                            `<td><button id="${fid}" type="button" class="btn btn-danger ajouterFavori">Ajouter favori</button></td>`
-                                        ]).node().id = tableJoueurs.rows().count();
+                            if (data)
+                            {
+                                alert('Une erreur est survenue!\n' + data);
+                            } else {
 
-
-                                    
-                                    tableJoueurs.draw();
-                                    
-                                }
+                                tableMesFavoris.row('#' + rid).remove().draw();
+                                tableJoueurs.row.add([
+                                        tableJoueurs.rows().count(),
+                                        fnom,
+                                        fprenom,
+                                        `<td><button id="${fid}" type="button" class="btn btn-danger ajouterFavori">Ajouter favori</button></td>`
+                                    ]).node().id = tableJoueurs.rows().count();
+                                
+                                tableJoueurs.draw();
+                                
+                            }
                                 
                         });
-                }
+                    }   
+                });
 
-            }
+                $(document).on('click', '.ajouterFavori', function (e) {
+                    fid = e.target.id;
+                    rid = $(this).closest('tr').attr('id');
 
-            function ajouterFavori(fid, fnom, fprenom, rid)
-            {
+                    fnom = $(this).closest("tr").find('td:eq(1)').text();
+                    fprenom = $(this).closest("tr").find('td:eq(2)').text();
 
-                if (confirm("Êtes-vous sûr de vouloir ajouter ce joueur à vos favoris?"))
-                {
-                    $.post('assets/sql/interface.php',
+
+                    if (confirm("Êtes-vous sûr de vouloir ajouter ce joueur à vos favoris?"))
+                    {
+                        $.post('assets/sql/interface.php',
                         {
                             function: 'addToFavorite',
                             aid: aid,
                             fid: fid,
                         }, function(data) {
-                                console.log(data);
-                                if (data)
-                                {
-                                    alert('Une erreur est survenue!\n' + data);
-                                } else {
 
-                                    
-                                    tableJoueurs.row('#' + rid).remove().draw();
-                                    tableMesFavoris.row.add([
-                                            tableJoueurs.rows().count(),
-                                            fnom,
-                                            fprenom,
-                                            `<td><button id="${fid}" type="button" class="btn btn-danger retirerFavori">Retirer favori</button></td>`
-                                        ]).node().id = tableMesFavoris.rows().count();
+                            if (data)
+                            {
+                                alert('Une erreur est survenue!\n' + data);
+                            } else {
 
-                                        
-                                        tableMesFavoris.draw();
-                                        
+                                tableJoueurs.row('#' + rid).remove().draw();
+                                tableMesFavoris.row.add([
+                                        tableJoueurs.rows().count(),
+                                        fnom,
+                                        fprenom,
+                                        `<td><button id="${fid}" type="button" class="btn btn-danger retirerFavori">Retirer favori</button></td>`
+                                    ]).node().id = tableMesFavoris.rows().count();
 
-                                }
+                                tableMesFavoris.draw();
+
+                            }
 
                         });
-                }
-            }
-            
-            function mesFavoris(data)
-            {
+                    }
+                });
 
-                for (let i = 0; i < data.length; i++) {
-
-                    tableMesFavoris.row.add([
-                            i+1,
-                            data[i]['nom'],
-                            data[i]['prenom'],
-                            `<td><button id="${data[i][0]}" type="button" class="btn btn-danger retirerFavori">Retirer favori</button></td>`,
-                        ]).node().id = i;
-                    
-
-                }
-                tableMesFavoris.draw();
-
-            }
-
-            function listeJoueurs(data)
-            {
-                for (let i = 0; i < data.length; i++) {
-                    tableJoueurs.row.add([
-                                            i+1,
-                                            data[i]['nom'],
-                                            data[i]['prenom'],
-                                            `<td><button id="${data[i][0]}" type="button" class="btn btn-danger ajouterFavori">Ajouter favori</button></td>`
-                                        ]).node().id = i;
-                }
-                tableJoueurs.draw();
-            }
-            
-            function addUser()
-            {
-
-                valid =($('#lastname').val() + $('#name').val() + $('#email').val() + $('#license').val()).length > 5;
-
-                if (valid)
+            // ---------------------------- Ajout utilisateur ----------------
+                function addUser()
                 {
-                    if (confirm("Êtes-vous sûr de vouloir ajouter ce joueur?"))
+
+                    valid =($('#lastname').val() + $('#name').val() + $('#email').val() + $('#license').val()).length > 5;
+
+                    if (valid)
                     {
-                        $.post('assets/sql/interface.php',
-                            {
-                                function: 'quickInsertUserAndFav',
-                                aid: aid,
-                                lastname: $('#lastname').val(),
-                                name: $('#name').val(),
-                                mail: $('#email').val(),
-                                license: $('#license').val(),
-                            }, function(data) {
-                                    if (data)
-                                    {
-                                        alert('Une erreur est survenue!\n' + data);
-                                    } else {
-                                        alert('Joueur ajouté!');
-                                        document.location.reload(true);
-                                    }                      
-                            });
+                        if (confirm("Êtes-vous sûr de vouloir ajouter ce joueur?"))
+                        {
+                            $.post('assets/sql/interface.php',
+                                {
+                                    function: 'quickInsertUserAndFav',
+                                    aid: aid,
+                                    lastname: $('#lastname').val(),
+                                    name: $('#name').val(),
+                                    mail: $('#email').val(),
+                                    license: $('#license').val(),
+                                }, function(data) {
+                                        if (data)
+                                        {
+                                            alert('Une erreur est survenue!\n' + data);
+                                        } else {
+                                            alert('Joueur ajouté!');
+                                            document.location.reload(true);
+                                        }                      
+                                });
+                        }
+                    } else {
+                        alert('Veuillez vérifier les champs.')
                     }
-                } else {
-                    alert('Veuillez vérifier les champs.')
+
                 }
 
-            }
+                $(document).on('click', '#addExterne', function (e) {
+                    modalAjoutUtilisateur.dialog( "open" );
+                });
 
-            var dialog = $( "#dialog-form" ).dialog({
-                autoOpen: false,
-                height: 350,
-                width: 280,
-                modal: true,
-                resize: false,
-                buttons: {
-                    "Ajouter l'utilisateur": addUser,
-                    Cancel: function() {
-                        dialog.dialog( "close" );
-                    }
-                },
-                close: function() {
-                    form[ 0 ].reset();
-                }
-            });
-
-            form = dialog.find( "form" ).on( "submit", function( event ) {
-                event.preventDefault();
-
-            });
-
-            $(document).on('click', '#addExterne', function (e) {
-                dialog.dialog( "open" );
-            });
-     
+                $(document).on('click', '#addExterne', function (e) {
+                    modalAjoutUtilisateur.dialog( "open" );
+                });
+        
         });
 
 
@@ -414,6 +415,10 @@ if (!logged())
 
                     <li>
                         <a style="display: none" id="gestionBase" href="admin.php"><span class="fa fa-table mr-3"></span>Gestion administrateur</a>
+                    </li>
+
+                    <li>
+                        <a href="https://scjc-bridge.fr"><span class="fa fa-link mr-3"></span>Retour au club</a>
                     </li>
 
                     <li>

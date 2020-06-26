@@ -51,30 +51,26 @@ if (!logged())
 
             $(document).ready(function(){
 
-                var aid = <?php echo intval($_COOKIE['logged']) ?>;
-                var user = getUser(aid);
-                var permissionsJoueur = []; 
-                var tmpPermissionsJoueur = getPermissionStatut(user['idStatut']);
-                tmpPermissionsJoueur.forEach(permission => {
-                    permissionsJoueur.push(parseInt(permission['did']));
-                });  
 
-                if (havePermission(6))    // Permission 6: Droit accès de base
-                {
-                    $('#gestionBase').show();
-                } else {
-                    document.location = 'index.php';
-                }
                 /*
-                    Retourne si l'utilisateur à la permission
+                    Gestion de la sidebar
                 */
-                function havePermission(droit)
-                {
-                    return permissionsJoueur.includes(droit);
-                }
+                $(document).on('click', '#sidebarCollapse', function () {
+                    $('#sidebar').toggleClass('active');
+                });
+                fullHeight();
 
+                /*
+                    Variables globales
+                */
+                var aid = <?php echo intval($_COOKIE['logged']) ?>;
+                var user;
+                var permissionsJoueur = []; 
                 let imported_ = [];
 
+                /*
+                    Transforme la table joueur en DataTable
+                */
 
                 var tableJoueurs = $('#tableJoueurs').DataTable({
                         ordering: false,
@@ -92,24 +88,42 @@ if (!logged())
                         ]
                 });
 
-
-                fullHeight();
+                // Main
                 init();
 
                 function init()
                 {
+
+                    /*
+                        Gestion des permissions
+                    */
+
+                    user = getUser(aid);
+                    let tmpPermissionsJoueur = getPermissionStatut(user['idStatut']);
+                    tmpPermissionsJoueur.forEach(permission => {
+                        permissionsJoueur.push(parseInt(permission['did']));
+                    });  
+
+                    if (havePermission(permissionsJoueur, 6))    // Permission 6: Droit accès de base
+                    {
+                        $('#gestionBase').show();
+                    } else {
+                        document.location = 'index.php';
+                    }       
+
+
                     /*
                         Populate players table
                     */
 
-                    populateTableJoueurs();
-                    
-                    populateTableStatut();
-                    populateTableEty();
-                    populateTablePermStatut();
-                    populateTablePermEty();
+                        populateTableJoueurs();
+                        
+                        populateTableStatut();
+                        populateTableEty();
+                        populateTablePermStatut();
+                        populateTablePermEty();
 
-                    populateTableDroit();
+                        populateTableDroit();
 
                 }
 
@@ -119,680 +133,707 @@ if (!logged())
                     init();
                 }
 
+                // ------------- Gestion des imports dans les tables ----------------
 
+                    /*
+                        Remplit la table "Liste des droits disponibles" 
+                    */
+                    function populateTableDroit()
+                    {
+                        let data = getDroits();
 
-                function populateTableDroit()
-                {
-                    let data = getDroits();
+                        data.forEach(droit => {
 
-                    data.forEach(droit => {
+                            $('#tableDroit').append(
+                                `<tr>
+                                    <td>${droit['id']}</td>
+                                    <td>${droit['libelle']}</td>
+                                    <td><button style="width: 100%;" id="${droit[0]}" type="button" class="btn btn-danger deleteDroit">-</button></td>
+                                </tr>`
+                            );
+
+                        });
 
                         $('#tableDroit').append(
-                            `<tr>
-                                <td>${droit['id']}</td>
-                                <td>${droit['libelle']}</td>
-                                <td><button style="width: 100%;" id="${droit[0]}" type="button" class="btn btn-danger deleteDroit">-</button></td>
-                            </tr>`
+                                `<tr>
+                                    <td colspan=3><button style="width: 100%;" id="newDroit" type="button" class="btn btn-dark">+</button></td>
+                                </tr>`
                         );
-
-                    });
-
-                    $('#tableDroit').append(
-                            `<tr>
-                                <td colspan=3><button style="width: 100%;" id="newDroit" type="button" class="btn btn-dark">+</button></td>
-                            </tr>`
-                    );
-                }
-
-                function populateTableEty()
-                {
-                    let data = getEty(-1);
-                    let last = "";
-
-                    data.forEach(typeEvent => {
-                        $('#tableEty').append(
-                            `<tr class="t${typeEvent[0]}">
-                                <td>${typeEvent[0]}</td>
-                                <td>${typeEvent['libelle']}</td>
-                                <td id="${typeEvent[0]}" class="color" style="background-color:#${typeEvent['color']}">#${typeEvent['color']}</td>
-                                <td><button style="width: 100%;" id="${typeEvent[0]}" type="button" class="btn btn-danger deleteEty">-</button></td>
-                            </tr>`
-                        );
-
-                        if (typeEvent['libelle'] != last)
-                        {
-                            $('#permEtyPicker').append(`<option class="t${typeEvent[0]}" selected>${typeEvent['libelle']}</option>`);
-                            last = typeEvent['libelle'];
-                        } 
-
-                    });
-
-                    $('#tableEty').append(
-                            `<tr>
-                                <td colspan=4><button style="width: 100%;" id="newEty" type="button" class="btn btn-dark">+</button></td>
-                            </tr>`
-                    );
-                } 
-
-                function populateTablePermEty()
-                {
-                    let data = getPermissionEvenement(-1);
-
-                    data.forEach(permission => {
-                        
-                        $('#tablePermEty').append(
-                            `<tr class="t${permission['ety']}">
-                                <td class="etyPermEty" id="${permission['ety']}">${permission[0]}</td>
-                                <td class="didPermEty" id="${permission['did']}">${permission['droit']}</td>
-                                <td><button style="width: 100%;" id="${permission[0]}" type="button" class="btn btn-danger deletePermEty">-</button></td>
-                            </tr>`
-                        );
-
-                    });
-
-                    $('#tablePermEty').append(
-                            `<tr>
-                                <td colspan=4><button style="width: 100%;" id="newPermEty" type="button" class="btn btn-dark">+</button></td>
-                            </tr>`
-                    );
-
-
-                }
-        
-                function populateTableStatut()
-                {
-                    let data = getAllStatut();
-                    let last = "";
-
-                    data.forEach(statut => {
-                        
-                        $('#tableStatut').append(
-                            `<tr class="s${statut[0]}">
-                                <td>${statut[0]}</td>
-                                <td>${statut['libelle']}</td>
-                                <td><button style="width: 100%;" id="${statut[0]}" type="button" class="btn btn-danger deleteStatut">-</button></td>
-                            </tr>`
-                        );
-
-                        if (statut['libelle'] != last)
-                        {
-                            $('#permStatutPicker').append(`<option class="s${statut[0]}" selected>${statut['libelle']}</option>`);
-                            last = statut['libelle'];
-                        } 
-
-                    });
-
-                    $('#tableStatut').append(
-                            `<tr>
-                                <td colspan=5><button style="width: 100%;" id="newStatut" type="button" class="btn btn-dark">+</button></td>
-                            </tr>`
-                    );
-                } 
-                            
-                function populateTablePermStatut()
-                {
-                    let data = getPermissionStatut(-1);
-
-                    data.forEach(typeEvent => {
-                        $('#tablePermStatut').append(
-                            `<tr class="s${typeEvent['sid']}">
-                                <td class="statutId" id="${typeEvent['sid']}">${typeEvent['statut']}</td>
-                                <td class="droitId" id="${typeEvent['did']}">${typeEvent['droit']}</td>
-                                <td><button style="width: 100%;" id="${typeEvent[0]}" type="button" class="btn btn-danger deletePermStatut">-</button></td>
-                            </tr>`
-                        );
-
-                    });
-
-                    $('#tablePermStatut').append(
-                            `<tr>
-                                <td colspan=4><button style="width: 100%;" id="newPermStatut" type="button" class="btn btn-dark">+</button></td>
-                            </tr>`
-                    );
-                } 
-
-
-                $(document).on('change', '.selectFilter', function(e) {
-
-                    $(this).find("option:not(:selected)").each(function(key,value){
-                        $(".table ." + value.className).hide();
-                    });
-
-                    $(this).find("option:selected").each(function(key,value){
-                        $(".table ." + value.className).show();
-                    });
-
-                });
-
-                // ---------------------------------------------------------------
-
-                $(document).on('click', '#newStatut', function(e){
-   
-                    $('#tableStatut').prepend(
-                            `<tr>
-                                <td><input type="number" class="form-control" placeholder="id" aria-label="id" disabled></td>
-                                <td><input  type="text" class="form-control statutLibelleEdit" placeholder="libelle" aria-label="libelle"></td>
-                                <td><button  style="width: 100%;" type="button" class="btn btn-primary confirmNewStatut">+</button></td>
-                            </tr>`
-                        );
-
-
-                });
-
-
-                $(document).on('click', '.deleteStatut', function(e) {
-
-                    let z = e.target.id;
-                    if (confirm('Supprimer cette permission?'))
-                    {
-                        let res = deleteStatut(z);
-                        if (!res)
-                        {
-                            // remove the row
-                            $(this).closest('tr').remove();
-                            alert('Supprimé avec succès.');
-                        } else {
-                            alert('Une erreur est survenue.\n' + res);
-                        }
-                    }
-                });
-
-
-                $(document).on('click', '.confirmNewStatut', function(e) {
-                    let z = e.target.id;
-                    
-                    let libelle = $(this).closest('tr').find('.statutLibelleEdit').val();
-                    
-                    var newStatut = [{              
-                        libelle: libelle,
-                    }];
-
-                    let res = newStatuts(newStatut);
-                    if (!res)
-                    {
-                        alert('Ajouté avec succès.');
-                        refresh();
-                    } else {
-                        alert('Une erreur est survenue.\n' + res);
                     }
 
-                });
-
-                // ---------------------------------------------------------------
-                $(document).on('click', '#newPermStatut', function(e) {
-
-                    let droits = getDroits();
-                    let optionDroits = "";
-                    droits.forEach(droit => {
-                        optionDroits += `<option id="${droit['id']}">${droit['libelle']}</option>`
-                    });
-                    
-                    let statuts = getAllStatut();
-                    let optionStatut = "";
-                    statuts.forEach(statut => {
-                        optionStatut += `<option id="${statut['idStatut']}">${statut['libelle']}</option>`
-                    });
-
-                    $('#tablePermStatut').prepend(
-                            `<tr>
-                                <td> 
-                                    <select class="form-control permStatutIdEdit"> 
-                                        ${optionStatut}
-                                    </select> 
-                                </td>
-                                <td> 
-                                    <select class="form-control permStatutDroitEdit"> 
-                                        ${optionDroits}
-                                    </select> 
-                                </td>
-                                <td><button style="width: 100%;" type="button" class="btn btn-primary confirmNewPermStatut">+</button></td>
-                            </tr>`
-                        );
-
-
-                });
-
-                $(document).on('click', '.deletePermStatut', function(e) {
-                    
-  
-                    if (confirm('Supprimer cette permission?'))
-                    {
-                        let sid = $(this).closest('tr').find('.statutId').attr('id');
-                        let did = $(this).closest('tr').find('.droitId').attr('id');
-                        let res = deletePermStatut(sid, did);
-
-                        if (!res)
-                        {
-                            // remove the row
-                            $(this).closest('tr').remove();
-                            alert('Supprimé avec succès.');
-                        } else {
-                            alert('Une erreur est survenue.\n' + res);
-                        }
-                    
-                    }
-                });
-
-
-                $(document).on('click', '.confirmNewPermStatut', function(e) {
-
-                    let sid = $(this).closest('tr').find('.permStatutIdEdit').children(":selected").attr("id");
-                    let did = $(this).closest('tr').find('.permStatutDroitEdit').children(":selected").attr("id");
-       
-                    var permStatut = [{
-                        sid: sid,
-                        did: did,
-                    }];
-
-                    let res = newPermStatut(permStatut);
-                    if (!res)
-                    {
-                        alert('Ajouté avec succès.');
-                        refresh();
-                    } else {
-                        alert('Une erreur est survenue.\n' + res);
-                    }
-
-                });
-                                 
-                // ---------------------------------------------------------------
-
-                $(document).on('click', '#newEty', function(e) {
-                    $('#tableEty').prepend(
-                            `<tr>
-                                <td><input type="number" class="form-control etyIdEdit" placeholder="Id" aria-label="id" disabled></td>
-                                <td><input type="text" class="form-control etyLibelleEdit" placeholder="Libelle" aria-label="libelle"></td>
-                                <td><input type="text" class="form-control etyCouleurEdit" placeholder="Couleur" aria-label="libelle"></td>
-                                <td><button style="width: 100%;" type="button" class="btn btn-primary confirmNewEty">+</button></td>
-                            </tr>`
-                        );
-
-
-                });                
-                
-
-                $(document).on('click', '.deleteEty', function(e) {
-                    
-
-                    if (confirm("Supprimer ce type d'évenement?"))
-                    {
-                        let ety = e.target.id;
-                        let res = deleteEty(ety);
-
-                        if (!res)
-                        {
-                            // remove the row
-                            $(this).closest('tr').remove();
-                            alert('Supprimé avec succès.');
-                        } else {
-                            alert('Une erreur est survenue.\n' + res);
-                        }
-                    
-                    }
-                });
-
-
-                $(document).on('click', '.confirmNewEty', function(e) {
-
-                    let libelle = $(this).closest('tr').find('.etyLibelleEdit').val();
-                    let couleur = $(this).closest('tr').find('.etyCouleurEdit').val();
-
-                    var ety = [{
-                        libelle: libelle,
-                        color: couleur
-                    }];
-
-                    let res = newEty(ety);
-                    if (!res)
-                    {
-                        alert('Ajouté avec succès.');
-                        refresh();
-                    } else {
-                        alert('Une erreur est survenue.\n' + res);
-                    }
-
-                });
-
-                // ---------------------------------------------------------------
-                $(document).on('click', '#newDroit', function(e) {
-                    $('#tableDroit').prepend(
-                            `<tr>
-                                <td><input type="number" class="form-control droitIdEdit" placeholder="id" aria-label="id" disabled></td>
-                                <td><input type="text" class="form-control droitLibelleEdit" placeholder="libelle" aria-label="libelle"></td>
-                                <td><button style="width: 100%;" type="button" class="btn btn-primary confirmNewDroit">+</button></td>
-                            </tr>`
-                        );
-
-
-                });
-
-                $(document).on('click', '.confirmNewDroit', function(e) {
-
-                    let libelle = $(this).closest('tr').find('.droitLibelleEdit').val();
-
-                    var droit = [{
-                        libelle: libelle,
-                    }];
-
-                    let res = newDroit(droit);
-                    if (!res)
-                    {
-                        alert('Ajouté avec succès.');
-                        refresh();
-                    } else {
-                        alert('Une erreur est survenue.\n' + res);
-                    }
-
-                });
-
-                $(document).on('click', '.deleteDroit', function(e) {
-                    
-                    if (confirm('Supprimer cette permission?'))
-                    {
-                        
-                        let did = e.target.id;
-                        let res = deleteDroit(did);
-
-                        if (!res)
-                        {
-                            // remove the row
-                            $(this).closest('tr').remove();
-                            alert('Supprimé avec succès.');
-                        } else {
-                            alert('Une erreur est survenue.\n' + res);
-                        }
-                    
-                    }
-                });
-
-                // ---------------------------------------------------------------
-                $(document).on('click', '#newPermEty', function(e) {
-
-                    $('#tablePermEty').prepend(
-                            `<tr>
-                                <td><input type="number" class="form-control permEtyIdEdit" placeholder="id" aria-label="id"></td>
-                                <td><input type="number" class="form-control permEtyDroitEdit" placeholder="droit" aria-label="droit"></td>
-                                <td><button style="width: 100%;" type="button" class="btn btn-primary confirmNewPermEty">+</button></td>
-                            </tr>`
-                        );
-
-
-                });
-                $(document).on('click', '.confirmNewPermEty', function(e) {
-
-                    
-                    let id = $(this).closest('tr').find('.permEtyIdEdit').val();
-                    let droit = $(this).closest('tr').find('.permEtyDroitEdit').val();
-                    
-                    var permEty = [{
-                        id: id,
-                        droit: droit,
-                    }];
-
-                    let res = newPermEty(permEty);
-                    if (!res)
-                    {
-                        alert('Ajouté avec succès.');
-                        refresh();
-                    } else {
-                        alert('Une erreur est survenue.\n' + res);
-                    }
-
-                });
-
-                $(document).on('click', '.deletePermEty', function(e) {
-                    
-                    if (confirm('Supprimer cette permission?'))
-                    {
-                        
-                        let ety = $(this).closest('tr').find('.etyPermEty').attr('id');
-                        let did = $(this).closest('tr').find('.didPermEty').attr('id');
-
-                        let res = deletePermEty(ety, did);
-
-                        if (!res)
-                        {
-                            // remove the row
-                            $(this).closest('tr').remove();
-                            alert('Supprimé avec succès.');
-                        } else {
-                            alert('Une erreur est survenue.\n' + res);
-                        }
-                    
-                    }
-                });
-
-
-                $(document).on('dblclick', '.color', function (e) {
-                    let ety = e.target.id;
-                    $(this).html(`
-                        <div class="input-group mb-3">
-                            <div class="input-group-prepend">
-                                <i class="input-group-text" aria-hidden="true">#</i>
-                            </div>
-                            <input type="text" class="form-control etyNewColor" value="${$(this).text().substr(1,6)}">
-                        </div>
-                    `);
-                    var v = $(this).closest('tr').find('.btn').parent();
-                    v.empty();
-                    v.html(`<button id="${ety}" style="width: 100%;" type="button" class="btn btn-primary confirmNewcolor">%</button>   `);
-
-                });
-
-                $(document).on('click', '.confirmNewcolor', function(e) {
-                    let ety = e.target.id;
-                    let newColor = $(this).closest('tr').find('.EtyNewColor').val();
-
-                    let res = updateEtyColor(ety, newColor);
-                    if (!res)
-                    {
-                        alert('Ajouté avec succès.');
-                        refresh();
-                    } else {
-                        alert('Une erreur est survenue.\n' + res);
-                    }
-
-                });
-
-
-                function populateTableJoueurs()
-                {
-
-                    let data = getEveryMembers([]);
-
-                    for (let i = 0; i < data.length; i++) {
-
-                        tableJoueurs.row.add([
-                                            i+1,
-                                            data[i]['nom'],
-                                            data[i]['prenom'],
-                                            `<td>
-                                                <button style="width: 100%;" id="${data[i][0]}" type="button" class="btn btn-dark inspecterJoueur">Inspecter</button>
-                                            </td>`
-                                        ]).node().id = i;
-                    }
-                    tableJoueurs.draw();
-
-
-                }
-
-                $('#sidebarCollapse').on('click', function () {
-                    $('#sidebar').toggleClass('active');
-
-                });
-
-
-                var aid = 0;
-                $(document).on('click', '.inspecterJoueur', function(e) {
                     /*
-                        Clear all forms
+                        Remplit la table "Types d'évenements" et la dropbox de trie ety
                     */
-
-                    $('#statutJoueurEdit').empty();
-                    $('#niveauJoueurEdit').empty();
-
-                    aid = e.target.id;
-                    let userInfo = getUser(aid);
-                    let statuts = getAllStatut();
-                    let niveaux = getAllNiveaux();
-
-                    statuts.forEach(statut => {
-                        $('#statutJoueurEdit').append($('<option>', { 
-                            id: statut['idStatut'],
-                            text : statut['libelle'], 
-                        }));
-                    });
-                    niveaux.forEach(niveau => {
-                        $('#niveauJoueurEdit').append($('<option>', { 
-                            id: niveau['idNiveau'],
-                            text : niveau['numeroSerie'] 
-                        }));
-                    });
-
-                    $('#statutJoueurEdit').val(userInfo['statut']);
-                    $('#niveauJoueurEdit').val(userInfo['Niveau']);
-                    
-
-
-                    $('#joueurNomEdit').val(userInfo['nom']);
-                    $('#joueurPrenomEdit').val(userInfo['prenom'])
-                    $('#joueurMailEdit').val(userInfo['mail'])
-                    $('#joueurTelEdit').val(userInfo['tel'])
-                    $('#joueurCommuneEdit').val(userInfo['commune'])
-                    $('#joueurLicenceEdit').val(userInfo['numeroLicense'])
-                    
-                    $("#joueurEditModal").modal('show');
-                });
-
-
-                $('#saveEditJoueurButton').on('click', function(e)
-                {
-
-                    var userInfo = {
-                        'id': aid,
-                        'nom': $('#joueurNomEdit').val(),
-                        'prenom': $('#joueurPrenomEdit').val(),
-                        'mail': $('#joueurMailEdit').val(),
-                        'tel': $('#joueurTelEdit').val(),
-                        'commune': $('#joueurCommuneEdit').val(),
-                        'numeroLicense': $('#joueurLicenceEdit').val(),
-                        'statut': $('#statutJoueurEdit > :selected').attr('id'),
-                        'niveau': $('#niveauJoueurEdit > :selected').attr('id'),
-                    }
-
-                    if (confirm('Confimer les modifications?'))
+                    function populateTableEty()
                     {
-                        updateUserInfos(userInfo);
-                    }
-                    
-                });
+                        let data = getEty(-1);
+                        let last = "";
 
-                $('#deleteJoueurButton').on('click', function() {
+                        data.forEach(typeEvent => {
+                            $('#tableEty').append(
+                                `<tr class="t${typeEvent[0]}">
+                                    <td>${typeEvent[0]}</td>
+                                    <td>${typeEvent['libelle']}</td>
+                                    <td id="${typeEvent[0]}" class="color" style="background-color:#${typeEvent['color']}">#${typeEvent['color']}</td>
+                                    <td><button style="width: 100%;" id="${typeEvent[0]}" type="button" class="btn btn-danger deleteEty">-</button></td>
+                                </tr>`
+                            );
 
-                    if (confirm('Confirmer vous la suppression?'))
-                    {
-                        alert(aid);
-                        deleteUser(aid);
-                        
-
-                    }
-
-
-                });
-
-
-                $('#confirmImport').on('click',function(e){
-
-                    if (imported_.toString().length > 0) 
-                    {
-
-                      $.post('assets/sql/interface.php',
+                            if (typeEvent['libelle'] != last)
                             {
-                                function: 'importEvents',
-                                events: imported_,
-                            }, function(data) {
-                                console.log(data);
-                                if (false && data.length > 0)
-                                {
-                                    alert("Une erreur est survenue: \n" + data);
-                                } else {
-                                    alert("Import éffectué avec succès!")
-                                }
+                                $('#permEtyPicker').append(`<option class="t${typeEvent[0]}" selected>${typeEvent['libelle']}</option>`);
+                                last = typeEvent['libelle'];
+                            } 
+
                         });
-                    } else {
-                        alert('Veuilliez importer un fichier');
-                    }
 
+                        $('#tableEty').append(
+                                `<tr>
+                                    <td colspan=4><button style="width: 100%;" id="newEty" type="button" class="btn btn-dark">+</button></td>
+                                </tr>`
+                        );
+                    } 
 
-                });
+                    /*
+                        Remplit la table "Permissions requises par types d'évenements"
+                    */
+                    function populateTablePermEty()
+                    {
+                        let data = getPermissionEvenement(-1);
 
-                $("input:file").change(function ()
-                {
-                    checkParseAndDraw();
-                });
-
-                function checkParseAndDraw()
-                {
-                        
-                    if ($("#import-form")[0].checkValidity() )
-                        {
-                            $('#files').parse({
-                                config: {
-                                    delimiter: "auto",
-                                    complete: displayHTMLTable,
-                                },
-                                error: function(err, file)
-                                {
-                                    alert('Une erreur est survenue, veuillez verifier le fichier. \,' + err + '\n' + file);
-                                }
-                            });
-                        } else {
-                            alert('Aucun fichier importé.');
-                        }
-
-                }
-                
-                function displayHTMLTable(results){
-                    var tdata = "";
-                    var data = results.data;
-
-                    // On sauvegarde le resultat dans une autre variable pour pouvoir réutiliser lors de l'importation
-                        imported_ = results;
-
-                    // On importe les header (doit toujours être la première ligne)
-                        tdata += "<thead><tr>";
-                        var row = data[0];
-                        var cells = row.join(",").split(",");
+                        data.forEach(permission => {
                             
-                        for(j=0;j<cells.length;j++){
-                            tdata+= "<td>";
-                            tdata+= cells[j];
-                            tdata+= "</th>";
-                        }
-                        tdata+= "</tr></thead>";
+                            $('#tablePermEty').append(
+                                `<tr class="t${permission['ety']}">
+                                    <td class="etyPermEty" id="${permission['ety']}">${permission[0]}</td>
+                                    <td class="didPermEty" id="${permission['did']}">${permission['droit']}</td>
+                                    <td><button style="width: 100%;" id="${permission[0]}" type="button" class="btn btn-danger deletePermEty">-</button></td>
+                                </tr>`
+                            );
 
-                    // On importe les données du CSV
-                    for(i=1;i<data.length-1;i++){
-                        
-                        tdata+= "<tr>";
-                        var row = data[i];
-                        
-                        var cells = row.join(",").split(",");
+                        });
 
-                        for(j=0;j<cells.length;j++){
-                            tdata+= "<td>";
-                            tdata+= cells[j];
-                            tdata+= "</th>";
-                        }
-                        tdata+= "</tr>";
+                        $('#tablePermEty').append(
+                                `<tr>
+                                    <td colspan=4><button style="width: 100%;" id="newPermEty" type="button" class="btn btn-dark">+</button></td>
+                                </tr>`
+                        );
+
+
                     }
-                    // La table prends les données
-                    $("#parsed_csv_list").html(tdata);
+            
+
+                    /*
+                        Remplit la table "Groupes" et la dropbox de trie statut
+                    */
+                    function populateTableStatut()
+                    {
+                        let data = getAllStatut();
+                        let last = "";
+
+                        data.forEach(statut => {
+                            
+                            $('#tableStatut').append(
+                                `<tr class="s${statut[0]}">
+                                    <td>${statut[0]}</td>
+                                    <td>${statut['libelle']}</td>
+                                    <td><button style="width: 100%;" id="${statut[0]}" type="button" class="btn btn-danger deleteStatut">-</button></td>
+                                </tr>`
+                            );
+
+                            if (statut['libelle'] != last)
+                            {
+                                $('#permStatutPicker').append(`<option class="s${statut[0]}" selected>${statut['libelle']}</option>`);
+                                last = statut['libelle'];
+                            } 
+
+                        });
+
+                        $('#tableStatut').append(
+                                `<tr>
+                                    <td colspan=5><button style="width: 100%;" id="newStatut" type="button" class="btn btn-dark">+</button></td>
+                                </tr>`
+                        );
+                    } 
+                        
                     
-                }
+                    /*
+                        Remplit la table "Permissions de groupes"
+                    */
+                    function populateTablePermStatut()
+                    {
+                        let data = getPermissionStatut(-1);
+
+                        data.forEach(typeEvent => {
+                            $('#tablePermStatut').append(
+                                `<tr class="s${typeEvent['sid']}">
+                                    <td class="statutId" id="${typeEvent['sid']}">${typeEvent['statut']}</td>
+                                    <td class="droitId" id="${typeEvent['did']}">${typeEvent['droit']}</td>
+                                    <td><button style="width: 100%;" id="${typeEvent[0]}" type="button" class="btn btn-danger deletePermStatut">-</button></td>
+                                </tr>`
+                            );
+
+                        });
+
+                        $('#tablePermStatut').append(
+                                `<tr>
+                                    <td colspan=4><button style="width: 100%;" id="newPermStatut" type="button" class="btn btn-dark">+</button></td>
+                                </tr>`
+                        );
+                    } 
+
+                    /*
+                        Remplit la table "Joueurs"
+                    */
+                    function populateTableJoueurs()
+                    {
+
+                        let data = getEveryMembers([]);
+
+                        for (let i = 0; i < data.length; i++) {
+
+                            tableJoueurs.row.add([
+                                                i+1,
+                                                data[i]['nom'],
+                                                data[i]['prenom'],
+                                                `<td>
+                                                    <button style="width: 100%;" id="${data[i][0]}" type="button" class="btn btn-dark inspecterJoueur">Inspecter</button>
+                                                </td>`
+                                            ]).node().id = i;
+                        }
+                        tableJoueurs.draw();
 
 
+                    }
 
+
+                // ------------- S'occupe des dropbox de trie -----------------------
+
+                    $(document).on('change', '.selectFilter', function(e) {
+
+                        $(this).find("option:not(:selected)").each(function(key,value){
+                            $(".table ." + value.className).hide();
+                        });
+
+                        $(this).find("option:selected").each(function(key,value){
+                            $(".table ." + value.className).show();
+                        });
+
+                    });
+
+                // ------------- Gestion de la table Statut -------------------------
+
+                    $(document).on('click', '#newStatut', function(e){
+    
+                        $('#tableStatut').prepend(
+                                `<tr>
+                                    <td><input type="number" class="form-control" placeholder="id" aria-label="id" disabled></td>
+                                    <td><input  type="text" class="form-control statutLibelleEdit" placeholder="libelle" aria-label="libelle"></td>
+                                    <td><button  style="width: 100%;" type="button" class="btn btn-primary confirmNewStatut">+</button></td>
+                                </tr>`
+                            );
+
+
+                    });
+
+
+                    $(document).on('click', '.deleteStatut', function(e) {
+
+                        let z = e.target.id;
+                        if (confirm('Supprimer cette permission?'))
+                        {
+                            let res = deleteStatut(z);
+                            if (!res)
+                            {
+                                // remove the row
+                                $(this).closest('tr').remove();
+                                alert('Supprimé avec succès.');
+                            } else {
+                                alert('Une erreur est survenue.\n' + res);
+                            }
+                        }
+                    });
+
+
+                    $(document).on('click', '.confirmNewStatut', function(e) {
+                        let z = e.target.id;
+                        
+                        let libelle = $(this).closest('tr').find('.statutLibelleEdit').val();
+                        
+                        var newStatut = [{              
+                            libelle: libelle,
+                        }];
+
+                        let res = newStatuts(newStatut);
+                        if (!res)
+                        {
+                            alert('Ajouté avec succès.');
+                            refresh();
+                        } else {
+                            alert('Une erreur est survenue.\n' + res);
+                        }
+
+                    });
+
+                // ------------- Gestion de la table permission statut --------------
+
+                    $(document).on('click', '#newPermStatut', function(e) {
+
+                        let droits = getDroits();
+                        let optionDroits = "";
+                        droits.forEach(droit => {
+                            optionDroits += `<option id="${droit['id']}">${droit['libelle']}</option>`
+                        });
+                        
+                        let statuts = getAllStatut();
+                        let optionStatut = "";
+                        statuts.forEach(statut => {
+                            optionStatut += `<option id="${statut['idStatut']}">${statut['libelle']}</option>`
+                        });
+
+                        $('#tablePermStatut').prepend(
+                                `<tr>
+                                    <td> 
+                                        <select class="form-control permStatutIdEdit"> 
+                                            ${optionStatut}
+                                        </select> 
+                                    </td>
+                                    <td> 
+                                        <select class="form-control permStatutDroitEdit"> 
+                                            ${optionDroits}
+                                        </select> 
+                                    </td>
+                                    <td><button style="width: 100%;" type="button" class="btn btn-primary confirmNewPermStatut">+</button></td>
+                                </tr>`
+                            );
+
+
+                    });
+
+                    $(document).on('click', '.deletePermStatut', function(e) {
+                        
+    
+                        if (confirm('Supprimer cette permission?'))
+                        {
+                            let sid = $(this).closest('tr').find('.statutId').attr('id');
+                            let did = $(this).closest('tr').find('.droitId').attr('id');
+                            let res = deletePermStatut(sid, did);
+
+                            if (!res)
+                            {
+                                // remove the row
+                                $(this).closest('tr').remove();
+                                alert('Supprimé avec succès.');
+                            } else {
+                                alert('Une erreur est survenue.\n' + res);
+                            }
+                        
+                        }
+                    });
+
+
+                    $(document).on('click', '.confirmNewPermStatut', function(e) {
+
+                        let sid = $(this).closest('tr').find('.permStatutIdEdit').children(":selected").attr("id");
+                        let did = $(this).closest('tr').find('.permStatutDroitEdit').children(":selected").attr("id");
+        
+                        var permStatut = [{
+                            sid: sid,
+                            did: did,
+                        }];
+
+                        let res = newPermStatut(permStatut);
+                        if (!res)
+                        {
+                            alert('Ajouté avec succès.');
+                            refresh();
+                        } else {
+                            alert('Une erreur est survenue.\n' + res);
+                        }
+
+                    });
+                                    
+                // ------------- Gestion de la table type évenements ----------------
+
+                    $(document).on('click', '#newEty', function(e) {
+                        $('#tableEty').prepend(
+                                `<tr>
+                                    <td><input type="number" class="form-control etyIdEdit" placeholder="Id" aria-label="id" disabled></td>
+                                    <td><input type="text" class="form-control etyLibelleEdit" placeholder="Libelle" aria-label="libelle"></td>
+                                    <td><input type="text" class="form-control etyCouleurEdit" placeholder="Couleur" aria-label="libelle"></td>
+                                    <td><button style="width: 100%;" type="button" class="btn btn-primary confirmNewEty">+</button></td>
+                                </tr>`
+                            );
+
+
+                    });                
+                    
+
+                    $(document).on('click', '.deleteEty', function(e) {
+                        
+
+                        if (confirm("Supprimer ce type d'évenement?"))
+                        {
+                            let ety = e.target.id;
+                            let res = deleteEty(ety);
+
+                            if (!res)
+                            {
+                                // remove the row
+                                $(this).closest('tr').remove();
+                                alert('Supprimé avec succès.');
+                            } else {
+                                alert('Une erreur est survenue.\n' + res);
+                            }
+                        
+                        }
+                    });
+
+
+                    $(document).on('click', '.confirmNewEty', function(e) {
+
+                        let libelle = $(this).closest('tr').find('.etyLibelleEdit').val();
+                        let couleur = $(this).closest('tr').find('.etyCouleurEdit').val();
+
+                        var ety = [{
+                            libelle: libelle,
+                            color: couleur
+                        }];
+
+                        let res = newEty(ety);
+                        if (!res)
+                        {
+                            alert('Ajouté avec succès.');
+                            refresh();
+                        } else {
+                            alert('Une erreur est survenue.\n' + res);
+                        }
+
+                    });
+
+                // ------------- Gestion de la table des permissions évenements -----
+
+                    $(document).on('click', '#newPermEty', function(e) {
+
+                        $('#tablePermEty').prepend(
+                                `<tr>
+                                    <td><input type="number" class="form-control permEtyIdEdit" placeholder="id" aria-label="id"></td>
+                                    <td><input type="number" class="form-control permEtyDroitEdit" placeholder="droit" aria-label="droit"></td>
+                                    <td><button style="width: 100%;" type="button" class="btn btn-primary confirmNewPermEty">+</button></td>
+                                </tr>`
+                            );
+
+                    });
+
+                    $(document).on('click', '.confirmNewPermEty', function(e) {
+
+
+                        let id = $(this).closest('tr').find('.permEtyIdEdit').val();
+                        let droit = $(this).closest('tr').find('.permEtyDroitEdit').val();
+
+                        var permEty = [{
+                            id: id,
+                            droit: droit,
+                        }];
+
+                        let res = newPermEty(permEty);
+                        if (!res)
+                        {
+                            alert('Ajouté avec succès.');
+                            refresh();
+                        } else {
+                            alert('Une erreur est survenue.\n' + res);
+                        }
+
+                    });
+
+                    $(document).on('click', '.deletePermEty', function(e) {
+
+                        if (confirm('Supprimer cette permission?'))
+                        {
+                            
+                            let ety = $(this).closest('tr').find('.etyPermEty').attr('id');
+                            let did = $(this).closest('tr').find('.didPermEty').attr('id');
+
+                            let res = deletePermEty(ety, did);
+
+                            if (!res)
+                            {
+                                // remove the row
+                                $(this).closest('tr').remove();
+                                alert('Supprimé avec succès.');
+                            } else {
+                                alert('Une erreur est survenue.\n' + res);
+                            }
+
+                        }
+                    });
+
+                // ------------- Gestion de la table des droits ---------------------
+
+                    $(document).on('click', '#newDroit', function(e) {
+                        $('#tableDroit').prepend(
+                                `<tr>
+                                    <td><input type="number" class="form-control droitIdEdit" placeholder="id" aria-label="id" disabled></td>
+                                    <td><input type="text" class="form-control droitLibelleEdit" placeholder="libelle" aria-label="libelle"></td>
+                                    <td><button style="width: 100%;" type="button" class="btn btn-primary confirmNewDroit">+</button></td>
+                                </tr>`
+                            );
+
+
+                    });
+
+                    $(document).on('click', '.confirmNewDroit', function(e) {
+
+                        let libelle = $(this).closest('tr').find('.droitLibelleEdit').val();
+
+                        var droit = [{
+                            libelle: libelle,
+                        }];
+
+                        let res = newDroit(droit);
+                        if (!res)
+                        {
+                            alert('Ajouté avec succès.');
+                            refresh();
+                        } else {
+                            alert('Une erreur est survenue.\n' + res);
+                        }
+
+                    });
+
+                    $(document).on('click', '.deleteDroit', function(e) {
+                        
+                        if (confirm('Supprimer cette permission?'))
+                        {
+                            
+                            let did = e.target.id;
+                            let res = deleteDroit(did);
+
+                            if (!res)
+                            {
+                                // remove the row
+                                $(this).closest('tr').remove();
+                                alert('Supprimé avec succès.');
+                            } else {
+                                alert('Une erreur est survenue.\n' + res);
+                            }
+                        
+                        }
+                    });
+
+
+                // ------------- Gestion du double clique sur la table ety ----------
+
+                    $(document).on('dblclick', '.color', function (e) {
+                        let ety = e.target.id;
+                        $(this).html(`
+                            <div class="input-group mb-3">
+                                <div class="input-group-prepend">
+                                    <i class="input-group-text" aria-hidden="true">#</i>
+                                </div>
+                                <input type="text" class="form-control etyNewColor" value="${$(this).text().substr(1,6)}">
+                            </div>
+                        `);
+                        var v = $(this).closest('tr').find('.btn').parent();
+                        v.empty();
+                        v.html(`<button id="${ety}" style="width: 100%;" type="button" class="btn btn-primary confirmNewcolor">%</button>   `);
+
+                    });
+
+                    $(document).on('click', '.confirmNewcolor', function(e) {
+                        let ety = e.target.id;
+                        let newColor = $(this).closest('tr').find('.EtyNewColor').val();
+
+                        let res = updateEtyColor(ety, newColor);
+                        if (!res)
+                        {
+                            alert('Ajouté avec succès.');
+                            refresh();
+                        } else {
+                            alert('Une erreur est survenue.\n' + res);
+                        }
+
+                    });
+
+
+                // - Gestion de la table joueur/Inspecter/Modifier/Supprimer joueur -
+
+                    $(document).on('click', '.inspecterJoueur', function(e) {
+                        /*
+                            Clear all forms
+                        */
+
+                        $('#statutJoueurEdit').empty();
+                        $('#niveauJoueurEdit').empty();
+
+                        aid = e.target.id;
+                        let userInfo = getUser(aid);
+                        let statuts = getAllStatut();
+                        let niveaux = getAllNiveaux();
+
+                        statuts.forEach(statut => {
+                            $('#statutJoueurEdit').append($('<option>', { 
+                                id: statut['idStatut'],
+                                text : statut['libelle'], 
+                            }));
+                        });
+                        niveaux.forEach(niveau => {
+                            $('#niveauJoueurEdit').append($('<option>', { 
+                                id: niveau['idNiveau'],
+                                text : niveau['numeroSerie'] 
+                            }));
+                        });
+
+                        $('#statutJoueurEdit').val(userInfo['statut']);
+                        $('#niveauJoueurEdit').val(userInfo['Niveau']);
+                        
+
+
+                        $('#joueurNomEdit').val(userInfo['nom']);
+                        $('#joueurPrenomEdit').val(userInfo['prenom'])
+                        $('#joueurMailEdit').val(userInfo['mail'])
+                        $('#joueurTelEdit').val(userInfo['tel'])
+                        $('#joueurCommuneEdit').val(userInfo['commune'])
+                        $('#joueurLicenceEdit').val(userInfo['numeroLicense'])
+                        
+                        $("#joueurEditModal").modal('show');
+                    });
+
+                    $('#saveEditJoueurButton').on('click', function(e)
+                    {
+
+                        var userInfo = {
+                            'id': aid,
+                            'nom': $('#joueurNomEdit').val(),
+                            'prenom': $('#joueurPrenomEdit').val(),
+                            'mail': $('#joueurMailEdit').val(),
+                            'tel': $('#joueurTelEdit').val(),
+                            'commune': $('#joueurCommuneEdit').val(),
+                            'numeroLicense': $('#joueurLicenceEdit').val(),
+                            'statut': $('#statutJoueurEdit > :selected').attr('id'),
+                            'niveau': $('#niveauJoueurEdit > :selected').attr('id'),
+                        }
+
+                        if (confirm('Confimer les modifications?'))
+                        {
+                            updateUserInfos(userInfo);
+                        }
+                        
+                    });
+
+                    $('#deleteJoueurButton').on('click', function() {
+
+                        if (confirm('Confirmer vous la suppression?'))
+                        {
+                            alert(aid);
+                            deleteUser(aid);
+                            
+
+                        }
+
+
+                    });
+
+                // ------------- Gestion de l'import --------------------------------
+
+                    /*
+                        Vérifie si un fichier à été importé, et affiche dans son contenu dans la table
+                    */
+                    $("input:file").change(function ()
+                    {
+                        checkParseAndDraw();
+                    });
+
+
+                    function checkParseAndDraw()
+                    {
+                        // Si fichier     
+                        if ($("#import-form")[0].checkValidity() )
+                            {
+                                $('#files').parse({
+                                    config: {
+                                        delimiter: "auto",
+                                        complete: showImportedEvents,
+                                    },
+                                    error: function(err, file)
+                                    {
+                                        alert('Une erreur est survenue, veuillez verifier le fichier. \,' + err + '\n' + file);
+                                    }
+                                });
+                            } else {
+                                alert('Aucun fichier importé.');
+                            }
+
+                    }
+                    
+                    function showImportedEvents(results){
+                        var tdata = "";
+                        var data = results.data;
+
+                        // On sauvegarde le resultat dans une autre variable pour pouvoir réutiliser lors de l'importation
+                            imported_ = results;
+
+                        // On importe les header (doit toujours être la première ligne)
+                            tdata += "<thead><tr>";
+                            var row = data[0];
+                            var cells = row.join(",").split(",");
+                                
+                            for(j=0;j<cells.length;j++){
+                                tdata+= "<td>";
+                                tdata+= cells[j];
+                                tdata+= "</th>";
+                            }
+                            tdata+= "</tr></thead>";
+
+                        // On importe les données du CSV
+                        for(i=1;i<data.length;i++){
+                            
+                            tdata+= "<tr>";
+                            var row = data[i];
+                            
+                            var cells = row.join(",").split(",");
+
+                            for(j=0;j<cells.length;j++){
+                                tdata+= "<td>";
+                                tdata+= cells[j];
+                                tdata+= "</th>";
+                            }
+                            tdata+= "</tr>";
+                        }
+                        // La table prends les données
+                        $("#parsed_csv_list").html(tdata);
+                        
+                    }
+                    
+                    $('#confirmImport').on('click',function(e){
+
+                        if (imported_.toString().length > 0) 
+                        {
+
+                        $.post('assets/sql/interface.php',
+                                {
+                                    function: 'importEvents',
+                                    events: imported_,
+                                }, function(data) {
+                                    console.log(data);
+                                    if (false && data.length > 0)
+                                    {
+                                        alert("Une erreur est survenue: \n" + data);
+                                    } else {
+                                        alert("Import éffectué avec succès!")
+                                    }
+                                }
+                        );
+
+                        } else {
+                            alert('Veuilliez importer un fichier');
+                        }
+
+                    });
+
+
+        
         });
 
         </script>
@@ -962,26 +1003,19 @@ if (!logged())
 
                 <div class="tab-content" id="myTabContent">
 
+                    <!-- Menu Gestion de la base de données -->
                     <div class="tab-pane active" id="bdd" role="tabpanel" aria-labelledby="bdd-tab">
                     
                         <h2>Gestion de l'agenda</h2>
                         <form id="import-form" class="form-inline">
-        
                             <div style="display: felx;">
                                 <div class="custom-file">
                                     <label style="width:400px" class="custom-file-label" for="files">Importer fichier .CSV</label>
                                     <input type="file" id="files" class="form-control custom-file-input" accept=".csv" required />
                                     <button style="margin-left: 100px;" id="confirmImport" class="btn form-control btn-warning" type="button">Confirmer l'importation dans la base.</button>
                                 </div>
-
                             </div>
-
-                                
-
-                            
                         </form>
-
-                        
 
                         <table class='table table-striped table-bordered' id="parsed_csv_list">
                             <thead>
@@ -996,12 +1030,11 @@ if (!logged())
                                 </tr>
                             </thead>
                             <tbody></tbody>
-
-                        </table>      
-
+                        </table> 
+                             
                     </div>
 
-        
+                    <!-- Menu Gestion des utilisateurs -->
                     <div class="tab-pane" id="users" role="tabpanel" aria-labelledby="users-tab">
                             
                             <h2 id="titre">Gestion des joueurs</h2>
@@ -1015,133 +1048,105 @@ if (!logged())
                                         <th>Options</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                
-                                </tbody>
+                                <tbody> </tbody>
                             </table>
 
                     </div>
 
 
+                    <!-- Menu gestion des statuts/permissions -->
                     <div class="tab-pane" id="statuts" role="tabpanel" aria-labelledby="statuts-tab">
 
                         <div class="flex-container p-3">
+
                             <div class="flex-item">
+                                
                                 <div class="row">
                                     <h4>Groupes</h4>
                                     <select id="permStatutPicker" class="selectpicker selectFilter" multiple data-live-search="false"></select>
                                 </div>
+
                                 <table class='table table-striped table-bordered' id="tableStatut">
-                                        <thead>
-                                            <tr>
-                                                <th>#</th>
-                                                <th>Libelle</th>
-                                                <th style="width:20%;">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody></tbody>
-
-                                    </table>    
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Libelle</th>
+                                            <th style="width:20%;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
                                 </table>    
-                                    </table>    
-                                </table>    
-                                    </table>    
-                                </table>    
-                                    </table>    
-
+   
                             </div>
 
                             <div class="flex-item col">
 
                                 <h4>Permissions de groupes</h4>
-                                    <table class='table table-striped table-bordered' id="tablePermStatut">
-                                            <thead>
-                                                <tr>
-                                                    <th>Groupe</th>
-                                                    <th>Droit</th>
-                                                    <th style="width:20%;">Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody></tbody>
-
-                                        </table>   
-                                    </table>   
-                                        </table>   
-                                    </table>   
-                                        </table>   
-                                    </table>   
-                                        </table>   
+                                <table class='table table-striped table-bordered'  id="tablePermStatut">
+                                    <thead>
+                                        <tr>
+                                            <th>Groupe</th>
+                                            <th>Droit</th>
+                                            <th style="width:20%;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>   
                             
                             </div>
 
                             <div class="flex-item">
+
                                 <div class="row">
                                     <h4>Types d'évenements</h4>
                                     <select id="permEtyPicker" class="selectpicker selectFilter" multiple data-live-search="false"></select>
                                 </div>
                                 
                                 <table class='table table-striped table-bordered' id="tableEty">
-                                        <thead>
-                                            <tr>
-                                                <th>#</th>
-                                                <th>Nom du type</th>
-                                                <th>Couleur dans l'agenda</th>
-                                                <th style="width:20%;">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody></tbody>
-
-                                    </table>    
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Nom du type</th>
+                                            <th>Couleur dans l'agenda</th>
+                                            <th style="width:20%;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
                                 </table>    
-                                    </table>    
-                                </table>    
-                                    </table>    
-                                </table>    
-                                    </table>    
+   
                             </div>
 
                             <div class="flex-item col">
                                 <h4>Permissions requises par types d'évenements</h4>
                                 <table class='table table-striped table-bordered' id="tablePermEty">
-                                        <thead>
-                                            <tr>
-                                                <th>Type d'évenement</th>
-                                                <th>droit</th>
-                                                <th style="width:20%;">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody></tbody>
-
-                                    </table>     
+                                    <thead>
+                                        <tr>
+                                            <th>Type d'évenement</th>
+                                            <th>droit</th>
+                                            <th style="width:20%;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>     
                             </div>
-
-                            
+                  
                             <div style="width:100%">
+
                                 <h4>Liste des droits disponibles</h4>
                                 <table class='table table-striped table-bordered' id="tableDroit">
-                                        <thead>
-                                            <tr>
-                                                <th>id</th>
-                                                <th>droit</th>
-                                                <th style="width:20%;">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody></tbody>
-
-                                    </table>     
+                                    <thead>
+                                        <tr>
+                                            <th>id</th>
+                                            <th>droit</th>
+                                            <th style="width:20%;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
                                 </table>     
-                                    </table>     
-                                </table>     
-                                    </table>     
-                                </table>     
-                                    </table>     
+   
                             </div>
 
                         </div>
-
-                     
-  
-
 
                     </div>   
 

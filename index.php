@@ -60,11 +60,12 @@ if (!logged())
 
          <!-- Utils --> 
             <script src='assets/js/utils.js'></script>
+            <link rel="icon" type="image/png" href="./favicon.ico" />
 
+        <!-- JsPDF -->
             <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.5.3/jspdf.min.js" integrity="sha256-gJWdmuCRBovJMD9D/TVdo4TIK8u5Sti11764sZT1DhI=" crossorigin="anonymous"></script>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.4/jspdf.plugin.autotable.min.js" integrity="sha256-4CNCFqz7EvqtM61GxKY25T/MFIWTh2Iqelbm+HrhYq8=" crossorigin="anonymous"></script>
-
-            <link rel="icon" type="image/png" href="./favicon.ico" />
+        
         <!-- next --> 
 
         <script type="text/javascript">
@@ -72,734 +73,795 @@ if (!logged())
 
             $(document).ready(function(){
 
-
+                /*
+                    Gestion de la sidebar
+                */
                 $('#sidebarCollapse').on('click', function () {
                     $('#sidebar').toggleClass('active');
                 });
                 fullHeight();
 
-                var aid = <?php echo intval($_COOKIE['logged']) ?>;
-                var user = getUser(aid);
-                var tmpPermissionsJoueur = getPermissionStatut(user['idStatut']);
-                var permissionsJoueur = []; 
-                tmpPermissionsJoueur.forEach(permission => {
-                    permissionsJoueur.push(parseInt(permission['did']));
-                });  
-
-                if (havePermission(6))    // Droit accès de base
-                {
-                    $('#gestionBase').show();
-                }
-       
                 /*
-                    Retourne si l'utilisateur à la permission
+                    Variables globales
                 */
-                function havePermission(droit)
+                
+                // Gestion du joueur
+                    var aid = <?php echo intval($_COOKIE['logged']) ?>;
+                    var user;
+                    var permissionsJoueur = []; 
+                // Gestion de l'agenda
+                    var calendar;
+                    var current_event = [];
+
+                
+                
+            
+                // Main
+                init();
+
+                function init()
                 {
-                    return permissionsJoueur.includes(droit)
+                    /*
+                        Gestion des permissions
+                    */
+                    user = getUser(aid);
+   
+                    getPermissionStatut(user['idStatut']).forEach(permission => {
+                        permissionsJoueur.push(parseInt(permission['did']));
+                    });  
+
+                    if (havePermission(permissionsJoueur,6))    // Droit accès de base
+                    {
+                        $('#gestionBase').show();
+                    }
+       
+                    /*
+                        Génère l'agenda
+                    */
+                    var calendarEl = document.getElementById('calendar');
+                    calendar = new FullCalendar.Calendar(calendarEl, {
+                        locale: 'FR',
+                        height: $(window).height()*0.85,
+                        plugins: ['interaction', 'dayGrid', 'list', 'timeGrid'],
+                        header: {
+                            left: 'prevYear,prev,next,nextYear today',
+                            center: 'title',
+                            right: 'dayGridMonth,dayGridWeek,dayGridDay, listMonth, timeGridWeek'
+                        },
+                        businessHours: {
+                            startTime: '6:00',
+                            endTime: '23:00',
+                        },
+                        minTime: '10:00',
+                        maxTime: '22:00',
+                        defaultDate: new Date().toISOString().slice(0,10),
+                        firstDay: 1,
+                        defaultView: 'timeGridWeek',
+                        navLinks: true, 
+                        eventLimit: true, 
+                        editable: havePermission(permissionsJoueur,8), // Permission 8: Ajuster les événements dans l'agenda (déplacements/étirements)
+                        allDaySlot: false,
+
+                        eventResize:function(event)
+                        {
+                            let newStartDate = moment(event.event.start).format("YYYY-MM-DD HH:mm:ss");
+                            let newEndDate = moment(event.event.end).format("YYYY-MM-DD HH:mm:ss");
+                            let eid = event.event.id;
+
+                            if (confirm("L'évenement aura pour nouvelle date: \nDébut: " + newStartDate + "\nFin     : " + newEndDate))
+                            {
+                                updateEventDate(eid, newStartDate, newEndDate);
+                            } else {
+                                event.revert();
+                            }
+                            
+                        },
+
+                        eventDrop:function(event)
+                        {
+
+
+                            let newStartDate = moment(event.event.start).format("YYYY-MM-DD HH:mm:ss");
+                            let newEndDate = moment(event.event.end).format("YYYY-MM-DD HH:mm:ss");
+                            let eid = event.event.id;
+
+                            if (confirm("L'évenement aura pour nouvelle date: \nDébut: " + newStartDate + "\nFin     : " + newEndDate))
+                            {
+                                updateEventDate(eid, newStartDate, newEndDate);
+                            } else {
+                                event.revert();
+                            }
+
+                        },
+                        eventClick:function(event)
+                        {
+
+                            event = event.event;
+                            var todayDate = moment(new Date($.now())).format("YYYY-MM-DD HH:mm:ss");
+                            var passed = moment(event['start']).format("YYYY-MM-DD HH:mm:ss") < todayDate;
+
+                            i = 0;
+                            // inscrit
+                            if (event.classNames.includes('inscrit')) { i++; }
+
+                            // ++ 
+                            for (let j = 0; j < permissionsJoueur.length; j++) {
+                            
+                                if (event.classNames.includes(permissionsJoueur[j]))
+                                    i++;
+                            }
+
+                            // Le type d'évenement fait partie des classes
+                            i++;
+                            console.log(i);
+                            console.log(event.classNames.length);
+                            // Si l'utilisateur à les droits et que l'évenement n'est pas passé ou que l'évenemnt n'est pas une finale
+                            if (i >= event.classNames.length && !passed || havePermission(permissionsJoueur,18)) // Permission 18: Accéder à n'importe quel événement 
+                            {
+
+                                if (confirm("Description de l'évenement?"))
+                                {
+                                        window.location = 'inscription.php?eid=' + event.id;
+                                }
+
+                            } else {
+                                alert("L'inscription n'est pas/plus disponible pour cet évenement.");
+                            }
+
+
+                        },
+                        datesRender : function(){
+
+                                /*
+                                    Clique droit sur les évenements, l'action ne se passe pas sur tout le document, alors il faut recréer le trigger à chaque nouvelle élément.
+                                */
+                                $('.fc-event').bind('contextmenu', function(e){
+                                    e.preventDefault();
+                                    editEventModal();
+                                });
+
+                                $('.fc-today-button').after('<select id="trieEvenement" class="selectpicker" multiple data-live-search="false"></select>');
+                                if (havePermission(permissionsJoueur,17)) // Permission 17: Créer des événements
+                                {
+                                    $('.fc-today-button').after('<button id="newEvent" class="btn btn-primary">Ajouter un évenement</button>');
+
+                                }
+                                let data = getEty(-1);
+                                let last = "";
+
+                                data.forEach(typeEvent => {
+                                
+                                    if (typeEvent['libelle'] != last)
+                                    {
+                                        $('#trieEvenement').append(`<option class="t${typeEvent[0]}" selected>${typeEvent['libelle']}</option>`);
+                                        last = typeEvent['libelle'];
+                                    } 
+
+                                });
+                                $('select').selectpicker();
+
+                        },
+                        eventMouseEnter: function( event, jsEvent, view )
+                        {
+                            current_event = event.event;
+                        }
+                    });
+
+                    callendarImport();           
+                    calendar.render();
+                    $('#helpModal').modal().show();
+
                 }
 
 
-                function callendarImport()
-                {
+                
+                // ------------- Gestion de l'agenda ----------------
 
                     /*
-                        On recupères tout les événements et leurs informations
+                        Importe les evenements de la base de données dans l'agenda
                     */
-                    events = [];
-                    $.ajaxSetup({async: false});  
-                    $.post('assets/sql/interface.php',
+                    function callendarImport()
                     {
-                        function: 'getEvents',
-                    }, function(data) {
-                        events = JSON.parse(data);
-                        console.log(data);
-                    });
-                    
-                    /*
-                        On regarde les évenements où est inscrits notre joueur:
-                    */
-                    registeredForEvents = [];
-                    $.post('assets/sql/interface.php',
-                    {
-                        function: 'getAllPlayersRegistrations',
-                        aid: aid,
-                    }, function(data) {
 
-                        registeredForEvents = JSON.parse(data);
-                    });
-
-                    let permissionsEvents = getArrayOfPermissions();              
-
-                    events.forEach(event => {
-
-                        bcColor = permissionsEvents[event['type']][0]['color'];
-                        classNames = [];
-
-                        i = 0;
-                        while (i < permissionsEvents[event['type']].length)
-                        {        
-                            classNames.push(parseInt(permissionsEvents[event['type']][i]['did']));            
-                            i++;  
-                        }
-
-                        classNames.push('t' + event['type'])
-
-                        let title = "";
-
-                        if (isInArray(registeredForEvents, event[0]))
+                        /*
+                            On recupères tout les événements et leurs informations
+                        */
+                        events = [];
+                        $.ajaxSetup({async: false});  
+                        $.post('assets/sql/interface.php',
                         {
-                            title += "★ ";
-                            bcColor = '#00a6ff';
-                            classNames.push("inscrit");
-                        }
-                        title += event['titre'];
-
-                        calendar.addEvent({
-                            id: event[0],
-                            title: title,
-                            start: event['dteDebut'],
-                            end: event['dteFin'],
-                            classNames: classNames,
-                            backgroundColor: bcColor,
+                            function: 'getEvents',
+                        }, function(data) {
+                            events = JSON.parse(data);
                         });
                         
-                    });
-
-
-                }  
-                
-                function updateEventDate(eid, startDate, endDate)
-                {
-                    $.post('assets/sql/interface.php',
+                        /*
+                            On regarde les évenements où est inscrits notre joueur:
+                        */
+                        registeredForEvents = [];
+                        $.post('assets/sql/interface.php',
                         {
-                            function: 'updateEventDate',
-                            eid: eid,
-                            startDate: startDate,
-                            endDate: endDate,
+                            function: 'getAllPlayersRegistrations',
+                            aid: aid,
                         }, function(data) {
 
-                            if (data)
-                            {
-                                alert('Une erreur est survenue: \n' + data + "\n Il est fortement recommandé d'actualiser la page.");
-                            }
-
+                            registeredForEvents = JSON.parse(data);
                         });
-                }
-                
-                var current_event = [];
-                var calendarEl = document.getElementById('calendar');
-                
-                var calendar = new FullCalendar.Calendar(calendarEl, {
-                    locale: 'FR',
-                    height: $(window).height()*0.85,
-                    plugins: ['interaction', 'dayGrid', 'list', 'timeGrid'],
-                    header: {
-                        left: 'prevYear,prev,next,nextYear today',
-                        center: 'title',
-                        right: 'dayGridMonth,dayGridWeek,dayGridDay, listMonth, timeGridWeek'
-                    },
-                    businessHours: {
-                        startTime: '6:00',
-                        endTime: '23:00',
-                    },
-                    minTime: '6:00',
-                    maxTime: '24:00',
-                    defaultDate: new Date().toISOString().slice(0,10),
-                    firstDay: 1,
-                    defaultView: 'timeGridWeek',
-                    navLinks: true, 
-                    eventLimit: true, 
-                    editable: havePermission(8), // Permission 8: Ajuster les événements dans l'agenda (déplacements/étirements)
-                    allDaySlot: false,
 
-                    eventResize:function(event)
-                    {
-                        let newStartDate = moment(event.event.start).format("YYYY-MM-DD HH:mm:ss");
-                        let newEndDate = moment(event.event.end).format("YYYY-MM-DD HH:mm:ss");
-                        let eid = event.event.id;
+                        let permissionsEvents = getArrayOfPermissions();              
+    
+                        events.forEach(event => {
 
-                        if (confirm("L'évenement aura pour nouvelle date: \nDébut: " + newStartDate + "\nFin     : " + newEndDate))
-                        {
-                            updateEventDate(eid, newStartDate, newEndDate);
-                        } else {
-                            event.revert();
-                        }
-                        
-                    },
+                            bcColor = event['color'];
+                            classNames = [];
 
-                    eventDrop:function(event)
-                    {
-
-
-                        let newStartDate = moment(event.event.start).format("YYYY-MM-DD HH:mm:ss");
-                        let newEndDate = moment(event.event.end).format("YYYY-MM-DD HH:mm:ss");
-                        let eid = event.event.id;
-
-                        if (confirm("L'évenement aura pour nouvelle date: \nDébut: " + newStartDate + "\nFin     : " + newEndDate))
-                        {
-                            updateEventDate(eid, newStartDate, newEndDate);
-                        } else {
-                            event.revert();
-                        }
-
-                    },
-                    eventClick:function(event)
-                    {
-
-                        event = event.event;
-                        var todayDate = moment(new Date($.now())).format("YYYY-MM-DD HH:mm:ss");
-                        var passed = moment(event['start']).format("YYYY-MM-DD HH:mm:ss") < todayDate;
-
-                        i = 0;
-                        // inscrit
-                        if (event.classNames.includes('inscrit')) { i++; }
-
-                        // ++ 
-                        for (let j = 0; j < permissionsJoueur.length; j++) {
-                           
-                            if (event.classNames.includes(permissionsJoueur[j]))
-                                i++;
-                        }
-
-                        // Le type d'évenement fait partie des classes
-                        i++;
-                        console.log(i);
-                        console.log(event.classNames.length);
-                        // Si l'utilisateur à les droits et que l'évenement n'est pas passé ou que l'évenemnt n'est pas une finale
-                        if (i >= event.classNames.length && !passed || havePermission(18)) // Permission 18: Accéder à n'importe quel événement 
-                        {
-
-                            if (confirm("Description de l'évenement?"))
-                            {
-                                    window.location = 'inscription.php?eid=' + event.id;
+                            i = 0;
+                            // vérifie si il y a des permissions, et ajoute les permissions à l'évenement
+                            while (permissionsEvents[event['type']] && i < permissionsEvents[event['type']].length)
+                            {        
+                                classNames.push(parseInt(permissionsEvents[event['type']][i]['did']));            
+                                i++;  
                             }
 
-                        } else {
-                            alert("L'inscription n'est pas/plus disponible pour cet évenement.");
-                        }
+                            classNames.push('t' + event['type'])
+
+                            let title = "";
+
+                            if (isInArray(registeredForEvents, event[0]))
+                            {
+                                title += "★ ";
+                                bcColor = '#00a6ff';
+                                classNames.push("inscrit");
+                            }
+                            title += event['titre'];
+
+                            calendar.addEvent({
+                                id: event[0],
+                                title: title,
+                                start: event['dteDebut'],
+                                end: event['dteFin'],
+                                classNames: classNames,
+                                backgroundColor: bcColor,
+                            });
+                            
+                        });
 
 
-                    },
-                    datesRender : function(){
+                    }  
+                    
+                    /*
+                        Checkbox de trie des evenements de l'agenda 
+                    */
+                    $(document).on('change', '#trieEvenement', function (e) {
+
+                        $(this).find("option:not(:selected)").each(function(key,value){
+                            $(".fc-event." + value.className).hide();
+                            console.log( value.className);
+                        });
+
+                        $(this).find("option:selected").each(function(key,value){
+                            $(".fc-event." + value.className).show();
+                        });
+            
+                    });
+
+                    // ------------- Gestion création d'un évenement --------
+
+                        /*
+                            Bouton ajout évenement
+                        */
+                        $(document).on('click', '#newEvent', function() {
+
+                            /* 
+                                Get the additionnal event info
+                            */
+                            let lieux = JSON.parse(getLieux());
+                            let niveaux = getAllNiveaux(); 
+                            let etys = getEty(-1);
+
+                            /* 
+                                Empty form
+                            */
+                            $('#newEventLieuEdit').empty();
+                            $('#newEventTypeEdit').empty();
+                            $('#newEventNR').empty();
 
                             /*
-                                Clique droit sur les évenements, l'action ne se passe pas sur tout le document, alors il faut recréer le trigger à chaque nouvelle élément.
+                                Populate Lieux
                             */
-                            $('.fc-event').bind('contextmenu', function(e){
-                                e.preventDefault();
-                                editEventModal();
+                            lieux.forEach(lieu => {
+                                $('#newEventLieuEdit').append($('<option>', { 
+                                    id: lieu['id'],
+                                    text : lieu['commune'] + ' ' + lieu['adresse'], 
+                                }));
                             });
 
-                            $('.fc-today-button').after('<select id="trieEvenement" class="selectpicker" multiple data-live-search="false"></select>');
-                            if (havePermission(17)) // Permission 17: Créer des événements
-                            {
-                                $('.fc-today-button').after('<button id="newEvent" class="btn btn-primary">Ajouter un évenement</button>');
-
-                            }
-                            let data = getEty(-1);
-                            let last = "";
-
-                            data.forEach(typeEvent => {
-                            
-                                if (typeEvent['libelle'] != last)
-                                {
-                                    $('#trieEvenement').append(`<option class="t${typeEvent[0]}" selected>${typeEvent['libelle']}</option>`);
-                                    last = typeEvent['libelle'];
-                                } 
-
-                            });
-                            $('select').selectpicker();
- 
-                    },
-                    eventMouseEnter: function( event, jsEvent, view )
-                    {
-                        current_event = event.event;
-                    }
-                });
-
-                callendarImport();           
-                calendar.render();
-
-                $(document).on('change', '#trieEvenement', function (e) {
-
-                    $(this).find("option:not(:selected)").each(function(key,value){
-                        $(".fc-event." + value.className).hide();
-                        console.log( value.className);
-                    });
-
-                    $(this).find("option:selected").each(function(key,value){
-                        $(".fc-event." + value.className).show();
-                    });
-
-                        
-                });
-
-
-                $(document).on('click', '#newEvent', function() {
-
-                    /* 
-                        Get the additionnal event info
-                    */
-                    let lieux = JSON.parse(getLieux());
-                    let niveaux = getAllNiveaux(); 
-                    /* 
-                        Empty form
-                    */
-                    $('#newEventLieuEdit').empty();
-                    $('#newEventNR').empty();
-
-                    /*
-                        Populate Lieux
-                    */
-                    lieux.forEach(lieu => {
-                        $('#newEventLieuEdit').append($('<option>', { 
-                            id: lieu['id'],
-                            text : lieu['commune'] + ' ' + lieu['adresse'], 
-                        }));
-                    });
-
-                    /*
-                        Populate Niveaux
-                    */
-                    niveaux.forEach(niveau => {
-                        $('#newEventNR').append($('<option>', { 
-                            id: niveau['idNiveau'],
-                            text : niveau['numeroSerie'], 
-                            }));
-                        });
-                    
-
-                    $('#newEventLieuEdit').selectpicker("refresh");
-                    $('#newEventTypeEdit').selectpicker("refresh");
-                    $('#newEventNR').selectpicker("refresh");
-                    
-                    $('#newDteDebutEdit').val(moment(new Date($.now())).format("YYYY-MM-DDTHH:mm:ss"));
-                
-                    $("#newEventModal").modal('show');
-                }); 
-
-                $('#newEventTypeEdit').on('change', function(e){
-
-                    $('#newTournoi').hide(); 
-                    $('#newPartieLibre').hide(); 
-                    $('#newCompetition').hide(); 
-                    $('#newSpecial').hide();  
-                    let niveaux = [];
-
-                    switch (parseInt($(this).children(":selected").attr("id")))
-                    {
-                        case 1: $('#newTournoi').show();      
-                            $('#newEventNR').empty();
-                            niveaux = getAllNiveaux(); 
-
+                            /*
+                                Populate Niveaux
+                            */
                             niveaux.forEach(niveau => {
                                 $('#newEventNR').append($('<option>', { 
                                     id: niveau['idNiveau'],
                                     text : niveau['numeroSerie'], 
                                     }));
-                                });
-                            $('#newEventNR').selectpicker("refresh");
-
-                            $('#newTournoi').show();  
-                        
-                        break;
-                        case 2:    
-                        
-                            $('#newEventNRPT').empty();
-                            niveaux = getAllNiveaux();
-
-                            niveaux.forEach(niveau => {
-                                $('#newEventNRPT').append($('<option>', { 
-                                    id: niveau['idNiveau'],
-                                    text : niveau['numeroSerie'], 
-                                    }));
-                                });
-                            $('#newEventNRPT').selectpicker("refresh");
-
-                            $('#newPartieLibre').show();  
-                            
-                        break;
-
-                        case 3: $('#newCompetition').show();     
-                        
-                            $('#newEventStade').empty();
-                            $('#newEventCatComp').empty();
-                            $('#newEventDivison').empty();
-                            $('#newEventPublic').empty();
-
-                            let stades = getAllStade();
-                            let categories = getAllCategorie();
-                            let divisions = getAllDivison();
-                            let publics = getAllPublic();
-
-                            stades.forEach(stade => {
-                                $('#newEventStade').append($('<option>', { 
-                                    id: stade['id'],
-                                    text : stade['libelle'], 
-                                    }));
-                                });
-                            $('#newEventStade').selectpicker("refresh");
-                            
-                            categories.forEach(categorie => {
-                                $('#newEventCatComp').append($('<option>', { 
-                                    id: categorie['id'],
-                                    text : categorie['libelle'], 
-                                    }));
-                                });
-                            $('#newEventCatComp').selectpicker("refresh");
-                            
-                            divisions.forEach(division => {
-                                $('#newEventDivison').append($('<option>', { 
-                                    id: division['id'],
-                                    text : division['libelle'], 
-                                    }));
-                                });
-                            $('#newEventDivison').selectpicker("refresh"); 
-                            
-                            publics.forEach(public => {
-                                $('#newEventPublic').append($('<option>', { 
-                                    id: public['id'],
-                                    text : public['libelle'], 
-                                    }));
-                                });
-                            $('#newEventPublic').selectpicker("refresh");
-
-                        break;
-
-                        case 4: 
-                            $('#newEvenement').show();       
-                        break;
-                        case 5: 
-                            let events = getEvents();
-                            $('#tableEventRaccorde').empty(); 
-                            events.forEach(event => {
-
-                                $('#tableEventRaccorde').append(
-                                    `<tr>
-                                        <td><a href="inscription.php?eid=${event[0]}">${event['titre']}</a></td>
-                                        <td>${event['dteDebut']}</td>
-                                        <td><input id="${event[0]}" type="checkbox" class="raccorderAvec"></input></td>
-                                    </tr>`
-                                );
-
                             });
-
-                            $('#newSpecial').show();      
-                        break;
-                    }
-                });
-
-                $('#confirmNewEvent').on('click', function(){
-
-                    // Get all form property:
-                    let ety = $('#newEventTypeEdit').children(":selected").attr("id");
-                    let res = "";
-
-                    switch (parseInt(ety))
-                    {
-                        case 1: // Tournoi
                             
-                                            
-                            var tournoi = [{
-                                                    
-                                titre: $('#newEventNameEdit').val(),
-                                dteDebut: $('#newDteDebutEdit').val(),
-                                dteFin: $('#newDteFinEdit').val(),
-                                prix: $('#newEventPrixEdit').val(),
-                                lieu: $('#newEventLieuEdit').children(":selected").attr("id"),
-                                paire: $('#newEventPaireEdit').val(),
-                                
-                                niveauRequis: $('#newEventNR').children(":selected").attr("id"),
-                                repas: $('#newEventRepas').val()=='Non'?0:1,
-                                apero: $('#newEventApero').val()=='Non'?0:1,
-                                imp: $('#newEventIMP').val()=='Non'?0:1,
-                                dc: $('#newEventDC').val()=='Non'?0:1,
-
-                                ety: 1,
-
-                            }];
+                            /*
+                                Populate Ety
+                            */
+                            etys.forEach(ety => {
+                                $('#newEventTypeEdit').append($('<option>', { 
+                                    id: ety['id'],
+                                    text : ety['libelle'], 
+                                    }));
+                            });
                             
-                            console.log(tournoi);
-                            if (confirm("Confirmer l'ajout?"))
-                            {
-                                res = newEvenement(tournoi);
-                            }
 
-                        break;
-
-                        case 2: // Partie libre   
+                            $('#newEventLieuEdit').selectpicker("refresh");
+                            $('#newEventTypeEdit').selectpicker("refresh");
+                            $('#newEventNR').selectpicker("refresh");
+                            
+                            $('#newDteDebutEdit').val(moment(new Date($.now())).format("YYYY-MM-DDTHH:mm:ss"));
                         
-                            var partieLibre = [{
-                                
-                                titre: $('#newEventNameEdit').val(),
-                                dteDebut: $('#newDteDebutEdit').val(),
-                                dteFin: $('#newDteFinEdit').val(),
-                                prix: $('#newEventPrixEdit').val(),
-                                lieu: $('#newEventLieuEdit').children(":selected").attr("id"),
-                                paire: $('#newEventPaireEdit').val(),
-
-                                niveauRequis: $('#newEventNR').children(":selected").attr("id"),
-
-                                ety: 2,
-
-                            }];
-
- 
-                            if (confirm("Confirmer l'ajout?"))
-                            {
-                                newEvenement(partieLibre);
-                            }
-                            
-                        break;
-
-                        case 3: // Compétition
-
-                            var competition = [{
-                                
-                                titre: $('#newEventNameEdit').val(),
-                                dteDebut: $('#newDteDebutEdit').val(),
-                                dteFin: $('#newDteFinEdit').val(),
-                                prix: $('#newEventPrixEdit').val(),
-                                lieu: $('#newEventLieuEdit').children(":selected").attr("id"),
-                                paire: $('#newEventPaireEdit').val(),
-
-                                catComp: $('#newEventCatComp').children(":selected").attr("id"),
-                                division: $('#newEventDivison').children(":selected").attr("id"),
-                                stade: $('#newEventStade').children(":selected").attr("id"),
-                                public: $('#newEventPublic').children(":selected").attr("id"),
-
-                                ety: 3,
-
-                            }];
-
- 
-                            if (confirm("Confirmer l'ajout?"))
-                            {
-                                newEvenement(competition);
-                            }
-
-                        break;
-
-                        case 4: // Evenement
-  
-                            var evenement = [{
-                                            
-                                titre: $('#newEventNameEdit').val(),
-                                dteDebut: $('#newDteDebutEdit').val(),
-                                dteFin: $('#newDteFinEdit').val(),
-                                prix: $('#newEventPrixEdit').val(),
-                                lieu: $('#newEventLieuEdit').children(":selected").attr("id"),
-                                paire: $('#newEventPaireEdit').val(),
-
-                                ety: 4,
-                            }];
-
-                            if (confirm("Confirmer l'ajout?"))
-                            {
-                                res = newEvenement(evenement);
-                            }
-
-                        break;
-
-
-                        case 5: // Spécial
-                        
-                            let raccordes = [];
-                            $('.raccorderAvec:checkbox:checked').each(function () {
-                                raccordes.push($(this).attr('id'));
-                            }); 
-
-                            var special = [{
-                                                    
-                                titre: $('#newEventNameEdit').val(),
-                                dteDebut: $('#newDteDebutEdit').val(),
-                                dteFin: $('#newDteFinEdit').val(),
-                                prix: $('#newEventPrixEdit').val(),
-                                lieu: $('#newEventLieuEdit').children(":selected").attr("id"),
-                                paire: $('#newEventPaireEdit').val(),
-                                
-                                raccordes: raccordes,
-                                ety: 5,
-                            }];
-
-                            
-                            if (confirm("Confirmer l'ajout?"))
-                            {
-                                res = newEvenement(special);
-                            }
-                            
-
-                        break;
-                    }
-
-
-                    check(res);
-
-                });
-
-                function editEventModal(e) {
-
-                    if (havePermission(7)) // Droit de gestion d'évenements
-                    {
-                        
-                        /* 
-                            Get the additionnal event info
-                        */
-                        let additionnal = JSON.parse(getEvent(current_event['id']));
-                        let lieux = JSON.parse(getLieux());
-                        let registered = JSON.parse(getPlayersRegisteredForEvent(current_event['id']));
-                        let eventTypes = getEty(-1);
+                            $("#newEventModal").modal('show');
+                        }); 
 
                         /*
-                            Empty form
+                            Selection du type d'évenement 
                         */
-                        $('#eventParticipants tbody').empty();
-                        $('#eventTypeEdit').empty();
-                        $('#eventLieuEdit').empty();
+                        $('#newEventTypeEdit').on('change', function(e){
 
-                        /*
-                            Populate Lieux
-                        */
-                        lieux.forEach(lieu => {
-                            $('#eventLieuEdit').append($('<option>', { 
-                                id: lieu['id'],
-                                text : lieu['commune'] + ' ' + lieu['adresse'], 
-                            }));
+                            $('#newTournoi').hide(); 
+                            $('#newPartieLibre').hide(); 
+                            $('#newCompetition').hide(); 
+                            $('#newSpecial').hide();  
+                            let niveaux = [];
+
+                            switch (parseInt($(this).children(":selected").attr("id")))
+                            {
+                                case 1: $('#newTournoi').show();      
+                                    $('#newEventNR').empty();
+                                    niveaux = getAllNiveaux(); 
+
+                                    niveaux.forEach(niveau => {
+                                        $('#newEventNR').append($('<option>', { 
+                                            id: niveau['idNiveau'],
+                                            text : niveau['numeroSerie'], 
+                                            }));
+                                        });
+                                    $('#newEventNR').selectpicker("refresh");
+
+                                    $('#newTournoi').show();  
+                                
+                                break;
+                                case 2:    
+                                
+                                    $('#newEventNRPT').empty();
+                                    niveaux = getAllNiveaux();
+
+                                    niveaux.forEach(niveau => {
+                                        $('#newEventNRPT').append($('<option>', { 
+                                            id: niveau['idNiveau'],
+                                            text : niveau['numeroSerie'], 
+                                            }));
+                                        });
+                                    $('#newEventNRPT').selectpicker("refresh");
+
+                                    $('#newPartieLibre').show();  
+                                    
+                                break;
+
+                                case 3: $('#newCompetition').show();     
+                                
+                                    $('#newEventStade').empty();
+                                    $('#newEventCatComp').empty();
+                                    $('#newEventDivison').empty();
+                                    $('#newEventPublic').empty();
+
+                                    let stades = getAllStade();
+                                    let categories = getAllCategorie();
+                                    let divisions = getAllDivison();
+                                    let publics = getAllPublic();
+
+                                    stades.forEach(stade => {
+                                        $('#newEventStade').append($('<option>', { 
+                                            id: stade['id'],
+                                            text : stade['libelle'], 
+                                            }));
+                                        });
+                                    $('#newEventStade').selectpicker("refresh");
+                                    
+                                    categories.forEach(categorie => {
+                                        $('#newEventCatComp').append($('<option>', { 
+                                            id: categorie['id'],
+                                            text : categorie['libelle'], 
+                                            }));
+                                        });
+                                    $('#newEventCatComp').selectpicker("refresh");
+                                    
+                                    divisions.forEach(division => {
+                                        $('#newEventDivison').append($('<option>', { 
+                                            id: division['id'],
+                                            text : division['libelle'], 
+                                            }));
+                                        });
+                                    $('#newEventDivison').selectpicker("refresh"); 
+                                    
+                                    publics.forEach(public => {
+                                        $('#newEventPublic').append($('<option>', { 
+                                            id: public['id'],
+                                            text : public['libelle'], 
+                                            }));
+                                        });
+                                    $('#newEventPublic').selectpicker("refresh");
+
+                                break;
+
+                                case 5: 
+                                    let events = getEvents();
+                                    $('#tableEventRaccorde > tbody').empty(); 
+                                    events.forEach(event => {
+
+                                        $('#tableEventRaccorde').append(
+                                            `<tr>
+                                                <td><a href="inscription.php?eid=${event[0]}">${event['titre']}</a></td>
+                                                <td>${event['dteDebut']}</td>
+                                                <td><input id="${event[0]}" type="checkbox" class="raccorderAvec"></input></td>
+                                            </tr>`
+                                        );
+
+                                    });
+
+                                    $('#newSpecial').show();      
+                                break;
+                        
+                                default:
+
+                                    $('#newEvenement').show();       
+                                
+                                break;
+                        
+                            }
                         });
-                        /*
-                            Populate Ety
-                        */
-                        eventTypes.forEach(ety => {
-                            $('#eventTypeEdit').append($('<option>', { 
-                                id: ety['id'],
-                                text : ety['libelle'], 
-                            }));
-                        });
-                        /*
-                            Populate table Participants
-                        */
 
-                        let i = 0;
-                        let noms = "";
-                        let prenoms = "";
+                        /*
+                            Ajoute l'évenement à la base
+                        */
+                        $('#confirmNewEvent').on('click', function(){
 
-                        if (registered.length > 0)
-                        {
-                            let iid = registered[0]['iid'];
-                            while (i < registered.length)
+                            // Get all form property:
+                            let ety = $('#newEventTypeEdit').children(":selected").attr("id");
+                            let res = "";
+
+                            switch (parseInt(ety))
                             {
-
-                                if (i < registered.length && registered[i]['iid'] == iid)
-                                {
-
-                                    while (i < registered.length && registered[i]['iid'] == iid)
-                                    {
-                                        noms    += registered[i]['nom'] + "</br>";
-                                        prenoms += registered[i]['prenom'] + "</br>";
-
-                                        pid = registered[i]['NumPaire'];
-                                        i++;
-
-                                    }
-
-                                    $('#eventParticipants > tbody').append(
-                                        `<tr>` +
-                                            `<td>${iid}</td>` +
-                                            `<td>${noms}</td>` +
-                                            `<td>${prenoms}</td>`+
-                                    '</tr>'
-                                    );
+                                case 1: // Tournoi
+                                    
+                                                    
+                                    var tournoi = [{
+                                                            
+                                        titre: $('#newEventNameEdit').val(),
+                                        dteDebut: $('#newDteDebutEdit').val(),
+                                        dteFin: $('#newDteFinEdit').val(),
+                                        prix: $('#newEventPrixEdit').val(),
+                                        lieu: $('#newEventLieuEdit').children(":selected").attr("id"),
+                                        paire: $('#newEventPaireEdit').val(),
                                         
+                                        niveauRequis: $('#newEventNR').children(":selected").attr("id"),
+                                        repas: $('#newEventRepas').val()=='Non'?0:1,
+                                        apero: $('#newEventApero').val()=='Non'?0:1,
+                                        imp: $('#newEventIMP').val()=='Non'?0:1,
+                                        dc: $('#newEventDC').val()=='Non'?0:1,
 
+                                        ety: 1,
 
-                                    if (i < registered.length && registered[i]['NumPaire'] != pid)
+                                    }];
+                                    
+                                    console.log(tournoi);
+                                    if (confirm("Confirmer l'ajout?"))
                                     {
-                                        noms    = "";
-                                        prenoms = "";
-                                        pid = registered[i]['NumPaire'];
-                                        iid = registered[i]['iid'];
+                                        res = newEvenement(tournoi);
                                     }
 
+                                break;
 
+                                case 2: // Partie libre   
+                                
+                                    var partieLibre = [{
+                                        
+                                        titre: $('#newEventNameEdit').val(),
+                                        dteDebut: $('#newDteDebutEdit').val(),
+                                        dteFin: $('#newDteFinEdit').val(),
+                                        prix: $('#newEventPrixEdit').val(),
+                                        lieu: $('#newEventLieuEdit').children(":selected").attr("id"),
+                                        paire: $('#newEventPaireEdit').val(),
+
+                                        niveauRequis: $('#newEventNR').children(":selected").attr("id"),
+
+                                        ety: 2,
+
+                                    }];
+
+                                    
+                                    if (confirm("Confirmer l'ajout?"))
+                                    {
+                                        newEvenement(partieLibre);
+                                    }
+                                    
+                                break;
+
+                                case 3: // Compétition
+
+                                    var competition = [{
+                                        
+                                        titre: $('#newEventNameEdit').val(),
+                                        dteDebut: $('#newDteDebutEdit').val(),
+                                        dteFin: $('#newDteFinEdit').val(),
+                                        prix: $('#newEventPrixEdit').val(),
+                                        lieu: $('#newEventLieuEdit').children(":selected").attr("id"),
+                                        paire: $('#newEventPaireEdit').val(),
+
+                                        catComp: $('#newEventCatComp').children(":selected").attr("id"),
+                                        division: $('#newEventDivison').children(":selected").attr("id"),
+                                        stade: $('#newEventStade').children(":selected").attr("id"),
+                                        public: $('#newEventPublic').children(":selected").attr("id"),
+
+                                        ety: 3,
+
+                                    }];
+
+        
+                                    if (confirm("Confirmer l'ajout?"))
+                                    {
+                                        newEvenement(competition);
+                                    }
+
+                                break;
+
+                                case 5: // Spécial
+                                
+                                    let raccordes = [];
+                                    $('.raccorderAvec:checkbox:checked').each(function () {
+                                        raccordes.push($(this).attr('id'));
+                                    }); 
+
+                                    var special = [{
+                                                            
+                                        titre: $('#newEventNameEdit').val(),
+                                        dteDebut: $('#newDteDebutEdit').val(),
+                                        dteFin: $('#newDteFinEdit').val(),
+                                        prix: $('#newEventPrixEdit').val(),
+                                        lieu: $('#newEventLieuEdit').children(":selected").attr("id"),
+                                        paire: $('#newEventPaireEdit').val(),
+                                        
+                                        raccordes: raccordes,
+                                        ety: 5,
+                                    }];
+
+                                    
+                                    if (confirm("Confirmer l'ajout?"))
+                                    {
+                                        res = newEvenement(special);
+                                    }
+                                    
+
+                                break;
+
+                                default: // Evenement
+                                    alert($('#newEventTypeEdit').children(":selected").attr("id"));
+                                    var evenement = [{
+                                                    
+                                        titre: $('#newEventNameEdit').val(),
+                                        dteDebut: $('#newDteDebutEdit').val(),
+                                        dteFin: $('#newDteFinEdit').val(),
+                                        prix: $('#newEventPrixEdit').val(),
+                                        lieu: $('#newEventLieuEdit').children(":selected").attr("id"),
+                                        paire: $('#newEventPaireEdit').val(),
+
+                                        ety: $('#newEventTypeEdit').children(":selected").attr("id"),
+                                    }];
+
+                                    if (confirm("Confirmer l'ajout?"))
+                                    {
+                                        res = newEvenement(evenement);
+                                    }
+
+                                break;
+
+                            }
+
+                            check(res);
+
+                        });
+
+
+                    // ------------- Edition d'un évenement -----------------
+
+                        /*
+                            Trigger lorse que clique droit sur un évenement
+                        */
+                        function editEventModal(e) {
+
+                            if (havePermission(permissionsJoueur,7)) // Droit de gestion d'évenements
+                            {
+                                
+                                /* 
+                                    Get the additionnal event info
+                                */
+                                let additionnal = JSON.parse(getEvent(current_event['id']));
+                                let lieux = JSON.parse(getLieux());
+                                let registered = JSON.parse(getPlayersRegisteredForEvent(current_event['id']));
+                                let eventTypes = getEty(-1);
+
+                                /*
+                                    Empty form
+                                */
+                                $('#eventParticipants tbody').empty();
+                                $('#eventTypeEdit').empty();
+                                $('#eventLieuEdit').empty();
+
+                                /*
+                                    Populate Lieux
+                                */
+                                lieux.forEach(lieu => {
+                                    $('#eventLieuEdit').append($('<option>', { 
+                                        id: lieu['id'],
+                                        text : lieu['commune'] + ' ' + lieu['adresse'], 
+                                    }));
+                                });
+                                /*
+                                    Populate Ety
+                                */
+                                eventTypes.forEach(ety => {
+                                    $('#eventTypeEdit').append($('<option>', { 
+                                        id: ety['id'],
+                                        text : ety['libelle'], 
+                                    }));
+                                });
+                                /*
+                                    Populate table Participants
+                                */
+
+                                let i = 0;
+                                let noms = "";
+                                let prenoms = "";
+
+                                if (registered.length > 0)
+                                {
+                                    let iid = registered[0]['iid'];
+                                    while (i < registered.length)
+                                    {
+
+                                        if (i < registered.length && registered[i]['iid'] == iid)
+                                        {
+
+                                            while (i < registered.length && registered[i]['iid'] == iid)
+                                            {
+                                                noms    += registered[i]['nom'] + "</br>";
+                                                prenoms += registered[i]['prenom'] + "</br>";
+
+                                                pid = registered[i]['NumPaire'];
+                                                i++;
+
+                                            }
+
+                                            $('#eventParticipants > tbody').append(
+                                                `<tr>` +
+                                                    `<td>${iid}</td>` +
+                                                    `<td>${noms}</td>` +
+                                                    `<td>${prenoms}</td>`+
+                                            '</tr>'
+                                            );
+                                                
+
+
+                                            if (i < registered.length && registered[i]['NumPaire'] != pid)
+                                            {
+                                                noms    = "";
+                                                prenoms = "";
+                                                pid = registered[i]['NumPaire'];
+                                                iid = registered[i]['iid'];
+                                            }
+
+
+                                        }
+
+                                    }
                                 }
+                                console.log();
+                                $('#' + additionnal['lieu']).prop('selected', true);
+                                $('#' + additionnal['type'][0]).prop('selected', true);
+                                $('#eventLieuEdit').selectpicker("refresh");
+                                $('#eventTypeEdit').selectpicker("refresh");
+                                
 
+                                $('#eventPaireEdit').val(additionnal['paires']).change();
+
+                                
+                                $('#eventNameEdit').val(additionnal['titre']);
+                                $('#eventPrixEdit').val(additionnal['prix']);
+
+                                $('#dteDebutEdit').val(moment(current_event['start']).format("YYYY-MM-DDTHH:mm:ss"));
+                                $('#dteFinEdit').val(moment(current_event['end']).format("YYYY-MM-DDTHH:mm:ss"));
+                            
+                                $("#eventEditModal").modal('show');
+                                $(".deleteEventButton").attr('id', additionnal['type']);
                             }
                         }
-                        console.log();
-                        $('#' + additionnal['lieu']).prop('selected', true);
-                        $('#' + additionnal['type'][0]).prop('selected', true);
-                        $('#eventLieuEdit').selectpicker("refresh");
-                        $('#eventTypeEdit').selectpicker("refresh");
-                        
 
-                        $('#eventPaireEdit').val(additionnal['paires']).change();
-
-                        
-                        $('#eventNameEdit').val(additionnal['titre']);
-                        $('#eventPrixEdit').val(additionnal['prix']);
-
-                        $('#dteDebutEdit').val(moment(current_event['start']).format("YYYY-MM-DDTHH:mm:ss"));
-                        $('#dteFinEdit').val(moment(current_event['end']).format("YYYY-MM-DDTHH:mm:ss"));
-                    
-                        $("#eventEditModal").modal('show');
-                        $(".deleteEventButton").attr('id', additionnal['type']);
-                    }
-                }
-
-
-                $('.deleteEventButton').on('click', function (e) {
-                
-                    if (confirm("Êtes vous sûr de vouloir supprimer l'évenement? Cette action est irréversible!"))
-                    {
-                        let ety = e.target.id;
-                        check(deleteEvent(current_event['id'], ety));
-                
-                    }
-                });
-                
-                $('#saveEditEventButton').on('click', function () {
-                
-                    if (confirm('Êtes vous sûr de vouloir sauvegarder les modifications? Cette action est irréversible!'))
-                    {
                         /*
-                            event[0] titre
-                                [1] dteDebut
-                                [2] dteFin
-                                [3] prix
-                                [4] lieu
-                                [5] paires
+                            Supprime un évenement
                         */
+                        $('.deleteEventButton').on('click', function (e) {
+                        
+                            if (confirm("Êtes vous sûr de vouloir supprimer l'évenement? Cette action est irréversible!"))
+                            {
+                                let ety = e.target.id;
+                                check(deleteEvent(current_event['id'], ety));
+                        
+                            }
+                        });
+                        
+                        /*
+                            Sauvegarde les modification d'un évenement
+                        */
+                        $('#saveEditEventButton').on('click', function () {
+                        
+                            if (confirm('Êtes vous sûr de vouloir sauvegarder les modifications? Cette action est irréversible!'))
+                            {
+                                /*
+                                    event[0] titre
+                                        [1] dteDebut
+                                        [2] dteFin
+                                        [3] prix
+                                        [4] lieu
+                                        [5] paires
+                                */
 
-                        event = {
-                            id:      current_event['id'],
-                            titre:   $('#eventNameEdit').val(),
-                            dteDebut:$('#dteDebutEdit').val(),
-                            dteFin:  $('#dteFinEdit').val(),
-                            prix:    $('#eventPrixEdit').val(),
-                            lieu:    $('#eventLieuEdit').find('option:selected').attr('id'),
-                            paires:  $('#eventPaireEdit').val(),
-                            ety:    $('#eventTypeEdit').find('option:selected').attr('id'),
-                        };
+                                event = {
+                                    id:      current_event['id'],
+                                    titre:   $('#eventNameEdit').val(),
+                                    dteDebut:$('#dteDebutEdit').val(),
+                                    dteFin:  $('#dteFinEdit').val(),
+                                    prix:    $('#eventPrixEdit').val(),
+                                    lieu:    $('#eventLieuEdit').find('option:selected').attr('id'),
+                                    paires:  $('#eventPaireEdit').val(),
+                                    ety:    $('#eventTypeEdit').find('option:selected').attr('id'),
+                                };
 
-                        check(updateEvent(event));
+                                check(updateEvent(event));
 
-                    }
+                            }
 
 
-                }); 
+                        }); 
+                        
+                        /*
+                            Exporte la liste des participants de l'évenement
+                        */
+                        $('#exportJoueursButton').on('click', function () {
+                        
+                            const doc = new jsPDF()
+                            
+                            doc.autoTable({html: '#eventParticipants'})
+                                                
+                            doc.save($('#eventNameEdit').val() + "-" + moment(new Date()).format('DD/MM/YYYY') + ".pdf");
+        
+                        });
+                // ------------- Autres ---------------------------------
+
+                        
                 
-                $('#exportJoueursButton').on('click', function () {
-                
-                    const doc = new jsPDF()
-                    
-                    doc.autoTable({html: '#eventParticipants'})
-                                        
-                    doc.save($('#eventNameEdit').val() + "-" + moment(new Date()).format('DD/MM/YYYY') + ".pdf");
- 
+                $('#helpLink').on('click', function() {
+                    $('#helpModal').modal().show();
                 });
-
-
+                /*
+                    Vérifie la présence d'érreur
+                    data: retour de fonction à vérifier
+                            * vide : pas d'erreurs
+                            * !vide: erreur
+                    @return Message
+                */    
                 function check(data)
                 {
                     if (!data)
@@ -812,7 +874,7 @@ if (!logged())
                 }
 
 
-    });
+            });
 
         </script>
             
@@ -833,9 +895,39 @@ if (!logged())
     .bootstrap-select .dropdown-toggle .filter-option {
         position: relative;
     }
+
+    .information-agenda {
+        position: absolute;
+        margin-left: 310px;
+    }
 </style>
 
     <body>
+
+        <!-- Modal for help -->
+        <div id="helpModal" class="modal" tabindex="-1" role="dialog">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                                <h5 class="modal-title">Aide</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Fermer">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+
+                            <div class="modal-body">
+                                <p>Tuto</p>
+                                <p id="mod-message">MessageAdmin</p>
+                            </div>
+
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Contacter un administrateur</button>
+                            <button type="button" class="btn btn-primary" data-dismiss="modal">J'ai compris!</button>
+                        </div>
+                    </div>
+                </div>
+        </div>
 
     
         <!-- Modal for event edit -->
@@ -920,14 +1012,7 @@ if (!logged())
 
                     <div class="modal-header">
                         <input id="newEventNameEdit" class="form-control border-primary" type="text" placeholder="Nom de l'évenement">
-                        <select id="newEventTypeEdit"  class="select w-25">
-                            <option id="1">Tournoi</option>
-                            <option id="2">Partie Libre</option>
-                            <option id="3">Compétition</option>
-                            <option id="4">Evenement</option>
-                            <option id="5">Spécial</option>
-
-                        </select>                          
+                        <select id="newEventTypeEdit"  class="select w-25"></select>                          
                     
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
@@ -1085,7 +1170,7 @@ if (!logged())
                                         <td>Raccorder</td>
                                     </tr>
                                 </thead>
-
+                                <tbody></tbody>
                             </table>
 
 
@@ -1131,6 +1216,14 @@ if (!logged())
                     <li>
                         <a style="display: none" id="gestionBase" href="admin.php"><span class="fa fa-table mr-3"></span>Gestion administrateur</a>
                     </li>
+                    
+                    <li>
+                        <a href="https://scjc-bridge.fr"><span class="fa fa-link mr-3"></span>Retour au club</a>
+                    </li>
+                    
+                    <li>
+                        <a id="helpLink" href="#"><span class="fa fa-question-circle mr-3"></span>Aide</a>
+                    </li>
 
 
                     <li>
@@ -1141,8 +1234,8 @@ if (!logged())
 
             </nav>
 
+            <span class="information-agenda">Pour s'inscrire à un évenement cliquer dessus.</span>
             <div id="content" class="p-4 p-md-5 pt-5">
-                
                 <div id='calendar'></div>
 
             </div>

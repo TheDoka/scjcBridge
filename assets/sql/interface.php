@@ -70,7 +70,7 @@ if (isset($_POST['function']))
             break;
             case 'sendMail':
                 require_once('../php/mail.php');
-                //return sendMail($_POST['mailContent']);
+                return sendMail($_POST['mailContent']);
             break;
             case 'createRegistrationNotificationMailForEvent':
                 echo json_encode(createRegistrationNotificationMailForEvent(createPDO(), $_POST['eid'], $_POST['ids']));
@@ -385,7 +385,7 @@ function importEvents($PDO, $evenements)
         
         // Pour chaque ligne on coupe à chaque virgule
             $curr = explode(',', $evenements['data'][$i][0]);
-            print_r($curr);
+
         /* 
             Common:  
                 Type         [0] => 1
@@ -438,36 +438,57 @@ function importEvents($PDO, $evenements)
 
                 $req .= "INSERT INTO `evenement` 
                         (`id`, `titre`, `prix`, `dteDebut`, `dteFin`, `lieu`, `type`, `paires`) VALUES 
-                        (NULL, '$title', '$curr[2]', '$startDate', '$endDate', $curr[7], $curr[0], $curr[8]);";
+                        (NULL, '$title', '$curr[2]', '$startDate', '$endDate', $curr[7], $curr[0], $curr[8]);
+                        ";
+
                 
-                /* Si l'événement appartient à un groupe
-                if ($curr[1] != 0)
-                {
-                    // Getting the evenement id
-                    $curseur = $PDO->prepare($req);
-                    $curseur ->execute();
+            // Si l'événement appartient à un groupe et n'est pas un évenement spécial
+            if ($curr[1] != 0)
+            {
+                $curseur = $PDO->prepare($req);
+                $curseur ->execute();
 
-                    $eventId = $PDO->lastInsertId();
+                // Récupère l'élément ajouté
+                $req = "SELECT LAST_INSERT_ID();";
+                
+                $curseur = $PDO->prepare($req);
+                $curseur ->execute();
+                $eventId = $curseur->fetch()[0];
 
-                } else {
-                    $req .= $secondStep;
-                }
+                /*
+                (   
+                    [groupe]
+                        [membre] id évenement
+                    [groupe]
+                        ...
                 */
-            // 2. Décide de si l'évenement est un tournoi, une compétition ou bien une partie libre et agis en fonction
+                if ($curr[0] != 5)
+                {    
+                    $raccorde["" . $curr[1]][] = $eventId;
+                } else {
+                    // Spécial
+                    $raccorde["" . $curr[1]]['master'] = $eventId;
+                }   
+
+                $req = "";
+            } 
+            
+
+            // 2. Décide de si l'évenement est un tournoi, une compétition ou bien ... et agis en fonction
 
             switch ($curr[0])
             {
 
                 case 1:
                     // tournoi
-                    $secondStep .= "INSERT INTO `tournoi` 
+                    $req .= "INSERT INTO `tournoi` 
                             (`id`, `evenementId`, `repas`, `apero`, `imp`, `niveauRequis`, `DC`) VALUES
                             (NULL, LAST_INSERT_ID(), '$curr[11]', '$curr[12]', '$curr[10]', (SELECT `idNiveau` FROM `niveau` WHERE `numeroSerie` = '$curr[9]'), '$curr[13]');";
                 break; 
 
                 case 2:
                     // partie libre
-                    $secondStep .= "INSERT INTO `partieLibre` 
+                    $req .= "INSERT INTO `partieLibre` 
                             (`id`, `evenementId`, `niveauRequis`) VALUES 
                             (NULL, LAST_INSERT_ID(), (SELECT `idNiveau` FROM `niveau` WHERE `numeroSerie` = '$curr[9]'));
                             ";
@@ -476,31 +497,37 @@ function importEvents($PDO, $evenements)
                 case 3:
                     // compétition
 
-                    $secondStep .= "INSERT INTO `competition` 
+                    $req .= "INSERT INTO `competition` 
                             (`id`, `evenementId`, `catComp`, `division`, `stade`, `public`) VALUES 
                             (NULL, LAST_INSERT_ID(), $curr[14], $curr[15], $curr[16], $curr[17]);";
                 break;
 
-                case 5: 
-                    // Spécial
-                    
-                break;
 
-            }
-
-            // Si l'événement appartient à un groupe
-            if ($curr[1] == 0)
-            {
-                $req .= $secondStep;
             }
 
         }
 
 
+    // Effectue les raccordement
+    foreach ($raccorde as $groupe) {
+
+        for ($i=0; $i < sizeof($groupe)-1; $i++) { 
+            $Aeid = $groupe['master'];
+            $Beid = $groupe[$i];
+            $req .= "INSERT INTO `raccorde` 
+                    (`Aeid`, `Beid`) VALUES 
+                    ($Aeid,$Beid);
+                    ";
+
+        }
+
+    }
+    
     $curseur = $PDO->prepare($req);
     $curseur ->execute();
 
     $curseur->fetch();
+
     // In case, respond with error message, it should be empty
     return $curseur->errorInfo()[2];
     
@@ -553,6 +580,7 @@ function makeEventTile($data, $type)
 
         case 3:
             // compétition
+            $req = "";
             $title = "$data[15] $data[17] $data[14] par $data[8] $data[16]";
         break;
                 
@@ -582,19 +610,32 @@ function getEvents($PDO)
             FROM `evenement` E
             
             INNER JOIN competition C 
-            ON E.`id` = C.evenementId;
+            ON E.`id` = C.evenementId
+            
+            INNER JOIN typeEvenement T
+            ON T.id = E.type;
             
             SELECT * 
             FROM `evenement` E
 
             INNER JOIN tournoi C 
-            ON E.`id` = C.evenementId;
+            ON E.`id` = C.evenementId
+
+            INNER JOIN typeEvenement T
+            ON T.id = E.type;
+        
             
             SELECT * 
             FROM `evenement` E
 
             INNER JOIN partieLibre C 
-            ON E.`id` = C.evenementId;";
+            ON E.`id` = C.evenementId
+
+            INNER JOIN typeEvenement T
+            ON T.id = E.type;
+
+            
+            ";
 
     $statement = $PDO->prepare($query);
     $statement->execute();
@@ -615,13 +656,13 @@ function getEvents($PDO)
     */
 
     $query = "SELECT * 
-              FROM `evenement` ";
-    
-    if ($except)
-    {
-        $query .= "WHERE `id` NOT IN ($except);";
-    }
-    
+              FROM `evenement` E
+              
+              INNER JOIN typeEvenement T
+              ON T.id = E.type
+
+              WHERE E.type > 3;
+             ";
 
     $statement = $PDO->prepare($query);
     $statement->execute();
@@ -659,7 +700,8 @@ function getEventsOnly($PDO, $only)
             INNER JOIN partieLibre C 
             ON E.`id` = C.evenementId
             
-            WHERE E.id IN ($only);";
+            WHERE E.id IN ($only);
+            ";
 
     $statement = $PDO->prepare($query);
     $statement->execute();
@@ -670,6 +712,20 @@ function getEventsOnly($PDO, $only)
         $statement->nextRowset();
         $result = array_merge($result, $statement->fetchAll());
     }
+
+    $query = "SELECT *
+              FROM `evenement` E
+              
+              INNER JOIN typeEvenement T
+              ON T.id = E.type
+
+              WHERE E.type > 3 && E.id IN ($only);
+             ";
+
+    $statement = $PDO->prepare($query);
+    $statement->execute();
+
+    $result = array_merge($result, $statement->fetchAll());
 
     return $result;
     
@@ -1823,9 +1879,6 @@ function deleteEvent($PDO, $eid, $ety)
 
         case 5: // Spécial
             
-            // recupère les évenements raccordés:
-            $raccordes = getEvenementsRaccorde($PDO, $eid);
-
             $req .= "DELETE FROM `raccorde`  WHERE `raccorde`.`Aeid` = $eid;";
         break;
 
@@ -1945,8 +1998,7 @@ function getEvenementsRaccorde($PDO, $eid)
 
     $raccordes = getFormatedIds($curseur->fetchAll(), 0);
 
-
-    return getEventsOnly($PDO, $raccordes);;       
+    return getEventsOnly($PDO, $raccordes);     
 
 }
 
@@ -1982,7 +2034,7 @@ function isRegisteredForEvent($PDO, $eid, $aid)
 function getPermissionEvenement($PDO, $ety)
 {
 
-    $req = "SELECT T.libelle as event, T.id as ety, T.color, D.libelle as droit, D.id as did
+    $req = "SELECT T.libelle as event, T.id as ety, D.libelle as droit, D.id as did
             FROM permissionEvenement P
             
             INNER JOIN typeEvenement T
@@ -2197,6 +2249,12 @@ function newEvenement($PDO, $evenement)
 
         break;
 
+        case 2:
+            $req .= "INSERT INTO `partieLibre` (`id`, `evenementId`, `niveauRequis`) VALUES 
+                    (NULL, last_insert_id(), :niveauRequis)
+                    ";
+        break;
+
         case 3:
                 $req .= "INSERT INTO `competition` 
                         (`id`, `evenementId`, `catComp`, `division`, `stade`, `public`) VALUES 
@@ -2217,6 +2275,7 @@ function newEvenement($PDO, $evenement)
             unset($evenement['raccordes']);
 
         break;
+
     }
 
 

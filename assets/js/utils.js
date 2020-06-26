@@ -1092,3 +1092,32 @@ function getArrayOfPermissions()
 
     return out;
 }
+
+/*
+    Retourne si l'utilisateur à la permission
+*/
+function havePermission(permissions, droit)
+{
+    return permissions.includes(droit);
+}
+
+/*
+    Met à jour la date d'un évenement
+*/
+function updateEventDate(eid, startDate, endDate)
+{
+    $.post('assets/sql/interface.php',
+        {
+            function: 'updateEventDate',
+            eid: eid,
+            startDate: startDate,
+            endDate: endDate,
+        }, function(data) {
+
+            if (data)
+            {
+                alert('Une erreur est survenue: \n' + data + "\n Il est fortement recommandé d'actualiser la page.");
+            }
+
+        });
+}
